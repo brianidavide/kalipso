@@ -1,0 +1,339 @@
+{
+  "models": [
+    {
+      "engine": "vosk",
+      "language": "en",
+      "model": "vosk-model-small-en-us-0.15",
+      "version": "vosk-model-small-en-us-0.15",
+      "sha256": "7135df8b02129ae4f474da8140c4c52048991100d210bd258a23fa57eda29cb7",
+      "sha256_kind": "directory-manifest-v1",
+      "license": "Apache-2.0 (official Vosk model catalog)",
+      "source_url": "https://alphacephei.com/vosk/models",
+      "archive_sha256": null
+    },
+    {
+      "engine": "vosk",
+      "language": "de",
+      "model": "vosk-model-small-de-0.15",
+      "version": "vosk-model-small-de-0.15",
+      "sha256": "e62bc6a3e77aa468b35b2cd9d0096f38696c2d883b93e9d9d2bb985e2f2b78c5",
+      "sha256_kind": "directory-manifest-v1",
+      "license": "Apache-2.0 (official Vosk model catalog)",
+      "source_url": "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip",
+      "archive_sha256": "b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43"
+    },
+    {
+      "engine": "vosk",
+      "language": "es",
+      "model": "vosk-model-small-es-0.42",
+      "version": "vosk-model-small-es-0.42",
+      "sha256": "b38430bba9d07f67b32c10be7f62aacf2dcc0dd5a159376905e13de8c3db0597",
+      "sha256_kind": "directory-manifest-v1",
+      "license": "Apache-2.0 (official Vosk model catalog)",
+      "source_url": "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip",
+      "archive_sha256": "09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f"
+    },
+    {
+      "engine": "vosk",
+      "language": "ja",
+      "model": "vosk-model-small-ja-0.22",
+      "version": "vosk-model-small-ja-0.22",
+      "sha256": "8fd4035b72342dc90962002f24f92e6692d3ad311e5affb2a8f98a4a3901e622",
+      "sha256_kind": "directory-manifest-v1",
+      "license": "Apache-2.0 (official Vosk model catalog)",
+      "source_url": "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip",
+      "archive_sha256": "efa092d280153a77615e9e0c7d7283e93e600de3d19d3bec686c57ef19d52eac"
+    },
+    {
+      "engine": "vosk",
+      "language": "zh",
+      "model": "vosk-model-small-cn-0.22",
+      "version": "vosk-model-small-cn-0.22",
+      "sha256": "2fbab26115370aa9431a00fb745d09f731ca1aef9e41682507e40d95b4c68864",
+      "sha256_kind": "directory-manifest-v1",
+      "license": "Apache-2.0 (official Vosk model catalog)",
+      "source_url": "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip",
+      "archive_sha256": "3af8b0e7e0f835ae9d414ce5df580237a3cfb08d586c9fbbb0f7ff29ad5b14ba"
+    },
+    {
+      "engine": "whisper.cpp",
+      "language": "multilingual",
+      "model": "ggml-tiny-q5_1",
+      "version": "ggerganov/whisper.cpp@5359861c739e955e79d9a303bcbc70fb988958b1",
+      "sha256": "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7",
+      "sha256_kind": "file",
+      "license": "MIT (Hugging Face model repository metadata; OpenAI Whisper upstream LICENSE)",
+      "source_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"
+    },
+    {
+      "engine": "whisper.cpp",
+      "language": "multilingual",
+      "model": "ggml-small-q5_1",
+      "version": "ggerganov/whisper.cpp@5359861c739e955e79d9a303bcbc70fb988958b1",
+      "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+      "sha256_kind": "file",
+      "license": "MIT (Hugging Face model repository metadata; OpenAI Whisper upstream LICENSE)",
+      "source_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin"
+    },
+    {
+      "engine": "whisper.cpp",
+      "language": "multilingual",
+      "model": "ggml-base-q5_1",
+      "version": "ggerganov/whisper.cpp@5359861c739e955e79d9a303bcbc70fb988958b1",
+      "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+      "sha256_kind": "file",
+      "license": "MIT (Hugging Face model repository metadata; OpenAI Whisper upstream LICENSE)",
+      "source_url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin"
+    },
+    {
+      "engine": "moonshine-voice",
+      "language": "en",
+      "model": "tiny-streaming-en",
+      "version": "quantized_26_08_21",
+      "license": "MIT (current upstream streaming catalog)",
+      "source_url": "https://download.moonshine.ai/model/tiny-streaming-en/quantized_26_08_21",
+      "files": [
+        {
+          "name": "adapter.ort",
+          "bytes": 1319664,
+          "sha256": "22ecc949e146c49667fda28d102d4e30749a107dc88a396292aa8f277ef1347c"
+        },
+        {
+          "name": "cross_kv.ort",
+          "bytes": 1287544,
+          "sha256": "143a36667b8d05fd9d04e8c337b7ee121f37ef299aea6b3d82bdb3d3401950b4"
+        },
+        {
+          "name": "decoder_kv.ort",
+          "bytes": 32583720,
+          "sha256": "8852553f312adb6c9aa4d17418015049b30f412209ee569d336548c0044627de"
+        },
+        {
+          "name": "encoder.ort",
+          "bytes": 7675440,
+          "sha256": "a8414e1a5dedf9f2093d7680601dd8a9b0433e7020260eafe0e370ead91134ca"
+        },
+        {
+          "name": "frontend.model.ort",
+          "bytes": 23344,
+          "sha256": "5121b561417b638afce0c6c31b760e37c93cf97f80d9b0031aad1fe7b6f25d61"
+        },
+        {
+          "name": "frontend.weights.ort",
+          "bytes": 2093464,
+          "sha256": "217da24ac6f522ebf02da8ef288e77d1ac68d50d4a6821433182e4fbf4204bbd"
+        },
+        {
+          "name": "streaming_config.json",
+          "bytes": 509,
+          "sha256": "74fe5ddebd63b17caf59e8a3b18c17547ff7bce1642050edbb1c3962674f8950"
+        },
+        {
+          "name": "tokenizer.bin",
+          "bytes": 249974,
+          "sha256": "6884b35fd6377d4c4d32336a0bc152f36b64d1e45b6503683cdc238250a8472d"
+        }
+      ]
+    },
+    {
+      "engine": "moonshine-voice",
+      "language": "de",
+      "model": "tiny-streaming-de",
+      "version": "quantized_26_08_24",
+      "license": "MIT (current upstream streaming catalog)",
+      "source_url": "https://download.moonshine.ai/model/tiny-streaming-de/quantized_26_08_24",
+      "files": [
+        {
+          "name": "adapter.ort",
+          "bytes": 1318472,
+          "sha256": "23b91142a35cfbc533a7f03ad8387d0b6d32856b465c6fe7a14ede44a254a345"
+        },
+        {
+          "name": "cross_kv.ort",
+          "bytes": 1288120,
+          "sha256": "25e6d9d4f16569c2ede7e23a381fe7c60cc4b0f141adc88580557d4530634f17"
+        },
+        {
+          "name": "decoder_kv.ort",
+          "bytes": 19717336,
+          "sha256": "768b1464074fc4fb7327e8b863fc13dcd12cb7bbe8d8e9428fa7292f7fd9ca6e"
+        },
+        {
+          "name": "encoder.ort",
+          "bytes": 7772792,
+          "sha256": "74610b818058e396f4b9d9ffd730cf8e36772122464d989dd3011dfa76bd6baf"
+        },
+        {
+          "name": "frontend.model.ort",
+          "bytes": 23176,
+          "sha256": "4445bb4c2f41b0dd993999e06dc9367a0dde0d42a2e777116e7d93be102dc43d"
+        },
+        {
+          "name": "frontend.weights.ort",
+          "bytes": 2093280,
+          "sha256": "233fda61d583403bbf13ea71b6ba2335fdf57eac71be85a97dcbb90a6c2f4186"
+        },
+        {
+          "name": "streaming_config.json",
+          "bytes": 509,
+          "sha256": "d31afd7c2dd5ee9ae3fa232312c5b42cb3e4fe1c6e9c53d885f2bea63023790a"
+        },
+        {
+          "name": "tokenizer.bin",
+          "bytes": 103319,
+          "sha256": "5725ad3771a1339802f8cebeda0fa8f7723f5282b1ee726c2544774d7399b9a7"
+        }
+      ]
+    },
+    {
+      "engine": "moonshine-voice",
+      "language": "es",
+      "model": "tiny-streaming-es",
+      "version": "quantized_26_08_24",
+      "license": "MIT (current upstream streaming catalog)",
+      "source_url": "https://download.moonshine.ai/model/tiny-streaming-es/quantized_26_08_24",
+      "files": [
+        {
+          "name": "adapter.ort",
+          "bytes": 1318472,
+          "sha256": "2efd97cd2ee7d89578dd1d429a849be9fe37ac81dd9c4e1d31c8a2e7f85d43e6"
+        },
+        {
+          "name": "cross_kv.ort",
+          "bytes": 1288120,
+          "sha256": "9e268b1b3bb0f9ff79bca6e76055d41298de0a5ba52505ee04907a2642efa3ae"
+        },
+        {
+          "name": "decoder_kv.ort",
+          "bytes": 19717336,
+          "sha256": "7adf56b982df98e385d71823b9a40cf9296ae3a746efcf03f3d7bb4604032db0"
+        },
+        {
+          "name": "encoder.ort",
+          "bytes": 7772792,
+          "sha256": "ec9eb43a01fbfe242a2c6a86050cffe4a31050e1c9f084e98560d6c100004505"
+        },
+        {
+          "name": "frontend.model.ort",
+          "bytes": 23176,
+          "sha256": "9d19434b861de0c1d2aff52556911ae565cf3212ebe6d7f797c76c5c5066c2fc"
+        },
+        {
+          "name": "frontend.weights.ort",
+          "bytes": 2093280,
+          "sha256": "5e4d5471cd5d984d4b94a603d861539ebf1dc72de11b0cf13f38316725d5ce48"
+        },
+        {
+          "name": "streaming_config.json",
+          "bytes": 509,
+          "sha256": "d31afd7c2dd5ee9ae3fa232312c5b42cb3e4fe1c6e9c53d885f2bea63023790a"
+        },
+        {
+          "name": "tokenizer.bin",
+          "bytes": 102888,
+          "sha256": "5fbb7d4314dcb18e03c5f975609e4a4cd572b22b01d2b2accb1b3e6830696f36"
+        }
+      ]
+    },
+    {
+      "engine": "moonshine-voice",
+      "language": "ja",
+      "model": "tiny-streaming-ja",
+      "version": "quantized_26_08_23",
+      "license": "MIT (current upstream streaming catalog)",
+      "source_url": "https://download.moonshine.ai/model/tiny-streaming-ja/quantized_26_08_23",
+      "files": [
+        {
+          "name": "adapter.ort",
+          "bytes": 1318472,
+          "sha256": "25f302e6203028e487d1b1f93db6fe5baf587373498062190160de70e0c4ae58"
+        },
+        {
+          "name": "cross_kv.ort",
+          "bytes": 1288120,
+          "sha256": "170ee70aeb3c82fd067193add0d1a8619cd16d4de80a5e0239dac12d956e8575"
+        },
+        {
+          "name": "decoder_kv.ort",
+          "bytes": 19717336,
+          "sha256": "ccc047610727f9fe039212a0b2370a7f970e80776376a229181a76998ff5af20"
+        },
+        {
+          "name": "encoder.ort",
+          "bytes": 7772792,
+          "sha256": "6420c180be55732d10db7a85f8966237bbbeee3b47addab4790ed81c22dde2cf"
+        },
+        {
+          "name": "frontend.model.ort",
+          "bytes": 27608,
+          "sha256": "c6fdee4c81d421617b9571e43cf952dc1e7e4f45d0cb1dbf13104ee8af4ffd45"
+        },
+        {
+          "name": "frontend.weights.ort",
+          "bytes": 2093288,
+          "sha256": "673a7177f030da9ce948daa1af44ec5425b6f0825348aacb80f6a01c18e42a07"
+        },
+        {
+          "name": "streaming_config.json",
+          "bytes": 509,
+          "sha256": "d31afd7c2dd5ee9ae3fa232312c5b42cb3e4fe1c6e9c53d885f2bea63023790a"
+        },
+        {
+          "name": "tokenizer.bin",
+          "bytes": 101836,
+          "sha256": "9f2599f20c3a9b03d79dbe122e443647c6589ce8e5c73e65e5c5d6f73485d5de"
+        }
+      ]
+    },
+    {
+      "engine": "moonshine-voice",
+      "language": "zh",
+      "model": "tiny-streaming-zh",
+      "version": "quantized_26_08_24",
+      "license": "MIT (current upstream streaming catalog)",
+      "source_url": "https://download.moonshine.ai/model/tiny-streaming-zh/quantized_26_08_24",
+      "files": [
+        {
+          "name": "adapter.ort",
+          "bytes": 1318472,
+          "sha256": "84d1bed88310f5b6dd452203bcaffb765f017a7d06da8d84a898235ef5c90e12"
+        },
+        {
+          "name": "cross_kv.ort",
+          "bytes": 1288120,
+          "sha256": "22c2261f3120b766a91deceb4f32ca0bef0a8f2b181509ad0dc9fe6adbd0c23a"
+        },
+        {
+          "name": "decoder_kv.ort",
+          "bytes": 19717336,
+          "sha256": "5caf9e4e9eaa39b93122338bfbad2917630afc51293f6229b935ae7df28bed33"
+        },
+        {
+          "name": "encoder.ort",
+          "bytes": 7772792,
+          "sha256": "4270ca0e1ecd10e78d658b08b91d81c7f913511177e1ad461c8a9d9d0903503d"
+        },
+        {
+          "name": "frontend.model.ort",
+          "bytes": 27608,
+          "sha256": "d27a9c994b43fa6568121f502e8b99d511ffd0425d4090ffddcc82c9a5667971"
+        },
+        {
+          "name": "frontend.weights.ort",
+          "bytes": 2090728,
+          "sha256": "ac56e8ee7780e1f254ee26f2d9c9a3b3c6cfd2f6822cb3944924ae321f86dc50"
+        },
+        {
+          "name": "streaming_config.json",
+          "bytes": 509,
+          "sha256": "d31afd7c2dd5ee9ae3fa232312c5b42cb3e4fe1c6e9c53d885f2bea63023790a"
+        },
+        {
+          "name": "tokenizer.bin",
+          "bytes": 74587,
+          "sha256": "f172da002a818b9968d5c7a995cc7c51acf2168331ab5f914b5b0860ceab8236"
+        }
+      ]
+    }
+  ]
+}

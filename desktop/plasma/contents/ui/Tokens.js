@@ -1,0 +1,115 @@
+// Generated; edit design/tokens.json.
+var tokens = {
+  "color": {
+    "paper": "#F7F8FA",
+    "surface": "#FFFFFF",
+    "ink": "#17191F",
+    "muted": "#626875",
+    "line": "#DDE0E7",
+    "action": "#345CF5",
+    "actionHover": "#2447D3",
+    "actionSoft": "#EAF0FF",
+    "brand": "#17191F",
+    "brandText": "#17191F",
+    "overlay": "#17191F",
+    "overlayText": "#F7F8FC",
+    "overlayMuted": "#838B9B",
+    "overlayLine": "#363C48",
+    "overlaySurface": "#242933",
+    "reading": "#C8D4FF",
+    "success": "#23754A",
+    "successSoft": "#E6F4EB",
+    "warning": "#8B590C",
+    "warningSoft": "#FFF1D5",
+    "error": "#B43C37",
+    "errorSoft": "#FDEBE9",
+    "focus": "#819AFF",
+    "scrim": "#10131C99"
+  },
+  "font": {
+    "body": "'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif",
+    "display": "'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif",
+    "mono": "'SFMono-Regular', 'DejaVu Sans Mono', monospace"
+  },
+  "type": {
+    "small": "0.75rem",
+    "label": "0.875rem",
+    "body": "1rem",
+    "lead": "1.1875rem",
+    "h3": "1.375rem",
+    "h2": "clamp(2rem, 4vw, 3.5rem)",
+    "hero": "clamp(2.75rem, 6.7vw, 5.5rem)",
+    "prompt": "clamp(1.375rem, 2.6vw, 2rem)",
+    "code": "0.8125rem"
+  },
+  "space": {
+    "1": "4px",
+    "2": "8px",
+    "3": "12px",
+    "4": "16px",
+    "5": "24px",
+    "6": "32px",
+    "7": "48px",
+    "8": "64px",
+    "9": "96px",
+    "10": "128px"
+  },
+  "radius": {
+    "small": "8px",
+    "medium": "16px",
+    "large": "24px",
+    "round": "999px",
+    "highlight": "4px"
+  },
+  "size": {
+    "page": "1200px",
+    "prose": "62ch",
+    "control": "44px",
+    "compactControl": "36px",
+    "icon": "20px",
+    "prompt": "720px",
+    "panel": "36rem",
+    "stroke": "1px",
+    "strokeStrong": "2px",
+    "focusRing": "3px",
+    "brand": "28px",
+    "textarea": "160px",
+    "heroMeasure": "15ch",
+    "dialogMax": "90dvh",
+    "swatch": "8rem",
+    "readerLines": "4.35em",
+    "readerLinesMobile": "5.8em",
+    "shadow": "0 16px 40px #17191f12",
+    "dot": "5px",
+    "sectionDescription": "42ch",
+    "platformDescription": "40ch",
+    "eyebrowMeasure": "28ch",
+    "component": "20rem",
+    "motionDistance": "120px",
+    "readerLineHeight": "1.45"
+  },
+  "motion": {
+    "press": "100ms",
+    "enter": "180ms",
+    "exit": "120ms",
+    "ease": "cubic-bezier(.2,.8,.2,1)",
+    "exitEase": "cubic-bezier(.4,0,1,1)"
+  },
+  "breakpoint": {
+    "compact": "48rem",
+    "narrow": "24rem"
+  },
+  "native": {
+    "width": 640,
+    "readerSize": 26,
+    "labelSize": 12,
+    "bodySize": 14,
+    "padding": 20,
+    "gap": 12,
+    "radius": 18,
+    "buttonRadius": 8,
+    "controlHeight": 36,
+    "editorHeight": 180,
+    "primaryWidth": 160
+  }
+};

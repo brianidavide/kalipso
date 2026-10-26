@@ -1,0 +1,14 @@
+[
+  {"script":"Hello everyone welcome here", "partial":"hello everyone", "read":"Hello everyone"},
+  {"script":"Buongiorno a tutti oggi iniziamo", "partial":"buongiorno a tutti", "read":"Buongiorno a tutti"},
+  {"script":"Привет всем сегодня начинаем", "partial":"привет всем", "read":"Привет всем"},
+  {"script":"مرحبا بالجميع نبدأ اليوم", "partial":"مرحبا بالجميع", "read":"مرحبا بالجميع"},
+  {"script":"שלום לכולם מתחילים היום", "partial":"שלום לכולם", "read":"שלום לכולם"},
+  {"script":"नमस्ते दुनिया आज शुरू", "partial":"नमस्ते दुनिया", "read":"नमस्ते दुनिया"},
+  {"script":"你好世界今天开始", "partial":"你好世界", "read":"你好世界"},
+  {"script":"こんにちは世界です", "partial":"こんにちは", "read":"こんにちは"},
+  {"script":"สวัสดีทุกคน", "partial":"สวัสดี", "read":"สวัสดี"},
+  {"script":"안녕하세요 여러분 오늘 시작합니다", "partial":"안녕하세요 여러분", "read":"안녕하세요 여러분"},
+  {"script":"Café mañana empieza", "partial":"café mañana", "read":"Café mañana"},
+  {"script":"𠀀𠀁𠀂𠀃", "partial":"𠀀𠀁", "read":"𠀀𠀁"}
+]

@@ -1,0 +1,17 @@
+{
+  "KPlugin": {
+    "Id": "io.github.brianidavide.kalipso",
+    "Name": "Kalipso",
+    "Description": "A compact reader with live script editing and manual controls. Local voice following uses the separately installed companion and a Moonshine or Vosk language model. Development preview, not a store release.",
+    "Icon": "media-record",
+    "Version": "0.0.1",
+    "License": "AGPL-3.0-or-later",
+    "Authors": [
+      {
+        "Name": "Kalipso contributors"
+      }
+    ]
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}

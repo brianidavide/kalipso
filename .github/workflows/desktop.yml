@@ -1,0 +1,34 @@
+name: Desktop source checks
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - 'tests/multilingual-tracker.json'
+      - '.github/workflows/desktop.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'tests/multilingual-tracker.json'
+      - '.github/workflows/desktop.yml'
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shared tracker
+        run: |
+          node desktop/tracker.test.mjs
+      - name: Check laboratory scripts
+        run: |
+          python3 -m py_compile desktop/*.py tests/desktop/*.py
+          bash -n tests/desktop/audio-session.sh tests/desktop/desktop.sh
+      - name: Package desktop frontends
+        run: python3 desktop/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kalipso-desktop-packages
+          path: |
+            artifacts/packages/*.plasmoid
+            artifacts/packages/*.zip

@@ -1,0 +1,10 @@
+{
+  "uuid": "kalipso@brianidavide.github.io",
+  "name": "Kalipso",
+  "description": "A compact reader with live script editing and manual controls. Local voice following uses the separately installed companion and a Moonshine or Vosk language model. Development preview, not a store release.",
+  "shell-version": [
+    "48"
+  ],
+  "url": "https://github.com/brianidavide/kalipso",
+  "version": 1
+}

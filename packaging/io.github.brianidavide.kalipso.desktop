@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Kalipso
+Comment=A local voice-following teleprompter
+Comment[it]=Teleprompter locale che segue la voce
+Exec=kalipso
+Icon=io.github.brianidavide.kalipso
+Terminal=false
+Categories=AudioVideo;
+Keywords=teleprompter;speech;presentation;meeting;
+StartupNotify=true

@@ -1,0 +1,6 @@
+/* Generated from design/tokens.json. */
+.tp-button { font-size: 12pt; font-weight: 500; border-radius: 8px; padding: 8px 12px; background-color: #242933; color: #F7F8FC; border: 2px solid transparent; }
+.tp-button:hover, .tp-button:active { background-color: #363C48; }
+.tp-button:focus { border-color: #819AFF; }
+.tp-primary { min-width: 132px; background-color: #345CF5; }
+.tp-primary:hover, .tp-primary:active { background-color: #2447D3; }

@@ -1,0 +1,44 @@
+name: Native build and tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source distribution
+        run: python3 tools/check-repository.py
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build qt6-base-dev desktop-file-utils appstream dbus-x11 libglib2.0-bin
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Check ASR benchmark metrics
+        run: |
+          python3 -m unittest discover -s benchmarks/asr -p 'test_*.py'
+          python3 -m py_compile benchmarks/asr/*.py
+          cmake -S benchmarks/asr -B build-asr-check -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-asr-check --parallel 2
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate packaging/*.desktop
+          appstreamcli validate --no-net packaging/*.metainfo.xml
+      - name: Smoke test
+        run: QT_QPA_PLATFORM=offscreen build/kalipso --demo --prompter --quit-after 1000
+      - name: Verify design token generation
+        run: |
+          python3 tools/generate-design-tokens.py
+          git diff --exit-code -- design src/design_tokens.h site/assets/tokens.css site/assets/tokens.json site/assets/mark.svg site/assets/tracker.mjs site/assets/unicode-tokens.mjs desktop/gnome/tokens.js desktop/gnome/stylesheet.css desktop/plasma/contents/ui/Tokens.js packaging/io.github.brianidavide.kalipso.svg
+      - name: Install to staging
+        run: DESTDIR="$PWD/artifacts/stage" cmake --install build --prefix /usr
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-development-build
+          path: artifacts/stage

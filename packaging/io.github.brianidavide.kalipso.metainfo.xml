@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.brianidavide.kalipso</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+  <name>Kalipso</name>
+  <summary>A local voice-following teleprompter</summary>
+  <developer id="io.github.brianidavide"><name>Davide Briani and contributors</name></developer>
+  <description>
+    <p>Prepare an editable script and display a compact reading window near your webcam. Optional local speech recognition follows your words.</p>
+    <p>Transcribe meeting audio locally and review a question before asking a compatible local or remote language model for a draft. Edit and approve the answer before appending it to your script.</p>
+    <p>This is a development preview. Speech requires a separately installed Vosk library and model. Capture exclusion requires KDE configuration and is subject to known compositor limitations.</p>
+  </description>
+  <launchable type="desktop-id">io.github.brianidavide.kalipso.desktop</launchable>
+  <url type="homepage">https://brianidavide.github.io/kalipso/</url>
+  <url type="bugtracker">https://github.com/brianidavide/kalipso/issues</url>
+  <url type="vcs-browser">https://github.com/brianidavide/kalipso</url>
+  <content_rating type="oars-1.1"/>
+  <releases><release version="0.1.0" date="2026-10-26" type="development"><description><p>Development version with editable prompting and local speech recognition.</p></description></release></releases>
+</component>
