@@ -1,15 +1,9 @@
 name: Desktop source checks
 on:
   push:
-    paths:
-      - 'desktop/**'
-      - 'tests/multilingual-tracker.json'
-      - '.github/workflows/desktop.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'desktop/**'
-      - 'tests/multilingual-tracker.json'
-      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
