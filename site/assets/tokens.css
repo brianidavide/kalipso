@@ -12,7 +12,7 @@
   --color-brand-text: #17191F;
   --color-overlay: #17191F;
   --color-overlay-text: #F7F8FC;
-  --color-overlay-muted: #838B9B;
+  --color-overlay-muted: #A7AFBF;
   --color-overlay-line: #363C48;
   --color-overlay-surface: #242933;
   --color-reading: #C8D4FF;
@@ -22,8 +22,12 @@
   --color-warning-soft: #FFF1D5;
   --color-error: #B43C37;
   --color-error-soft: #FDEBE9;
-  --color-focus: #819AFF;
+  --color-focus: #17191F;
   --color-scrim: #10131C99;
+  --color-control-border: #747C8B;
+  --color-overlay-border: #8F98A9;
+  --color-overlay-focus: #F7F8FC;
+  --color-action-text: #FFFFFF;
   --font-body: 'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'SFMono-Regular', 'DejaVu Sans Mono', monospace;
@@ -94,4 +98,31 @@
   --native-control-height: 36;
   --native-editor-height: 180;
   --native-primary-width: 160;
+  --accessibility-text-contrast: 4.5;
+  --accessibility-control-contrast: 3;
+  --accessibility-minimum-target: 24;
+  --accessibility-palette-hold-ms: 2500;
+  --accessibility-sample-interval-ms: 2000;
+}
+
+.reader[data-theme="light"] {
+  --color-overlay: #F7F8FA;
+  --color-overlay-text: #17191F;
+  --color-overlay-muted: #626875;
+  --color-overlay-surface: #FFFFFF;
+  --color-overlay-line: #EAF0FF;
+  --color-overlay-border: #747C8B;
+  --color-focus: #17191F;
+  --color-reading: #2447D3;
+}
+
+.reader[data-theme="dark"] {
+  --color-overlay: #17191F;
+  --color-overlay-text: #F7F8FC;
+  --color-overlay-muted: #A7AFBF;
+  --color-overlay-surface: #242933;
+  --color-overlay-line: #363C48;
+  --color-overlay-border: #8F98A9;
+  --color-focus: #F7F8FC;
+  --color-reading: #C8D4FF;
 }

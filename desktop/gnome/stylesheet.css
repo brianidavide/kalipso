@@ -1,6 +1,16 @@
 /* Generated from design/tokens.json. */
-.tp-button { font-size: 12pt; font-weight: 500; border-radius: 8px; padding: 8px 12px; background-color: #242933; color: #F7F8FC; border: 2px solid transparent; }
-.tp-button:hover, .tp-button:active { background-color: #363C48; }
-.tp-button:focus { border-color: #819AFF; }
-.tp-primary { min-width: 132px; background-color: #345CF5; }
-.tp-primary:hover, .tp-primary:active { background-color: #2447D3; }
+.tp-light .tp-button { font-size: 12pt; font-weight: 500; border-radius: 8px; padding: 8px 12px; min-height: 24px; background-color: #FFFFFF; color: #17191F; border: 2px solid #747C8B; }
+.tp-light .tp-button:hover, .tp-light .tp-button:active { background-color: #EAF0FF; }
+.tp-light .tp-button:focus { border-color: #17191F; }
+.tp-light StScrollBar { min-width: 24px; background-color: #F7F8FA; }
+.tp-light StScrollBar StButton#vhandle, .tp-light StScrollBar StButton#hhandle { background-color: #747C8B; min-width:24px; min-height:24px; }
+.tp-light .tp-primary { min-width: 132px; background-color: #345CF5; color: #FFFFFF; }
+.tp-light .tp-primary:hover, .tp-light .tp-primary:active { background-color: #2447D3; }
+
+.tp-dark .tp-button { font-size: 12pt; font-weight: 500; border-radius: 8px; padding: 8px 12px; min-height: 24px; background-color: #242933; color: #F7F8FC; border: 2px solid #8F98A9; }
+.tp-dark .tp-button:hover, .tp-dark .tp-button:active { background-color: #363C48; }
+.tp-dark .tp-button:focus { border-color: #F7F8FC; }
+.tp-dark StScrollBar { min-width: 24px; background-color: #17191F; }
+.tp-dark StScrollBar StButton#vhandle, .tp-dark StScrollBar StButton#hhandle { background-color: #8F98A9; min-width:24px; min-height:24px; }
+.tp-dark .tp-primary { min-width: 132px; background-color: #345CF5; color: #FFFFFF; }
+.tp-dark .tp-primary:hover, .tp-dark .tp-primary:active { background-color: #2447D3; }

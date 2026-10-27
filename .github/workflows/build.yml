@@ -1,7 +1,7 @@
 name: Native build and tests
 on:
   push:
-    branches: [main, feature/system-speech]
+    branches: [main, feature/**]
   pull_request:
 permissions:
   contents: read

@@ -14,10 +14,10 @@ assert (base / 'unicode-tokens.mjs').read_bytes() == (base / 'plasma/contents/ui
 packages = {
     'kalipso-plasma.plasmoid': [(base / 'plasma' / name, name) for name in [
         'metadata.json', 'contents/ui/main.qml', 'contents/ui/LocalEngine.qml', 'contents/ui/Tokens.js',
-        'contents/ui/tracker.mjs', 'contents/ui/unicode-tokens.mjs']],
+        'contents/ui/tracker.mjs', 'contents/ui/unicode-tokens.mjs', 'contents/ui/contrast.mjs']],
     'kalipso-gnome.zip': [(base / src, dst) for src, dst in [
         ('gnome/metadata.json', 'metadata.json'), ('gnome/extension.js', 'extension.js'),
-        ('tracker.mjs', 'tracker.mjs'), ('unicode-tokens.mjs', 'unicode-tokens.mjs'), ('gnome/local-engine.js', 'local-engine.js'), ('gnome/tokens.js', 'tokens.js'), ('gnome/stylesheet.css', 'stylesheet.css')]],
+        ('tracker.mjs', 'tracker.mjs'), ('contrast.mjs', 'contrast.mjs'), ('unicode-tokens.mjs', 'unicode-tokens.mjs'), ('gnome/local-engine.js', 'local-engine.js'), ('gnome/tokens.js', 'tokens.js'), ('gnome/stylesheet.css', 'stylesheet.css')]],
 }
 for name, files in packages.items():
     with zipfile.ZipFile(out / name, 'w', zipfile.ZIP_DEFLATED) as archive:

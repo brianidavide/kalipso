@@ -12,7 +12,7 @@ export const tokens = {
     "brandText": "#17191F",
     "overlay": "#17191F",
     "overlayText": "#F7F8FC",
-    "overlayMuted": "#838B9B",
+    "overlayMuted": "#A7AFBF",
     "overlayLine": "#363C48",
     "overlaySurface": "#242933",
     "reading": "#C8D4FF",
@@ -22,8 +22,12 @@ export const tokens = {
     "warningSoft": "#FFF1D5",
     "error": "#B43C37",
     "errorSoft": "#FDEBE9",
-    "focus": "#819AFF",
-    "scrim": "#10131C99"
+    "focus": "#17191F",
+    "scrim": "#10131C99",
+    "controlBorder": "#747C8B",
+    "overlayBorder": "#8F98A9",
+    "overlayFocus": "#F7F8FC",
+    "actionText": "#FFFFFF"
   },
   "font": {
     "body": "'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif",
@@ -110,5 +114,44 @@ export const tokens = {
     "controlHeight": 36,
     "editorHeight": 180,
     "primaryWidth": 160
+  },
+  "palette": {
+    "light": {
+      "background": "#F7F8FA",
+      "text": "#17191F",
+      "muted": "#626875",
+      "surface": "#FFFFFF",
+      "hover": "#EAF0FF",
+      "border": "#747C8B",
+      "focus": "#17191F",
+      "accent": "#2447D3",
+      "action": "#345CF5",
+      "actionHover": "#2447D3",
+      "actionText": "#FFFFFF",
+      "selection": "#2447D3",
+      "selectionText": "#FFFFFF"
+    },
+    "dark": {
+      "background": "#17191F",
+      "text": "#F7F8FC",
+      "muted": "#A7AFBF",
+      "surface": "#242933",
+      "hover": "#363C48",
+      "border": "#8F98A9",
+      "focus": "#F7F8FC",
+      "accent": "#C8D4FF",
+      "action": "#345CF5",
+      "actionHover": "#2447D3",
+      "actionText": "#FFFFFF",
+      "selection": "#C8D4FF",
+      "selectionText": "#17191F"
+    }
+  },
+  "accessibility": {
+    "textContrast": 4.5,
+    "controlContrast": 3,
+    "minimumTarget": 24,
+    "paletteHoldMs": 2500,
+    "sampleIntervalMs": 2000
   }
 };

@@ -24,6 +24,7 @@
 #include <QWindow>
 #include <QRegularExpression>
 #include <QJsonArray>
+#include <QTimer>
 
 namespace {
 QLabel *note(const QString &text) {
@@ -31,7 +32,7 @@ QLabel *note(const QString &text) {
 }
 QWidget *field(const QString &label,QWidget *input) {
     auto *box=new QWidget; auto *layout=new QVBoxLayout(box); layout->setContentsMargins(0,0,0,0);
-    auto *title=new QLabel(label); title->setBuddy(input); layout->addWidget(title); layout->addWidget(input); return box;
+    auto *title=new QLabel(label); title->setBuddy(input); input->setAccessibleName(label); layout->addWidget(title); layout->addWidget(input); return box;
 }
 void replaceText(QPlainTextEdit *editor, const QString &value) {
     const auto old=editor->toPlainText();
@@ -46,22 +47,30 @@ void replaceText(QPlainTextEdit *editor, const QString &value) {
 }
 Prompter::Prompter(QWidget *parent) : QWidget(parent,Qt::Window|Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint) {
     setWindowTitle("Kalipso — reading"); setObjectName("readingWindow");
-    resize(680,250); setMinimumSize(360,180);
+    resize(680,250); setMinimumSize(320,180);
     auto *layout=new QVBoxLayout(this); layout->setContentsMargins(16,10,16,12);
-    auto *bar=new QHBoxLayout;
-    auto *title=new QLabel(tr("READ AT YOUR PACE"));
-    auto *previous=new QPushButton(tr("Previous")); auto *next=new QPushButton(tr("Next"));
-    auto *edit=new QPushButton(tr("Edit")); edit->setCheckable(true);
-    auto *hide=new QPushButton(tr("Hide"));
-    bar->addWidget(title); bar->addStretch(); bar->addWidget(previous); bar->addWidget(next); bar->addWidget(edit); bar->addWidget(hide);
+    auto *bar=new FlowLayout;
+    auto *title=new QLabel(tr("READ AT YOUR PACE"));title->setWordWrap(true);
+    auto *previous=new AccessibleButton(tr("Previous")); auto *next=new AccessibleButton(tr("Next"));
+    auto *edit=new AccessibleButton(tr("Edit")); edit->setCheckable(true);
+    auto *hide=new AccessibleButton(tr("Hide"));
+    bar->addWidget(title);  bar->addWidget(previous); bar->addWidget(next); bar->addWidget(edit); bar->addWidget(hide);
     layout->addLayout(bar);
     text=new QPlainTextEdit; text->setReadOnly(true); text->setFrameStyle(QFrame::NoFrame);
-    text->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff); text->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    text->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded); text->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     text->setAccessibleName(tr("Kalipso script")); text->setCenterOnScroll(true);
     layout->addWidget(text);
     auto *privacy=note(tr("Capture exclusion is not verified. Check what the other participant sees."));
     layout->addWidget(privacy);
-    setStyleSheet(QString("QWidget#readingWindow { background:%1; color:%2; } QPlainTextEdit { background:%1; color:%2; selection-background-color:%3; } QLabel { color:%2; } QPushButton { padding:4px 8px; }").arg(Design::overlay,Design::overlayText,Design::action));
+    backdrop_=new Backdrop(this);
+    connect(backdrop_,&Backdrop::unavailable,this,&Prompter::colorStatus);
+    connect(backdrop_,&Backdrop::colorChanged,this,[this](const QColor &sample){
+        const auto luminance=Accessibility::luminance(sample);const QString next=luminance>0.35?"dark":luminance<0.15?"light":resolvedTheme_;
+        if(next==resolvedTheme_||(paletteAge_.isValid()&&paletteAge_.elapsed()<2500))return;
+        resolvedTheme_=next;paletteAge_.restart();colors_=next=="light"?Design::light:Design::dark;
+        Accessibility::apply(this,colors_);text->setPalette(Accessibility::palette(colors_));highlight(position_,length_);
+    });
+    setReaderTheme("dark");
     setTextSize(28);
     connect(previous,&QPushButton::clicked,this,[this]{emit step(-1);});
     connect(next,&QPushButton::clicked,this,[this]{emit step(1);});
@@ -70,6 +79,13 @@ Prompter::Prompter(QWidget *parent) : QWidget(parent,Qt::Window|Qt::FramelessWin
     auto *escape=new QShortcut(QKeySequence(Qt::Key_Escape),this); connect(escape,&QShortcut::activated,this,&QWidget::hide);
     auto *forward=new QShortcut(QKeySequence("Ctrl+Right"),this); connect(forward,&QShortcut::activated,this,[this]{emit step(1);});
     auto *back=new QShortcut(QKeySequence("Ctrl+Left"),this); connect(back,&QShortcut::activated,this,[this]{emit step(-1);});
+}
+void Prompter::setReaderTheme(const QString &theme){
+    appearance_=theme;resolvedTheme_=theme=="light"?"light":"dark";paletteAge_.invalidate();
+    backdrop_->setEnabled(theme=="auto");
+    colors_=resolvedTheme_=="light"?Design::light:Design::dark;
+    Accessibility::apply(this,colors_);text->setPalette(Accessibility::palette(colors_));
+    highlight(position_,length_);
 }
 void Prompter::setTextSize(int points) { auto font=text->font(); font.setPointSize(points); text->setFont(font); }
 void Prompter::showAtCamera(QScreen *screen) {
@@ -83,51 +99,54 @@ void Prompter::showAtCamera(QScreen *screen) {
     show(); raise();
 }
 void Prompter::highlight(int position,int length) {
+    position_=position;length_=length;
     QTextCursor cursor(text->document()); cursor.setPosition(std::min(position,text->document()->characterCount()-1));
     cursor.movePosition(QTextCursor::NextCharacter,QTextCursor::KeepAnchor,length);
     QTextEdit::ExtraSelection selection; selection.cursor=cursor;
-    selection.format.setBackground(QColor(Design::reading)); selection.format.setForeground(QColor(Design::ink));
-    text->setExtraSelections({selection});
+    selection.format.setBackground(QColor(colors_.selection)); selection.format.setForeground(QColor(colors_.selectionText));
+    selection.format.setFontUnderline(true);
+    QTextEdit::ExtraSelection read;read.cursor=QTextCursor(text->document());read.cursor.setPosition(0);read.cursor.setPosition(std::max(0,position),QTextCursor::KeepAnchor);read.format.setForeground(QColor(colors_.muted));
+    text->setExtraSelections({read,selection});
     if (!editing_) { text->setTextCursor(cursor); text->centerCursor(); }
 }
 MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new Prompter) {
-    setWindowTitle(tr("Kalipso")); resize(1100,760); setMinimumSize(700,540);
-    setStyleSheet("QPushButton { padding:7px 12px; } QTabBar::tab { padding:8px 16px; } QPlainTextEdit { padding:8px; } QLineEdit { padding:6px; } QGroupBox { margin-top:12px; padding-top:12px; }");
+    setWindowTitle(tr("Kalipso")); resize(1100,760); setMinimumSize(320,240);
+    Accessibility::apply(this,Design::light);
     auto *central=new QWidget; auto *layout=new QVBoxLayout(central); layout->setContentsMargins(24,20,24,20); layout->setSpacing(14);
-    auto *heading=new QLabel(tr("A little closer to the conversation.")); auto font=heading->font(); font.setPointSize(20); font.setBold(true); heading->setFont(font);
+    auto *heading=new QLabel(tr("A little closer to the conversation."));heading->setWordWrap(true); auto font=heading->font(); font.setPointSize(20); font.setBold(true); heading->setFont(font);
     layout->addWidget(heading);
     layout->addWidget(note(tr("Keep your script near the camera. Review every question and answer before it joins your words.")));
-    auto *bar=new QHBoxLayout;
-    auto *open=new QPushButton(tr("Open script…")); auto *save=new QPushButton(tr("Save script…"));
-    auto *show=new QPushButton(tr("Show prompter")); show->setDefault(true);
-    auto *readHere=new QPushButton(tr("Read from cursor"));
-    listen_=new QPushButton(tr("Start listening"));
-    bar->addWidget(open); bar->addWidget(save); bar->addWidget(readHere); bar->addStretch(); bar->addWidget(listen_); bar->addWidget(show); layout->addLayout(bar);
-    audioStatus_=note(tr("Listening is off. No audio is being captured.")); layout->addWidget(audioStatus_);
+    auto *bar=new FlowLayout;
+    auto *open=new AccessibleButton(tr("Open script…")); auto *save=new AccessibleButton(tr("Save script…"));
+    auto *show=new AccessibleButton(tr("Show prompter")); show->setDefault(true);
+    auto *readHere=new AccessibleButton(tr("Read from cursor"));
+    listen_=new AccessibleButton(tr("Start listening"));
+    bar->addWidget(open); bar->addWidget(save); bar->addWidget(readHere);  bar->addWidget(listen_); bar->addWidget(show); layout->addLayout(bar);
+    audioStatus_=new StatusLabel(tr("Listening is off. No audio is being captured.")); layout->addWidget(audioStatus_);
     auto *tabs=new QTabWidget;
     script_=new QPlainTextEdit; script_->setObjectName("scriptEditor"); script_->setPlaceholderText(tr("Paste or write the script you want to read…")); script_->setAccessibleName(tr("Editable script"));
     auto editorFont=script_->font(); editorFont.setPointSize(14); script_->setFont(editorFont);
     tabs->addTab(script_,tr("Script"));
     auto *conversation=new QWidget; auto *conversationLayout=new QVBoxLayout(conversation);
-    auto *splitter=new QSplitter;
+    auto *splitter=new QSplitter(Qt::Vertical);
     auto *left=new QWidget; auto *leftLayout=new QVBoxLayout(left);
     transcript_=new QPlainTextEdit; transcript_->setReadOnly(true); transcript_->document()->setMaximumBlockCount(150);
     transcript_->setPlaceholderText(tr("Meeting audio appears here after you enable it in Settings. You can also write a question directly."));
     leftLayout->addWidget(field(tr("Meeting transcript · kept in memory"),transcript_));
     liveTranscript_=note(QString{}); leftLayout->addWidget(liveTranscript_);
-    auto *use=new QPushButton(tr("Use selected text as question")); auto *clear=new QPushButton(tr("Clear conversation"));
+    auto *use=new AccessibleButton(tr("Use selected text as question")); auto *clear=new AccessibleButton(tr("Clear conversation"));
     leftLayout->addWidget(use); leftLayout->addWidget(clear);
     auto *right=new QWidget; auto *rightLayout=new QVBoxLayout(right);
-    question_=new QPlainTextEdit; question_->setPlaceholderText(tr("What is the question you want to answer?")); question_->setMaximumHeight(120);
+    question_=new QPlainTextEdit; question_->setPlaceholderText(tr("What is the question you want to answer?")); question_->setMinimumHeight(100);
     rightLayout->addWidget(field(tr("1 · Check the question"),question_));
-    generate_=new QPushButton(tr("Approve question and generate")); rightLayout->addWidget(generate_);
+    generate_=new AccessibleButton(tr("Approve question and generate")); rightLayout->addWidget(generate_);
     answer_=new QPlainTextEdit; answer_->setPlaceholderText(tr("The proposed answer will appear here. Edit it before inserting."));
     rightLayout->addWidget(field(tr("2 · Review the answer"),answer_));
-    insert_=new QPushButton(tr("Approve answer and append to script")); rightLayout->addWidget(insert_);
-    reviewStatus_=note(tr("Nothing is sent until you approve the question.")); rightLayout->addWidget(reviewStatus_);
+    insert_=new AccessibleButton(tr("Approve answer and append to script")); rightLayout->addWidget(insert_);
+    reviewStatus_=new StatusLabel(tr("Nothing is sent until you approve the question.")); rightLayout->addWidget(reviewStatus_);
     splitter->addWidget(left); splitter->addWidget(right); splitter->setSizes({450,500}); conversationLayout->addWidget(splitter);
     tabs->addTab(conversation,tr("Conversation")); tabs->addTab(makeSettings(),tr("Settings")); layout->addWidget(tabs,1);
-    position_=note(tr("Ready to write.")); position_->setObjectName("readingPosition"); readHere->setObjectName("readHere"); layout->addWidget(position_); setCentralWidget(central);
+    position_=note(tr("Ready to write.")); position_->setObjectName("readingPosition"); readHere->setObjectName("readHere"); layout->addWidget(position_); auto *pageScroll=new QScrollArea;pageScroll->setWidgetResizable(true);pageScroll->setWidget(central);pageScroll->setFrameShape(QFrame::NoFrame);setCentralWidget(pageScroll);
     connect(open,&QPushButton::clicked,this,&MainWindow::loadScript);
     connect(save,&QPushButton::clicked,this,[this]{ saveScript(); });
     connect(show,&QPushButton::clicked,this,&MainWindow::showPrompter);
@@ -180,7 +199,7 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
         cursor.beginEditBlock(); cursor.insertText((script_->toPlainText().isEmpty()?QString{}:QStringLiteral("\n\n"))+answer); cursor.endEditBlock();
         reviewStatus_->setText(tr("Approved answer appended. You can still edit it in Script."));
     });
-    connect(&speech_,&SpeechService::status,audioStatus_,&QLabel::setText);
+    connect(&speech_,&SpeechService::status,audioStatus_,&StatusLabel::setText);
     connect(&speech_,&SpeechService::stopped,this,[this]{listen_->setText(tr("Start listening"));backend_->setEnabled(true);language_->setEnabled(true);checkSystem_->setEnabled(true);});
     connect(&speech_,&SpeechService::transcript,this,[this](int channel,const QString &text,bool final) {
         if(channel==0) {
@@ -208,14 +227,29 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
 QWidget *MainWindow::makeSettings() {
     QSettings settings;
     auto *contents=new QWidget; auto *layout=new QVBoxLayout(contents);
-    auto *reading=new QGroupBox(tr("Reading")); auto *readingForm=new QFormLayout(reading);
+    auto *reading=new QGroupBox(tr("Reading")); auto *readingForm=new QFormLayout(reading);readingForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
     screen_=new QComboBox; for(auto *screen:QGuiApplication::screens()) screen_->addItem(screen->name());
     auto *size=new QSpinBox; size->setRange(18,64); size->setValue(settings.value("reading/fontSize",28).toInt());
     prompter_->setTextSize(size->value());
     readingForm->addRow(tr("Monitor"),screen_); readingForm->addRow(tr("Text size"),size);
     connect(size,qOverload<int>(&QSpinBox::valueChanged),this,[this](int value){prompter_->setTextSize(value);QSettings{}.setValue("reading/fontSize",value);});
+    auto *appearance=new QComboBox;appearance->setObjectName("applicationTheme");appearance->addItem(tr("Light"),"light");appearance->addItem(tr("Dark"),"dark");
+    const auto savedTheme=settings.value("appearance/theme","light").toString();appearance->setCurrentIndex(savedTheme=="dark"?1:0);Accessibility::apply(this,savedTheme=="dark"?Design::dark:Design::light);
+    connect(appearance,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,appearance]{const auto name=appearance->currentData().toString();Accessibility::apply(this,name=="dark"?Design::dark:Design::light);QSettings{}.setValue("appearance/theme",name);});
+    readingForm->addRow(tr("Application appearance"),appearance);
+    auto *readerTheme=new QComboBox;readerTheme->setObjectName("readerTheme");readerTheme->addItem(tr("Dark"),"dark");readerTheme->addItem(tr("Light"),"light");readerTheme->addItem(tr("Automatic screen colors"),"auto");
+    const auto savedReader=settings.value("reading/theme","dark").toString();readerTheme->setCurrentIndex(std::max(0,readerTheme->findData(savedReader)));prompter_->setReaderTheme(savedReader);
+    connect(readerTheme,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,readerTheme]{const auto theme=readerTheme->currentData().toString();prompter_->setReaderTheme(theme);QSettings{}.setValue("reading/theme",theme);});readingForm->addRow(tr("Reader appearance"),readerTheme);
+    auto *colorSource=new StatusLabel(prompter_->colorSource());readingForm->addRow(colorSource);connect(prompter_,&Prompter::colorStatus,colorSource,&StatusLabel::setText);
+    auto *uiScale=new QComboBox;uiScale->setObjectName("interfaceTextSize");uiScale->addItem("100%",1.0);uiScale->addItem("150%",1.5);uiScale->addItem("200%",2.0);
+    readingForm->addRow(tr("Interface text size"),uiScale);
+    connect(uiScale,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,uiScale]{
+        const auto widgets=findChildren<QWidget*>();for(auto *widget:widgets)if(!widget->property("baseAccessibleFont").isValid())widget->setProperty("baseAccessibleFont",widget->font());
+        const double scale=uiScale->currentData().toDouble();for(auto *widget:widgets){auto font=widget->property("baseAccessibleFont").value<QFont>();font.setPointSizeF(std::max(8.0,font.pointSizeF())*scale);widget->setFont(font);}QSettings{}.setValue("appearance/textScale",scale);
+    });
+    const double savedScale=settings.value("appearance/textScale",1.0).toDouble();QTimer::singleShot(0,this,[uiScale,savedScale]{const int index=uiScale->findData(savedScale);if(index>=0)uiScale->setCurrentIndex(index);});
     layout->addWidget(reading);
-    auto *audio=new QGroupBox(tr("Local speech recognition")); auto *audioForm=new QFormLayout(audio);
+    auto *audio=new QGroupBox(tr("Local speech recognition")); auto *audioForm=new QFormLayout(audio);audioForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
     backend_=new QComboBox;backend_->setObjectName("speechBackend");
     if(SystemSpeechClient::platformSupported())backend_->addItem(tr("System · on-device"),"system");
     backend_->addItem("Moonshine","moonshine");backend_->addItem("Vosk","vosk");
@@ -230,11 +264,11 @@ QWidget *MainWindow::makeSettings() {
     audioForm->addRow(tr("Speech engine"),backend_);audioForm->addRow(tr("Language"),language_);
     audioForm->addRow(tr("Native library"),library_);audioForm->addRow(tr("Model folder"),modelPath_);
     audioForm->addRow(tr("Moonshine model size"),architecture_);
-    auto *browse=new QPushButton(tr("Choose model folder…"));audioForm->addRow(QString{},browse);
+    auto *browse=new AccessibleButton(tr("Choose model folder…"));audioForm->addRow(QString{},browse);
     connect(browse,&QPushButton::clicked,this,[this]{auto path=QFileDialog::getExistingDirectory(this,tr("Choose speech model"));if(!path.isEmpty())modelPath_->setText(path);});
-    auto *systemActions=new QWidget;auto *systemLayout=new QHBoxLayout(systemActions);systemLayout->setContentsMargins(0,0,0,0);
-    checkSystem_=new QPushButton(tr("Check availability"));installSystem_=new QPushButton(tr("Install system language"));installSystem_->setEnabled(false);
-    systemLayout->addWidget(checkSystem_);systemLayout->addWidget(installSystem_);systemLayout->addStretch();
+    auto *systemActions=new QWidget;auto *systemLayout=new FlowLayout(systemActions);systemLayout->setContentsMargins(0,0,0,0);
+    checkSystem_=new AccessibleButton(tr("Check availability"));installSystem_=new AccessibleButton(tr("Install system language"));installSystem_->setEnabled(false);
+    systemLayout->addWidget(checkSystem_);systemLayout->addWidget(installSystem_);
 #ifndef Q_OS_MACOS
     installSystem_->hide();
 #endif
@@ -272,7 +306,7 @@ QWidget *MainWindow::makeSettings() {
     connect(&systemCheck_,&SystemSpeechClient::completed,this,[this]{checkSystem_->setEnabled(true);if(installingSystem_){installingSystem_=false;systemCheck_.check(speechLanguage());}});
     audioForm->addRow(note(tr("Recognition stays on this device. Moonshine and Vosk require a matching native library and extracted model. System speech uses the default microphone; language availability depends on the operating system. Changing engines never switches to a cloud service.")));
     layout->addWidget(audio);
-    auto *ai=new QGroupBox(tr("Answer generation")); auto *aiForm=new QFormLayout(ai);
+    auto *ai=new QGroupBox(tr("Answer generation")); auto *aiForm=new QFormLayout(ai);aiForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
     endpoint_=new QLineEdit(settings.value("llm/endpoint","http://127.0.0.1:8080/v1/chat/completions").toString());
     model_=new QLineEdit(settings.value("llm/model").toString());
     apiKey_=new QLineEdit; apiKey_->setEchoMode(QLineEdit::Password); apiKey_->setPlaceholderText(tr("Kept in memory for this session only"));
@@ -280,6 +314,10 @@ QWidget *MainWindow::makeSettings() {
     aiForm->addRow(note(tr("Use a compatible local server or an HTTPS provider. Approving a question sends that question and up to 8,000 recent transcript characters to this endpoint. API keys and transcripts are never saved in settings.")));
     layout->addWidget(ai);
     layout->addWidget(note(tr("Screen sharing: install the optional KWin companion or configure a window rule to exclude this app from capture. Exclusion is not verified by the app and KDE has known thumbnail/Overview limitations. Test from a second participant before relying on it.")));
+    for(auto *form:contents->findChildren<QFormLayout*>())for(int row=0;row<form->rowCount();++row){
+        auto *labelItem=form->itemAt(row,QFormLayout::LabelRole);auto *fieldItem=form->itemAt(row,QFormLayout::FieldRole);
+        if(labelItem&&fieldItem)if(auto *label=qobject_cast<QLabel*>(labelItem->widget()))if(auto *input=fieldItem->widget()){label->setBuddy(input);input->setAccessibleName(label->text());}
+    }
     layout->addStretch();
     auto *scroll=new QScrollArea; scroll->setWidgetResizable(true); scroll->setFrameShape(QFrame::NoFrame); scroll->setWidget(contents); return scroll;
 }

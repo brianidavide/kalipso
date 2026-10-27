@@ -1,7 +1,7 @@
 name: Desktop source checks
 on:
   push:
-    branches: [main]
+    branches: [main, feature/**]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -14,6 +14,7 @@ jobs:
       - name: Check shared tracker
         run: |
           node desktop/tracker.test.mjs
+          node tests/contrast.test.mjs
       - name: Check laboratory scripts
         run: |
           python3 -m py_compile desktop/*.py tests/desktop/*.py

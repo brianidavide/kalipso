@@ -3,6 +3,11 @@
 #include <QStandardPaths>
 #include <QtTest>
 #include <QSettings>
+#include <QAccessible>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QTabWidget>
+#include <QDir>
 
 class UiTests : public QObject {
     Q_OBJECT
@@ -37,6 +42,53 @@ private slots:
             QCOMPARE(reopened.findChild<QLineEdit*>("speechModel")->text(),QString("vosk-model"));
         }
         QSettings{}.clear();
+    }
+    void accessiblePalettesKeepReadTextAndSelectionLegible(){
+        for(const auto &p:{Design::light,Design::dark}){
+            const auto colors=Accessibility::palette(p);
+            for(auto group:{QPalette::Active,QPalette::Inactive,QPalette::Disabled}){
+                QVERIFY(Accessibility::contrast(colors.color(group,QPalette::Text),colors.color(group,QPalette::Base))>=4.5);
+                QVERIFY(Accessibility::contrast(colors.color(group,QPalette::PlaceholderText),colors.color(group,QPalette::Base))>=4.5);
+                QVERIFY(Accessibility::contrast(colors.color(group,QPalette::HighlightedText),colors.color(group,QPalette::Highlight))>=4.5);
+            }
+            Prompter reader;reader.setReaderTheme(QString(p.background)==Design::light.background?"light":"dark");reader.text->setPlainText("Read current next");reader.highlight(5,7);
+            const auto selections=reader.text->extraSelections();QCOMPARE(selections.size(),2);
+            QVERIFY(Accessibility::contrast(selections[0].format.foreground().color(),QColor(p.surface))>=4.5);
+            QVERIFY(Accessibility::contrast(selections[1].format.foreground().color(),selections[1].format.background().color())>=4.5);
+        }
+        QVERIFY(Accessibility::contrast(QColor("#777777"),Qt::white)<4.5);
+    }
+    void statusHasAnAccessibleRoleAndName(){
+        StatusLabel status("Paused");auto *interface=QAccessible::queryAccessibleInterface(&status);QVERIFY(interface);
+        QCOMPARE(interface->role(),QAccessible::StatusBar);status.setText("Listening");QCOMPARE(interface->text(QAccessible::Name),QString("Listening"));
+    }
+    void settingsFieldsHavePersistentAccessibleNames(){
+        MainWindow window;
+        for(const auto *name:{"speechBackend","speechLanguage","speechLibrary","speechModel","applicationTheme","readerTheme"}){
+            auto *field=window.findChild<QWidget*>(name);QVERIFY(field);auto *interface=QAccessible::queryAccessibleInterface(field);QVERIFY(interface);QVERIFY2(!interface->text(QAccessible::Name).isEmpty(),name);
+        }
+    }
+    void toolbarWrapsAtNarrowWidths(){
+        QWidget host;auto *flow=new FlowLayout(&host);
+        for(int i=0;i<4;++i)flow->addWidget(new AccessibleButton("Readable control"));
+        host.resize(320,300);host.show();QTest::qWait(20);
+        QVERIFY(flow->heightForWidth(320)>flow->heightForWidth(1000));
+        for(int i=0;i<flow->count();++i){const auto rect=flow->itemAt(i)->geometry();QVERIFY(rect.left()>=0);QVERIFY(rect.right()<320);QVERIFY(rect.height()>=24);}
+    }
+    void interfaceTextCanGrowWithoutHorizontalScrolling(){
+        QSettings{}.clear();MainWindow window;window.resize(640,760);window.show();
+        auto *scale=window.findChild<QComboBox*>("interfaceTextSize");QVERIFY(scale);scale->setCurrentIndex(2);
+        QTest::qWait(80);
+        auto *scroll=qobject_cast<QScrollArea*>(window.centralWidget());QVERIFY(scroll);
+        QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
+        auto *tabs=window.findChild<QTabWidget*>();QVERIFY(tabs);tabs->setCurrentIndex(2);QTest::qWait(80);
+        QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
+        if(const auto directory=qEnvironmentVariable("KALIPSO_A11Y_SHOTS");!directory.isEmpty()){
+            QDir{}.mkpath(directory);window.grab().save(directory+"/qt-settings-200.png");
+            scale->setCurrentIndex(0);window.resize(1100,760);QTest::qWait(80);window.grab().save(directory+"/qt-settings.png");
+            window.setDemoScript();window.showPrompter();window.prompter()->setReaderTheme("light");QTest::qWait(80);window.prompter()->grab().save(directory+"/qt-reader-light.png");
+            window.prompter()->setReaderTheme("dark");QTest::qWait(80);window.prompter()->grab().save(directory+"/qt-reader-dark.png");
+        }
     }
     void overlayEditsPreserveReadingPositionAndUndo() {
         MainWindow window;

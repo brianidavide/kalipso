@@ -2,6 +2,7 @@
 import Foundation
 import AVFoundation
 import Speech
+import ScreenCaptureKit
 import Darwin
 
 private let outputLock = NSLock()
@@ -60,10 +61,49 @@ struct SystemSpeech {
             guard #available(macOS 26.0, *) else {
                 throw SpeechFailure(message: "Apple system speech requires macOS 26 or later. Choose Moonshine or Vosk on older systems.")
             }
+            if CommandLine.arguments[1] == "--colors" { try await colors(first: CommandLine.arguments[2]); return }
             try await run(operation: CommandLine.arguments[1], language: CommandLine.arguments[2])
         } catch {
             send(["type": "error", "message": error.localizedDescription])
             exit(1)
+        }
+    }
+    @available(macOS 26.0, *)
+    static func colors(first: String) async throws {
+        var request: String? = first
+        while let line = request {
+            guard let data = line.data(using: .utf8), data.count < 1024,
+                  let area = try JSONSerialization.jsonObject(with: data) as? [String: Double],
+                  let x = area["x"], let y = area["y"], let width = area["width"], let height = area["height"],
+                  width > 0, height > 0, width < 20000, height < 20000 else {
+                throw SpeechFailure(message: "Invalid reader position.")
+            }
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let rect = CGRect(x: x, y: y, width: width, height: height)
+            guard let display = content.displays.first(where: { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) }) else {
+                throw SpeechFailure(message: "The reader's display is unavailable.")
+            }
+            let applications = content.applications.filter { $0.processID == getppid() || $0.processID == getpid() }
+            guard !applications.isEmpty else { throw SpeechFailure(message: "Cannot exclude Kalipso from screen color sampling.") }
+            let filter = SCContentFilter(display: display, excludingApplications: applications, exceptingWindows: [])
+            let config = SCStreamConfiguration()
+            config.sourceRect = rect.intersection(display.frame).offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
+            config.width = 32; config.height = 16; config.showsCursor = false
+            let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            var pixels = [UInt8](repeating: 0, count: 32 * 16 * 4)
+            guard let space = CGColorSpace(name: CGColorSpace.sRGB) else { throw SpeechFailure(message: "No sRGB color space.") }
+            let value: String? = pixels.withUnsafeMutableBytes { bytes in
+                guard let context = CGContext(data: bytes.baseAddress, width: 32, height: 16, bitsPerComponent: 8,
+                    bytesPerRow: 128, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue) else { return nil }
+                context.draw(image, in: CGRect(x: 0, y: 0, width: 32, height: 16))
+                let values = bytes.bindMemory(to: UInt8.self)
+                var red = 0, green = 0, blue = 0
+                for offset in stride(from: 0, to: values.count, by: 4) { red += Int(values[offset]); green += Int(values[offset + 1]); blue += Int(values[offset + 2]) }
+                return String(format: "#%02x%02x%02x", red / 512, green / 512, blue / 512)
+            }
+            guard let value else { throw SpeechFailure(message: "Cannot sample screen colors.") }
+            send(["type": "color", "color": value])
+            request = readLine()
         }
     }
     @available(macOS 26.0, *)

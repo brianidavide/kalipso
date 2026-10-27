@@ -16,11 +16,12 @@
  <p class="opening-copy">A quiet script beneath your camera.<br>Keep your place while you stay in the conversation.</p>
  <a class="button primary" href="#install">Set up the preview <span class="arrow" aria-hidden="true">↗</span></a>
  <div class="demo-context" id="try"><span class="camera-mark" aria-hidden="true"></span><span>Close to the camera. Out of your way.</span></div>
- <div class="reader" data-reader>
+ <div class="reader" data-reader data-theme="dark">
   <div class="reader-header"><span class="reader-name"><span class="focus-mark" aria-hidden="true"></span>Kalipso</span><button class="button on-dark" id="edit-toggle" aria-expanded="false" aria-controls="edit-panel">Edit script</button></div>
   <p class="reading-text" id="reading-text" dir="auto">A little preparation makes room for a better conversation. Take your time. Leave space for a pause.</p>
   <div class="reader-transport"><button class="button primary" id="next-word"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 9 7-9 7Z"/></svg>Next words</button><button class="button on-dark" id="previous-word">Previous</button><button class="button on-dark" id="reset-reading">Reset</button><output id="read-count" aria-label="Words read">0 / 27</output></div>
   <div class="reader-state"><span class="status-dot" aria-hidden="true"></span><span id="read-state" role="status">Manual demo · Microphone off</span></div>
+  <div class="reader-appearance"><label for="reader-appearance">Reader colors</label><select id="reader-appearance"><option value="auto">Automatic · page background</option><option value="dark">Dark</option><option value="light">Light</option></select></div>
   <div class="edit-panel" id="edit-panel" hidden><label for="script">SCRIPT</label><textarea id="script" rows="5" spellcheck="false" dir="auto">A little preparation makes room for a better conversation.
 
 Take your time. Leave space for a pause. Your next words will be here when you are ready.</textarea><p class="hint">Changes appear immediately. Text stays in this tab and resets on reload.</p></div>

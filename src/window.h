@@ -4,6 +4,9 @@
 #include "approval.h"
 #include "llm.h"
 #include "speech.h"
+#include "accessibility.h"
+#include "backdrop.h"
+#include <QElapsedTimer>
 #include <QMainWindow>
 #include <QPlainTextEdit>
 #include <QLineEdit>
@@ -20,10 +23,20 @@ public:
     void showAtCamera(QScreen *screen);
     void highlight(int position,int length);
     void setTextSize(int points);
+    void setReaderTheme(const QString &theme);
+    QString colorSource() const{return backdrop_->source();}
+signals:
+    void colorStatus(const QString &text);
+public:
 signals:
     void step(int direction);
 private:
     bool editing_ = false;
+    Design::Palette colors_=Design::dark;
+    Backdrop *backdrop_;
+    QString appearance_="dark",resolvedTheme_="dark";
+    QElapsedTimer paletteAge_;
+    int position_=0,length_=0;
 };
 
 class MainWindow : public QMainWindow {
@@ -63,7 +76,8 @@ private:
     QPushButton *checkSystem_, *installSystem_;
     QString profile_;
     QPushButton *listen_, *generate_, *insert_;
-    QLabel *audioStatus_, *reviewStatus_, *position_, *liveTranscript_;
+    StatusLabel *audioStatus_, *reviewStatus_;
+    QLabel *position_, *liveTranscript_;
     QString scriptPath_;
     quint64 request_ = 0;
     bool installingSystem_ = false;

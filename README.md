@@ -20,6 +20,8 @@ The widget and extension work manually without speech components. Voice followin
 
 Experimental standalone ports for macOS and Windows also provide selectable local system recognition. See [requirements and native build instructions](docs/system-speech.md); these are not store releases.
 
+[Accessibility settings and verification status](docs/accessibility.md) describe the WCAG 2.2 AA target, opaque contrast palettes and platform-specific automatic color sources. Full AA conformance is not yet declared.
+
 ## Build on Linux
 
 Requires a C++20 compiler, CMake 3.22+, Qt 6.4+ Core/DBus/Widgets/Network, and Qt Test for tests. Python 3.11+ is used by installation and test tools; Node.js runs frontend tests.

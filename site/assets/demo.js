@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Manual presentation only. No microphone, network request or inference.
 import {Tracker} from './tracker.mjs';
+import {PaletteChoice} from './contrast.mjs';
 const script=document.querySelector('#script');
 if(script){
  const tracker=new Tracker(script.value),reading=document.querySelector('#reading-text'),count=document.querySelector('#read-count'),panel=document.querySelector('#edit-panel'),toggle=document.querySelector('#edit-toggle');
@@ -23,4 +24,20 @@ if(script){
  toggle.addEventListener('click',()=>{if(!panel.hidden){closeEditor();return}panel.hidden=false;toggle.textContent='Done editing';toggle.setAttribute('aria-expanded','true');script.focus()});
  panel.addEventListener('keydown',event=>{if(event.key==='Escape'){closeEditor();event.preventDefault()}});
  render();
+}
+
+const appearance=document.querySelector('#reader-appearance'),reader=document.querySelector('[data-reader]');
+if(appearance&&reader){
+ const choice=new PaletteChoice();
+ function pageBackground(){
+  for(let element=reader.parentElement;element;element=element.parentElement){
+   const value=getComputedStyle(element).backgroundColor,rgba=value.match(/[\d.]+/g)?.map(Number);
+   if(rgba?.length>=3&&(rgba.length===3||rgba[3]===1))return '#'+rgba.slice(0,3).map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+  }return '#ffffff';
+ }
+ function update(){reader.dataset.theme=appearance.value==='auto'?choice.sample(pageBackground(),performance.now()):appearance.value;}
+ appearance.addEventListener('change',update);
+ const observer=new MutationObserver(update);
+ for(let parent=reader.parentElement;parent;parent=parent.parentElement)observer.observe(parent,{attributes:true,attributeFilter:['style','class']});
+ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',update);update();
 }

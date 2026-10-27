@@ -1,7 +1,7 @@
 name: macOS and Windows
 on:
   push:
-    branches: [main, feature/system-speech]
+    branches: [main, feature/**]
   pull_request:
   workflow_dispatch:
 permissions:
