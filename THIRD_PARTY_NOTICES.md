@@ -16,3 +16,10 @@ The native Moonshine adapter includes the unmodified MIT C ABI header from v0.1.
 [notices](third_party/native-notices/README.txt) are copied into user-local installs.
 The optional installer downloads upstream wheels and extracts only the native
 libraries and their notices; no third-party runtime/model binary is stored in Git.
+
+The macOS/Windows CI bundles additionally contain dynamically linked Qt and its
+runtime dependencies. Their `licenses` directory includes Qt's offline license
+catalog and component notices, standard license texts, and SDK SBOM files when
+provided by the installed Qt package. The catalog covers more components than
+Kalipso ships; only the licenses of included components apply. Qt's source
+archive location and Kalipso's source repository are recorded in that directory.

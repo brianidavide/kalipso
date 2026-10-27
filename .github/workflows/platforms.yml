@@ -38,10 +38,14 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: Collect runtime notices
+        run: python tools/package-qt-notices.py ${{ matrix.qt }} artifacts/runtime-notices
       - name: macOS bundle
         if: runner.os == 'macOS'
         run: |
           macdeployqt build/kalipso.app
+          mkdir -p build/kalipso.app/Contents/Resources/licenses
+          cp -R artifacts/runtime-notices/. build/kalipso.app/Contents/Resources/licenses/
           codesign --force --deep --sign - --entitlements packaging/macos/entitlements.plist build/kalipso.app
           build/kalipso.app/Contents/MacOS/kalipso --demo --quit-after 1000
           mkdir -p artifacts
@@ -51,6 +55,7 @@ jobs:
         run: |
           cmake --install build --config Release --prefix artifacts/kalipso
           windeployqt --release artifacts/kalipso/bin/kalipso.exe
+          Copy-Item -Recurse artifacts/runtime-notices artifacts/kalipso/share/licenses/third-party
       - uses: actions/upload-artifact@v4
         with:
           name: kalipso-${{ matrix.os }}
