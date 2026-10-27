@@ -15,7 +15,7 @@ These builds do not guarantee exclusion from screen sharing. Verify the view see
 
 ## Build
 
-Both ports require CMake 3.22+, a C++20 compiler and Qt 6.8+ Core, Widgets, Network, Multimedia and Test. Python is optional for additional tests. Windows uses MSVC 2022 and the Windows SDK. macOS additionally requires Xcode 26+ with the macOS 26 SDK and Swift compiler.
+Both ports require CMake 3.22+, a C++20 compiler and Qt Core, Widgets, Network, Multimedia and Test: Qt 6.10+ on macOS, Qt 6.8+ on Windows. Python is optional for additional tests. Windows uses MSVC 2022 and the Windows SDK. macOS additionally requires Xcode 26+ with the macOS 26 SDK and Swift compiler.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

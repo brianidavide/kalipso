@@ -5,6 +5,10 @@
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QTimer>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 
 SystemSpeechClient::SystemSpeechClient(QObject *parent, QString executable)
     : QObject(parent), executable_(executable.isEmpty()?helperPath():std::move(executable)) {}
@@ -44,6 +48,9 @@ void SystemSpeechClient::launch(const QString &operation,const QString &language
     if(language.trimmed().isEmpty()){emit failed(tr("Choose a recognition language first."));return;}
     if(!QFileInfo::exists(executable_)){emit failed(tr("The system speech helper is not installed on this platform."));return;}
     auto *p=new QProcess(this);process_=p;
+#ifdef Q_OS_WIN
+    p->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args){args->flags|=CREATE_NO_WINDOW;});
+#endif
     connect(p,&QProcess::readyReadStandardOutput,this,&SystemSpeechClient::readOutput);
     connect(p,&QProcess::readyReadStandardError,this,[p]{p->readAllStandardError();});
     connect(p,&QProcess::errorOccurred,this,[this,p](QProcess::ProcessError){if(process_==p)fail(tr("Cannot start system speech: %1").arg(p->errorString()));});
@@ -54,6 +61,7 @@ void SystemSpeechClient::launch(const QString &operation,const QString &language
         stop();if(success)emit completed();else emit failed(tr("System speech ended. Check the language and microphone, then restart."));
     });
     connect(p,&QProcess::started,this,[this]{if(operation_=="listen")updateScript(phrases_);});
+    if(operation=="check")QTimer::singleShot(30000,p,[this,p]{if(process_==p)fail(tr("System speech availability check timed out. Try again."));});
     p->start(executable_,{"--"+operation,language});
 }
 void SystemSpeechClient::updateScript(const QStringList &phrases){
