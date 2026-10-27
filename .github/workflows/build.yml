@@ -13,7 +13,7 @@ jobs:
       - name: Check source distribution
         run: python3 tools/check-repository.py
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build qt6-base-dev desktop-file-utils appstream dbus-x11 libglib2.0-bin
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build qt6-base-dev libpipewire-0.3-dev pkg-config pipewire-bin wireplumber gstreamer1.0-tools gstreamer1.0-pipewire gstreamer1.0-plugins-base desktop-file-utils appstream dbus-x11 libglib2.0-bin
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
       - name: Build

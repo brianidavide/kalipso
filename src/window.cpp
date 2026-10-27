@@ -82,10 +82,10 @@ Prompter::Prompter(QWidget *parent) : QWidget(parent,Qt::Window|Qt::FramelessWin
 }
 void Prompter::setReaderTheme(const QString &theme){
     appearance_=theme;resolvedTheme_=theme=="light"?"light":"dark";paletteAge_.invalidate();
-    backdrop_->setEnabled(theme=="auto");
     colors_=resolvedTheme_=="light"?Design::light:Design::dark;
     Accessibility::apply(this,colors_);text->setPalette(Accessibility::palette(colors_));
     highlight(position_,length_);
+    backdrop_->setEnabled(theme=="auto");
 }
 void Prompter::setTextSize(int points) { auto font=text->font(); font.setPointSize(points); text->setFont(font); }
 void Prompter::showAtCamera(QScreen *screen) {
@@ -241,6 +241,14 @@ QWidget *MainWindow::makeSettings() {
     const auto savedReader=settings.value("reading/theme","dark").toString();readerTheme->setCurrentIndex(std::max(0,readerTheme->findData(savedReader)));prompter_->setReaderTheme(savedReader);
     connect(readerTheme,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,readerTheme]{const auto theme=readerTheme->currentData().toString();prompter_->setReaderTheme(theme);QSettings{}.setValue("reading/theme",theme);});readingForm->addRow(tr("Reader appearance"),readerTheme);
     auto *colorSource=new StatusLabel(prompter_->colorSource());readingForm->addRow(colorSource);connect(prompter_,&Prompter::colorStatus,colorSource,&StatusLabel::setText);
+    if(prompter_->usesWindowPortal()){
+        readingForm->addRow(note(tr("Follow the colors of a window you select, even while the reader covers it. Sharing stays active while the reader is visible. Images stay in memory and are never saved or sent. You can stop sharing at any time.")));
+        auto *choose=new AccessibleButton(tr("Choose background window…"));choose->setObjectName("chooseBackgroundWindow");
+        auto *stop=new AccessibleButton(tr("Stop window sharing"));stop->setObjectName("stopWindowSharing");
+        readingForm->addRow(choose);readingForm->addRow(stop);
+        connect(choose,&QPushButton::clicked,this,[this,readerTheme]{readerTheme->setCurrentIndex(readerTheme->findData("auto"));showPrompter();prompter_->chooseBackgroundWindow();});
+        connect(stop,&QPushButton::clicked,prompter_,&Prompter::stopWindowSharing);
+    }
     auto *uiScale=new QComboBox;uiScale->setObjectName("interfaceTextSize");uiScale->addItem("100%",1.0);uiScale->addItem("150%",1.5);uiScale->addItem("200%",2.0);
     readingForm->addRow(tr("Interface text size"),uiScale);
     connect(uiScale,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,uiScale]{

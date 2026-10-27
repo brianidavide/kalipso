@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
@@ -10,9 +11,18 @@ PlasmoidItem {
     id:root
     SystemPalette{id:desktopPalette;colorGroup:SystemPalette.Active}
     property string appearance:"auto"
-    readonly property var p:Design.tokens.palette[appearance==="auto"?Contrast.suggestedTheme(desktopPalette.window.toString()):appearance]
+    property string windowTheme:"dark"
+    property var windowPalette:new Contrast.PaletteChoice()
+    readonly property var p:Design.tokens.palette[appearance==="window"?windowTheme:appearance==="auto"?Contrast.suggestedTheme(desktopPalette.window.toString()):appearance]
     readonly property var c:Object.assign({},Design.tokens.color,{overlay:p.background,overlayText:p.text,overlayMuted:p.muted,overlaySurface:p.surface,overlayLine:p.hover,overlayBorder:p.border,focus:p.focus,reading:p.accent})
-    onAppearanceChanged:refresh()
+    onAppearanceChanged:{if(appearance!=="window")windowColors.stop();refresh()}
+    onWindowThemeChanged:refresh()
+    onVisibleChanged:if(!visible)windowColors.stop()
+    Connections {
+        target:root.Window.window
+        function onVisibleChanged(){if(!root.Window.window.visible)windowColors.stop()}
+        function onVisibilityChanged(){if(root.Window.window.visibility===Window.Minimized)windowColors.stop()}
+    }
     readonly property var n:Design.tokens.native
     signal revealRequested(var item)
     property string pane:""
@@ -32,6 +42,10 @@ PlasmoidItem {
     function seek(index){tracker.seek(index);refresh()}
     function showPane(next){pane=pane===next?"":next;if(pane==="settings")audio.settings()}
     LocalEngine {id:audio;onTranscript:function(event){if(root.tracker.follow(event.text,event.final))root.refresh()}}
+    WindowColors {
+        id:windowColors
+        onSampled:function(color){if(root.appearance==="window")root.windowTheme=root.windowPalette.sample(color,Date.now())}
+    }
     Component.onCompleted:refresh()
     component ReaderButton:Button {
         id:control
@@ -43,6 +57,7 @@ PlasmoidItem {
         implicitHeight:Math.max(root.n.controlHeight,contentItem.implicitHeight+16)
         implicitWidth:Math.max(contentItem.implicitWidth+24,primary?Math.max(root.n.primaryWidth,metrics.advanceWidth("Start listening")+24):0)
         FontMetrics{id:metrics;font:control.font}
+        width:Math.min(implicitWidth,parent?parent.width:implicitWidth)
         padding:8;leftPadding:12;rightPadding:12
         background:Rectangle {
             radius:root.n.buttonRadius
@@ -50,7 +65,7 @@ PlasmoidItem {
             border.width:2;border.color:control.activeFocus?root.c.focus:root.c.overlayBorder
             opacity:1
         }
-        contentItem:Text {text:control.text;color:control.primary?root.p.actionText:root.c.overlayText;font:control.font;horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter;opacity:1}
+        contentItem:Text {text:control.text;color:control.primary?root.p.actionText:root.c.overlayText;font:control.font;wrapMode:Text.Wrap;horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter;opacity:1}
     }
     component ReaderScrollBar:ScrollBar {
         orientation:Qt.Vertical;policy:ScrollBar.AsNeeded
@@ -60,6 +75,12 @@ PlasmoidItem {
         background:Rectangle {color:root.c.overlay}
     }
     fullRepresentation:Rectangle {
+        onVisibleChanged:if(!visible)windowColors.stop()
+        Connections {
+            target:body.Window.window
+            function onVisibleChanged(){if(!body.Window.window.visible)windowColors.stop()}
+            function onVisibilityChanged(){if(body.Window.window.visibility===Window.Minimized)windowColors.stop()}
+        }
         id:body;color:root.c.overlay;radius:root.n.radius
         implicitWidth:root.n.width;implicitHeight:content.implicitHeight+root.n.padding*2
         Layout.preferredWidth:root.n.width;Layout.preferredHeight:Math.min(700,content.implicitHeight+root.n.padding*2);Layout.minimumWidth:320;Layout.minimumHeight:240
@@ -140,7 +161,14 @@ PlasmoidItem {
                     ReaderButton{objectName:"darkAppearance";text:(root.appearance==="dark"?"✓ ":"")+"Dark";onClicked:root.appearance="dark"}
                     ReaderButton{objectName:"lightAppearance";text:(root.appearance==="light"?"✓ ":"")+"Light";onClicked:root.appearance="light"}
                 }
-                Label{text:"Desktop theme does not sample pixels behind the widget. Both palettes keep an opaque reading background.";color:root.c.overlayMuted;wrapMode:Text.Wrap;Layout.fillWidth:true}
+                Flow {
+                    Layout.fillWidth:true;spacing:8
+                    ReaderButton{objectName:"chooseBackgroundWindow";text:"Choose background window…";enabled:!windowColors.active&&!windowColors.busy;onClicked:{root.appearance="window";windowColors.start()}}
+                    ReaderButton{objectName:"stopWindowSharing";text:"Stop window sharing";enabled:windowColors.active||windowColors.busy;onClicked:windowColors.stop()}
+                }
+                Label{objectName:"windowColorsStatus";text:windowColors.status;color:root.c.overlayMuted;wrapMode:Text.Wrap;Layout.fillWidth:true;Accessible.role:Accessible.StaticText;Accessible.name:text}
+                Label{text:"Window colors follow the window you select. Sharing stays active while this reader is visible. Images stay in memory and are never saved or sent. Requires the Kalipso companion, PipeWire and the desktop sharing portal.";color:root.c.overlayMuted;wrapMode:Text.Wrap;Layout.fillWidth:true}
+                Label{text:"Desktop theme follows the system palette. All color modes keep an opaque reading background.";color:root.c.overlayMuted;wrapMode:Text.Wrap;Layout.fillWidth:true}
                 Label{objectName:"speechDetails";text:audio.status;color:root.c.overlayMuted;wrapMode:Text.Wrap;Layout.fillWidth:true}
                 Flow {
                     Layout.fillWidth:true;spacing:8

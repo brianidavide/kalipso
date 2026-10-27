@@ -25,6 +25,9 @@ public:
     void setTextSize(int points);
     void setReaderTheme(const QString &theme);
     QString colorSource() const{return backdrop_->source();}
+    bool usesWindowPortal() const{return backdrop_->usesWindowPortal();}
+    void chooseBackgroundWindow(){backdrop_->chooseWindow();}
+    void stopWindowSharing(){backdrop_->stopWindowSharing();}
 signals:
     void colorStatus(const QString &text);
 public:

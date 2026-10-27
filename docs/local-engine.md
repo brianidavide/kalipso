@@ -23,7 +23,7 @@ The runtime path is C++/Qt Core/DBus → PipeWire PCM → the selected native C 
 From a checkout of this repository, install the source-build prerequisites:
 
 ```sh
-sudo pacman -S --needed base-devel cmake qt6-base pipewire-audio python
+sudo pacman -S --needed base-devel cmake qt6-base pipewire pipewire-audio pkgconf python
 ```
 
 Choose **one** of these examples. The language is explicit and is never inferred from the desktop locale:
@@ -65,7 +65,7 @@ Arch offers [`vosk-api`](https://archlinux.org/packages/extra/x86_64/vosk-api/);
 
 Moonshine architecture IDs are 2 Tiny Streaming, 3 Base Streaming, 4 Small Streaming and 5 Medium Streaming. This integration has executed Tiny; larger architectures require their own resource and quality validation. `--language ja` / `zh` also selects the publisher's higher token-rate guard for those languages. Specify the actual model language.
 
-On Debian, the build/capture prerequisites are `build-essential`, `cmake`, `qt6-base-dev`, `pipewire-bin` and Python 3.11+. The companion requires Qt Core/DBus even on GNOME; these are explicit dependencies, not assumed GNOME components. Automatic native downloads are Linux x86_64 only; supply compatible libraries manually for other platforms.
+On Debian, the build/capture prerequisites are `build-essential`, `cmake`, `qt6-base-dev`, `libpipewire-0.3-dev`, `pkg-config`, `pipewire-bin` and Python 3.11+. The companion requires Qt Core/Gui/DBus even on GNOME; these are explicit dependencies, not assumed GNOME components. Automatic native downloads are Linux x86_64 only; supply compatible libraries manually for other platforms.
 
 ## Manual companion build without the Python installer
 
@@ -125,3 +125,5 @@ An optional second audio channel is available through `--meeting-target` / `--me
 Stop listening and disable/remove the frontend. Remove the companion executable, D-Bus activation file and companion license from your chosen prefix. Configuration normally resides in `~/.config/Kalipso/engine.conf` (or `XDG_CONFIG_HOME`).
 
 Downloaded components belong to `~/.local/share/kalipso/runtimes/` and `~/.local/share/kalipso/models/`; each backend/version has its own directory. Delete only the backend/model directories you no longer need. Removing a widget does not remove potentially shared models. Manually supplied models and system packages remain owned by their original installation method.
+
+The Plasma **Choose background window…** action also uses this companion. It requires a running PipeWire service and a window-capable desktop portal (`xdg-desktop-portal-kde` on KDE). It does not require a speech model or microphone access. Desktop-theme, Light and Dark colors remain available without the companion. See [window color permissions and limits](accessibility.md#window-colors-on-kdewayland).

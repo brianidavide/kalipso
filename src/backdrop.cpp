@@ -12,6 +12,10 @@
 #include <windows.h>
 #endif
 Backdrop::Backdrop(QWidget *reader):QObject(reader),reader_(reader){
+#ifdef KALIPSO_PORTAL_COLORS
+    connect(&portal_,&PortalColors::colorChanged,this,[this](const QColor &color){if(enabled_&&reader_->isVisible())emit colorChanged(color);});
+    connect(&portal_,&PortalColors::statusChanged,this,[this](const QString &status){if(usesWindowPortal())emit unavailable(status);});
+#endif
     reader->installEventFilter(this);timer_.setInterval(2000);timer_.setTimerType(Qt::VeryCoarseTimer);
     timeout_.setSingleShot(true);timeout_.setInterval(30000);connect(&timeout_,&QTimer::timeout,this,[this]{stop();emit unavailable(tr("Screen color sampling timed out. The opaque reader keeps its contrast."));});
     connect(&timer_,&QTimer::timeout,this,&Backdrop::sample);
@@ -33,17 +37,36 @@ QString Backdrop::source()const{
 #elif defined(Q_OS_WIN)
     return tr("Colors around the reader · no recording or saved images");
 #else
+    if(usesWindowPortal())return tr("Choose a background window to follow its colors. Desktop permission is required; sharing stops when the reader is hidden.");
     return QGuiApplication::platformName()=="xcb"?tr("Colors around the reader · no recording or saved images"):tr("Screen pixels are unavailable here; the reader uses a fixed high-contrast palette.");
 #endif
 }
+bool Backdrop::usesWindowPortal()const{
+#ifdef KALIPSO_PORTAL_COLORS
+    return QGuiApplication::platformName().startsWith("wayland");
+#else
+    return false;
+#endif
+}
+void Backdrop::chooseWindow(){
+#ifdef KALIPSO_PORTAL_COLORS
+    if(usesWindowPortal()&&enabled_&&reader_->isVisible())portal_.start();
+#endif
+}
+void Backdrop::stopWindowSharing(){
+#ifdef KALIPSO_PORTAL_COLORS
+    portal_.stop();
+#endif
+}
 void Backdrop::setEnabled(bool enabled){enabled_=enabled;stop();if(enabled&&reader_->isVisible()){timer_.start();sample();}}
-void Backdrop::stop(){timer_.stop();timeout_.stop();helper_.blockSignals(true);helper_.kill();helper_.waitForFinished(500);helper_.blockSignals(false);pending_=false;output_.clear();}
+void Backdrop::stop(){stopWindowSharing();timer_.stop();timeout_.stop();helper_.blockSignals(true);helper_.kill();helper_.waitForFinished(500);helper_.blockSignals(false);pending_=false;output_.clear();}
 bool Backdrop::eventFilter(QObject *object,QEvent *event){
-    if(object==reader_){if(event->type()==QEvent::Hide)stop();else if(event->type()==QEvent::Show&&enabled_){timer_.start();QTimer::singleShot(0,this,&Backdrop::sample);}}
+    if(object==reader_){if(event->type()==QEvent::Hide||(event->type()==QEvent::WindowStateChange&&reader_->isMinimized()))stop();else if(event->type()==QEvent::Show&&enabled_){timer_.start();QTimer::singleShot(0,this,&Backdrop::sample);}}
     return QObject::eventFilter(object,event);
 }
 void Backdrop::sample(){
     if(!enabled_||!reader_->isVisible()||pending_)return;
+    if(usesWindowPortal()){timer_.stop();emit unavailable(source());return;}
     const QRect rect=reader_->frameGeometry();
 #ifdef Q_OS_MACOS
     const QJsonObject area{{"x",rect.x()},{"y",rect.y()},{"width",rect.width()},{"height",rect.height()}};

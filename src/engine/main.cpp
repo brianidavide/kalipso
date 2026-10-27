@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "speech.h"
+#include "screen_colors/portal.h"
 #include "config.h"
 #include "settings_migration.h"
 #include <QDBusInterface>
@@ -36,6 +37,9 @@ class Engine final : public QObject, protected QDBusContext {
     Q_CLASSINFO("D-Bus Interface", "io.github.brianidavide.Kalipso.Engine")
 public:
     Engine() : watcher_(QString(),QDBusConnection::sessionBus(),QDBusServiceWatcher::WatchForUnregistration) {
+        connect(&colors_,&PortalColors::colorChanged,this,[this](const QColor &color){color_=color.name();});
+        connect(&colorWatcher_,&QDBusServiceWatcher::serviceUnregistered,this,[this](const QString &name){if(name==colorOwner_)stopColors();});
+        colorWatcher_.setConnection(QDBusConnection::sessionBus());colorWatcher_.setWatchMode(QDBusServiceWatcher::WatchForUnregistration);
         idle_.start();state_["backend"]=SpeechConfig::selected();
         connect(&speech_,&SpeechService::listening,this,[this]{state_["status"]="listening";publish();});
         connect(&speech_,&SpeechService::status,this,[this](const QString &message){
@@ -54,11 +58,28 @@ public:
         connect(&watcher_,&QDBusServiceWatcher::serviceUnregistered,this,[this](const QString &name){if(name==owner_)stop();});
         connect(&timer_,&QTimer::timeout,this,[this]{
             if(!owner_.isEmpty() && lease_.elapsed()>10000) stop();
-            if(owner_.isEmpty() && idle_.elapsed()>90000) QCoreApplication::quit();
+            if(!colorOwner_.isEmpty()&&colorLease_.elapsed()>10000)stopColors();
+            if(owner_.isEmpty() && colorOwner_.isEmpty() && idle_.elapsed()>90000) QCoreApplication::quit();
         });
         timer_.start(1000);
     }
 public slots:
+    bool StartColors(const QString &clientToken){
+        if(!calledFromDBus())return false;
+        if(clientToken.isEmpty()||clientToken.size()>128){sendErrorReply(QDBusError::InvalidArgs,"A widget identifier is required.");return false;}
+        const auto caller=message().service();
+        if(!colorOwner_.isEmpty()&&(caller!=colorOwner_||clientToken!=colorToken_)){sendErrorReply(QDBusError::AccessDenied,"Another widget is sharing a background window.");return false;}
+        colorOwner_=caller;colorToken_=clientToken;colorWatcher_.addWatchedService(caller);colorLease_.start();idle_.restart();color_.clear();colors_.start();return true;
+    }
+    QString GetColorState(const QString &clientToken){
+        if(!calledFromDBus()||(!colorOwner_.isEmpty()&&(message().service()!=colorOwner_||clientToken!=colorToken_))){sendErrorReply(QDBusError::AccessDenied,"Only the sharing widget can read its color state.");return {};}
+        colorLease_.restart();idle_.restart();
+        return json({{"active",colors_.active()},{"message",colors_.status()},{"color",color_}});
+    }
+    void StopColors(const QString &clientToken){
+        if(!calledFromDBus()||(!colorOwner_.isEmpty()&&(message().service()!=colorOwner_||clientToken!=colorToken_))){sendErrorReply(QDBusError::AccessDenied,"Only the sharing widget can stop its session.");return;}
+        stopColors();
+    }
     QString GetDependencies() {idle_.restart();return json(SpeechConfig::dependencies(SpeechConfig::selected()));}
     QString GetBackends() {idle_.restart();return json({{"selected",SpeechConfig::selected()},{"backends",SpeechConfig::backends()}});}
     bool SelectBackend(const QString &backend) {
@@ -110,6 +131,11 @@ private:
     void publish(){state_["active"]=speech_.active();emit StateChanged(json(state_));}
     void releaseOwner(){if(!owner_.isEmpty())watcher_.removeWatchedService(owner_);owner_.clear();idle_.restart();}
     void stop(){speech_.stop();releaseOwner();state_["status"]="stopped";state_["message"]="Microphone stopped";publish();}
+    void stopColors(){colors_.stop();colorWatcher_.removeWatchedService(colorOwner_);colorOwner_.clear();colorToken_.clear();color_.clear();idle_.restart();}
+    PortalColors colors_;
+    QDBusServiceWatcher colorWatcher_;
+    QElapsedTimer colorLease_;
+    QString colorOwner_,colorToken_,color_;
     QJsonArray events_;
     SpeechService speech_;
     QDBusServiceWatcher watcher_;

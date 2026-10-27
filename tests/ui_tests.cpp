@@ -88,6 +88,11 @@ private slots:
         QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
         if(const auto directory=qEnvironmentVariable("KALIPSO_A11Y_SHOTS");!directory.isEmpty()){
             QDir{}.mkpath(directory);window.grab().save(directory+"/qt-settings-200.png");
+            if(auto *choose=window.findChild<QPushButton*>("chooseBackgroundWindow")){
+                for(auto *parent=choose->parentWidget();parent;parent=parent->parentWidget())if(auto *area=qobject_cast<QScrollArea*>(parent)){area->ensureWidgetVisible(choose);QTest::qWait(20);}
+                choose->setFocus();QTest::qWait(80);window.grab().save(directory+"/qt-window-colors-200.png");
+                QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
+            }
             scale->setCurrentIndex(0);window.resize(1100,760);QTest::qWait(80);window.grab().save(directory+"/qt-settings.png");
             window.setDemoScript();window.showPrompter();window.prompter()->setReaderTheme("light");QTest::qWait(80);window.prompter()->grab().save(directory+"/qt-reader-light.png");
             window.prompter()->setReaderTheme("dark");QTest::qWait(80);window.prompter()->grab().save(directory+"/qt-reader-dark.png");
@@ -101,6 +106,29 @@ private slots:
         QTRY_VERIFY(!colors.isEmpty());QCOMPARE(colors.last()[0].value<QColor>(),QColor("#000000"));
         background.setStyleSheet("background:#ffffff;");const auto before=colors.size();QTRY_VERIFY_WITH_TIMEOUT(colors.size()>before,4000);QCOMPARE(colors.last()[0].value<QColor>(),QColor("#ffffff"));
         sampler.setEnabled(false);const auto stopped=colors.size();QTest::qWait(2200);QCOMPARE(colors.size(),stopped);
+    }
+    void realWaylandWindowSharingFollowsColorsAndStopsOnHide(){
+        if(!qEnvironmentVariableIsSet("KALIPSO_WAYLAND_CAPTURE_TEST")||!QGuiApplication::platformName().startsWith("wayland"))
+            QSKIP("Requires a real Wayland compositor, portal and explicit selection of the test source window.");
+        QSettings{}.clear();
+        QWidget source;source.setWindowTitle("Kalipso color test source");source.resize(800,600);source.setStyleSheet("background:#000000;");source.show();
+        MainWindow window;window.setDemoScript();window.show();
+        auto *sampler=window.prompter()->findChild<Backdrop*>();QVERIFY(sampler);
+        auto *choose=window.findChild<QPushButton*>("chooseBackgroundWindow");QVERIFY(choose);
+        QSignalSpy samples(sampler,&Backdrop::colorChanged);
+        QTest::qWait(500);choose->click();
+        QTRY_VERIFY_WITH_TIMEOUT(!samples.isEmpty(),120000);
+        QCOMPARE(samples.last()[0].value<QColor>(),QColor(Qt::black));
+        QCOMPARE(window.prompter()->palette().color(QPalette::Window),QColor(Design::light.background));
+        if(const auto directory=qEnvironmentVariable("KALIPSO_A11Y_SHOTS");!directory.isEmpty())window.prompter()->grab().save(directory+"/wayland-reader-light.png");
+        source.setStyleSheet("background:#ffffff;");
+        QTRY_COMPARE_WITH_TIMEOUT(samples.last()[0].value<QColor>(),QColor(Qt::white),12000);
+        QTRY_COMPARE_WITH_TIMEOUT(window.prompter()->palette().color(QPalette::Window),QColor(Design::dark.background),12000);
+        if(const auto directory=qEnvironmentVariable("KALIPSO_A11Y_SHOTS");!directory.isEmpty())window.prompter()->grab().save(directory+"/wayland-reader-dark.png");
+        window.prompter()->hide();const auto count=samples.size();source.setStyleSheet("background:#000000;");QTest::qWait(3000);QCOMPARE(samples.size(),count);
+        window.showPrompter();QTest::qWait(2500);QCOMPARE(samples.size(),count);
+        window.findChild<QPlainTextEdit*>("scriptEditor")->document()->setModified(false);
+        QSettings{}.clear();
     }
     void overlayEditsPreserveReadingPositionAndUndo() {
         MainWindow window;

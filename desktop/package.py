@@ -13,7 +13,7 @@ assert (base / 'tracker.mjs').read_bytes() == (base / 'plasma/contents/ui/tracke
 assert (base / 'unicode-tokens.mjs').read_bytes() == (base / 'plasma/contents/ui/unicode-tokens.mjs').read_bytes()
 packages = {
     'kalipso-plasma.plasmoid': [(base / 'plasma' / name, name) for name in [
-        'metadata.json', 'contents/ui/main.qml', 'contents/ui/LocalEngine.qml', 'contents/ui/Tokens.js',
+        'metadata.json', 'contents/ui/main.qml', 'contents/ui/LocalEngine.qml', 'contents/ui/WindowColors.qml', 'contents/ui/Tokens.js',
         'contents/ui/tracker.mjs', 'contents/ui/unicode-tokens.mjs', 'contents/ui/contrast.mjs']],
     'kalipso-gnome.zip': [(base / src, dst) for src, dst in [
         ('gnome/metadata.json', 'metadata.json'), ('gnome/extension.js', 'extension.js'),

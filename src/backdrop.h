@@ -4,6 +4,9 @@
 #include <QProcess>
 #include <QTimer>
 #include <QWidget>
+#ifdef KALIPSO_PORTAL_COLORS
+#include "screen_colors/portal.h"
+#endif
 
 // Samples only in memory. The palette always paints an opaque reading surface.
 class Backdrop:public QObject {
@@ -13,6 +16,9 @@ public:
     ~Backdrop() override {stop();}
     void setEnabled(bool enabled);
     QString source() const;
+    bool usesWindowPortal() const;
+    void chooseWindow();
+    void stopWindowSharing();
 signals:
     void colorChanged(const QColor &color);
     void unavailable(const QString &reason);
@@ -21,6 +27,9 @@ protected:
 private:
     void sample();
     void stop();
+#ifdef KALIPSO_PORTAL_COLORS
+    PortalColors portal_;
+#endif
     QWidget *reader_;
     QTimer timer_,timeout_;
     QProcess helper_;

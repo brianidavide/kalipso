@@ -28,10 +28,10 @@ Requires a C++20 compiler, CMake 3.22+, Qt 6.4+ Core/DBus/Widgets/Network, and Q
 
 ```sh
 # Arch / EndeavourOS
-sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland pipewire-audio python nodejs
+sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland pipewire pipewire-audio pkgconf python nodejs
 
 # Debian / Ubuntu
-sudo apt install build-essential cmake ninja-build qt6-base-dev qt6-wayland pipewire-bin python3 nodejs
+sudo apt install build-essential cmake ninja-build qt6-base-dev qt6-wayland pipewire-bin libpipewire-0.3-dev pkg-config python3 nodejs
 
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
@@ -57,3 +57,5 @@ Generated packages, test output, recordings, models, local configuration and wor
 Original code is **AGPL-3.0-or-later**. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md). AppStream metadata is CC0-1.0. Dependencies and models retain their own licenses.
 
 Kalipso is an independent project and is not affiliated with KDE or GNOME.
+
+On KDE/Wayland, **Choose background window…** follows the colors of a window selected through the desktop sharing dialog. Install `xdg-desktop-portal` and `xdg-desktop-portal-kde` for this optional mode. See [color sources and sharing controls](docs/accessibility.md#window-colors-on-kdewayland).

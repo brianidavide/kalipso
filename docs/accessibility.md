@@ -17,14 +17,22 @@ Automatic color changes select a complete, verified palette, rather than applyin
 | macOS standalone | ScreenCaptureKit samples the region behind the reader, excluding the reading window. Selecting automatic screen colors can request Screen Recording permission. No image files are saved. Real-device capture and multi-monitor placement still need validation. |
 | Windows standalone | A few pixels immediately outside the reader, every two seconds. These describe the surroundings, not pixels hidden behind the window. No video stream is opened. |
 | Linux standalone on X11 | Small samples immediately outside the reader, every two seconds. |
-| Linux standalone on Wayland | Screen pixels are unavailable through this sampling backend. A fixed opaque palette remains; the app reports this limitation. |
-| Plasma widget | Automatic selection from the desktop palette. This is **not** detection of pixels behind the widget. No screen-capture session or companion is required for colors. |
+| Linux standalone on Wayland | **Choose background window…** opens the desktop ScreenCast portal. Colors follow a sparse sample of that selected window through PipeWire, including when the reader overlaps it. The selection is explicit and is not restored automatically. |
+| Plasma widget | **Desktop theme** follows the desktop palette. **Choose background window…** uses the same portal/PipeWire window sampling as the standalone app, through the updated Kalipso companion. Desktop theme and manual colors work without the companion. |
 | GNOME extension | A surrounding pixel sampled through GNOME Shell every two seconds while automatic mode is visible. No image files or video stream are produced. |
 | Browser demonstration | The computed opaque background of its containing page. It cannot inspect other applications. |
 
 Automatic mode is separate from microphone capture. Sampling stops when the reader is hidden or automatic mode is disabled. No captured screen data is sent to speech engines or an LLM.
 
-Continuously detecting the actual hidden background on KDE/Wayland would require an additional compositor/portal capture path and its consent flow. That feature is not represented by the desktop-theme option.
+### Window colors on KDE/Wayland
+
+In Settings, choose **Choose background window…**, then select the application behind the reader in the desktop permission dialog. Only windows are requested, with the cursor excluded and without a persistent permission token. The standalone app opens its reader before asking. Choose **Stop window sharing**, Light, Dark or (in Plasma) Desktop theme to end capture. Hiding the reader also closes the session; reopening requires another explicit selection. Closing the selected window, cancelling permission or revoking sharing leaves the last opaque palette in place and reports the state. A disconnected Plasma client releases its session, with a ten-second heartbeat timeout as a fallback.
+
+This follows the **selected window's overall colors**, not a geometrically exact patch beneath the reader. Moving the reader over a different application does not select that application automatically: stop sharing and choose the new background window. This distinction avoids relying on global window coordinates that Wayland clients do not reliably have. The reader must not be selected as its own background.
+
+The desktop streams that window continuously while sharing is active. Kalipso requests at most one frame per second, samples no more than 256 pixels every two seconds, and discards each buffer after use. Actual compositor costs depend on the desktop and source window; the low sampling rate is not a zero-cost capture guarantee. Frames stay in memory, are never saved or sent, and are independent of speech or LLM processing. Both frontends use the existing contrast palettes, luminance dead band and minimum palette hold time.
+
+Runtime requirements: PipeWire, `xdg-desktop-portal`, and a desktop backend with window ScreenCast support (on KDE, `xdg-desktop-portal-kde`). Plasma also requires the updated Kalipso companion. The build requires PipeWire development headers and pkg-config. Missing services, unsupported stream formats and permission failures keep the readable fallback and allow an explicit retry.
 
 ## Keyboard and text
 
@@ -34,6 +42,10 @@ Continuously detecting the actual hidden background on KDE/Wayland would require
 - The browser demonstration has a skip link, associated field labels, status messages, reduced-motion behavior and forced-colors support.
 
 ## Verification
+
+`portal_colors` exercises the portal lifecycle, cancellation, late replies, revocation, window-only selection, buffer bounds, and ownership between widget instances. When the PipeWire/GStreamer test dependencies are installed, `portal_colors_stream` passes real BGRx and RGBx video buffers through a simulated consent portal, checks their colors and sampling rate, and checks that stopping removes the capture node. It does not substitute for the real desktop permission dialog.
+
+A manual Qt test is available as `KALIPSO_WAYLAND_CAPTURE_TEST=1 build/ui_tests realWaylandWindowSharingFollowsColorsAndStopsOnHide`. Run it on a Wayland desktop with working window ScreenCast support and select **Kalipso color test source** in the permission dialog. It checks black/white source changes, the resulting reader palettes, hiding and reopening without renewed capture. The development container's nested KDE 6.3 session uses QPainter and does not expose window ScreenCast; there, only fallback, controls, keyboard navigation and scaling could be exercised. Successful capture on a GPU-backed KDE desktop and supported native multi-monitor setups remains a release verification requirement.
 
 `node tests/contrast.test.mjs` checks palette combinations, exact contrast thresholds, opaque colors and rapid-alternation protection. Qt UI tests check read-text/selection contrast, accessible field names and status roles, wrapping controls, text scaling and editing behavior.
 
