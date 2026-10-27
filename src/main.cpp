@@ -12,7 +12,7 @@ int main(int argc,char **argv) {
     importLegacySettings("brianidavide", "kde-teleprompter");
     app.setApplicationVersion("0.1.0-dev");
     app.setDesktopFileName("io.github.brianidavide.kalipso");
-    QCommandLineParser parser; parser.setApplicationDescription("Kalipso — local teleprompter for Linux");
+    QCommandLineParser parser; parser.setApplicationDescription("Kalipso — local teleprompter");
     parser.addHelpOption(); parser.addVersionOption();
     parser.addOption({"demo","Load a synthetic demonstration script (no audio or API)."});
     parser.addOption({"prompter","Show the reading window at startup."});

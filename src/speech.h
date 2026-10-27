@@ -2,6 +2,11 @@
 #pragma once
 #include <QObject>
 #include "moonshine.h"
+#include "system_speech/client.h"
+#ifdef KALIPSO_QT_AUDIO
+#include <QAudioSource>
+#include "pcm_converter.h"
+#endif
 #include <QLibrary>
 #include <QProcess>
 #include <QThread>
@@ -51,6 +56,7 @@ public:
                const QString &meetingTarget, bool meeting, const QString &backend="vosk",
                const QString &language={}, int architecture=2);
     void stop();
+    void setScript(const QString &script, int position);
     bool active() const { return active_; }
 signals:
     void transcript(int channel, const QString &text, bool final);
@@ -59,6 +65,16 @@ signals:
     void stopped();
 private:
     void capture(int channel, const QString &target);
+    void queueAudio(int channel, const QByteArray &pcm);
+    void captureReady();
+    SystemSpeechClient system_;
+    QString script_;
+    int scriptPosition_=-1;
+    bool systemMode_=false;
+#ifdef KALIPSO_QT_AUDIO
+    QAudioSource *audio_=nullptr;
+    PcmConverter converter_;
+#endif
     QThread thread_;
     std::shared_ptr<std::atomic<quint64>> epoch_ = std::make_shared<std::atomic<quint64>>(0);
     SpeechWorker *worker_;

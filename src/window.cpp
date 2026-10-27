@@ -23,6 +23,7 @@
 #include <QVBoxLayout>
 #include <QWindow>
 #include <QRegularExpression>
+#include <QJsonArray>
 
 namespace {
 QLabel *note(const QString &text) {
@@ -133,7 +134,7 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
     connect(listen_,&QPushButton::clicked,this,&MainWindow::toggleListening);
     connect(script_,&QPlainTextEdit::textChanged,this,[this] {
         const auto text=script_->toPlainText(); tracker_.setScript(text);
-        if (speech_.active()) waitForNewUtterance_=true;
+        if (speech_.active()) { waitForNewUtterance_=true; speech_.setScript(text,tracker_.position()); }
         if (prompter_->text->toPlainText()!=text) { QSignalBlocker block(prompter_->text); replaceText(prompter_->text,text); }
         refreshReading();
     });
@@ -145,9 +146,9 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
         const auto words=ScriptTracker::tokenize(script_->toPlainText());
         const int character=script_->textCursor().position();
         int index=-1; for(int i=0;i<words.size() && words[i].start<=character;++i) index=i;
-        tracker_.seek(index); waitForNewUtterance_=speech_.active(); refreshReading();
+        tracker_.seek(index); speech_.setScript(script_->toPlainText(),tracker_.position()); waitForNewUtterance_=speech_.active(); refreshReading();
     });
-    connect(prompter_,&Prompter::step,this,[this](int delta){tracker_.seek(tracker_.position()+delta);waitForNewUtterance_=speech_.active();refreshReading();});
+    connect(prompter_,&Prompter::step,this,[this](int delta){tracker_.seek(tracker_.position()+delta);speech_.setScript(script_->toPlainText(),tracker_.position());waitForNewUtterance_=speech_.active();refreshReading();});
     connect(question_,&QPlainTextEdit::textChanged,this,[this]{flow_.setQuestion(question_->toPlainText());});
     connect(answer_,&QPlainTextEdit::textChanged,this,[this]{flow_.editAnswer(answer_->toPlainText());});
     connect(&flow_,&ApprovalFlow::changed,this,&MainWindow::refreshApproval);
@@ -180,11 +181,12 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
         reviewStatus_->setText(tr("Approved answer appended. You can still edit it in Script."));
     });
     connect(&speech_,&SpeechService::status,audioStatus_,&QLabel::setText);
-    connect(&speech_,&SpeechService::stopped,this,[this]{listen_->setText(tr("Start listening"));});
+    connect(&speech_,&SpeechService::stopped,this,[this]{listen_->setText(tr("Start listening"));backend_->setEnabled(true);language_->setEnabled(true);checkSystem_->setEnabled(true);});
     connect(&speech_,&SpeechService::transcript,this,[this](int channel,const QString &text,bool final) {
         if(channel==0) {
             if(waitForNewUtterance_) { if(final) { waitForNewUtterance_=false; refreshReading(); } return; }
             if(tracker_.follow(text,final)) refreshReading();
+            if(final)speech_.setScript(script_->toPlainText(),tracker_.position());
         }
         else if(final) {
             liveTranscript_->clear();
@@ -214,16 +216,61 @@ QWidget *MainWindow::makeSettings() {
     connect(size,qOverload<int>(&QSpinBox::valueChanged),this,[this](int value){prompter_->setTextSize(value);QSettings{}.setValue("reading/fontSize",value);});
     layout->addWidget(reading);
     auto *audio=new QGroupBox(tr("Local speech recognition")); auto *audioForm=new QFormLayout(audio);
-    library_=new QLineEdit(settings.value("speech/library","libvosk.so").toString());
-    modelPath_=new QLineEdit(settings.value("speech/model").toString());
-    microphone_=new QLineEdit(settings.value("speech/microphone").toString()); microphone_->setPlaceholderText(tr("Default microphone"));
-    meetingTarget_=new QLineEdit(settings.value("speech/meetingTarget").toString()); meetingTarget_->setPlaceholderText(tr("PipeWire output node.name or object.serial"));
+    backend_=new QComboBox;backend_->setObjectName("speechBackend");
+    if(SystemSpeechClient::platformSupported())backend_->addItem(tr("System · on-device"),"system");
+    backend_->addItem("Moonshine","moonshine");backend_->addItem("Vosk","vosk");
+    language_=new QComboBox;language_->setObjectName("speechLanguage");language_->setEditable(true);
+    language_->addItem(tr("Choose language"),QString{});
+    for(const auto &entry:QList<QPair<QString,QString>>{{"English (US)","en-US"},{"Italiano","it-IT"},{"Deutsch","de-DE"},{"Español","es-ES"},{"Français","fr-FR"},{"日本語","ja-JP"},{"中文","zh-CN"}})language_->addItem(entry.first,entry.second);
+    library_=new QLineEdit;library_->setObjectName("speechLibrary");modelPath_=new QLineEdit;modelPath_->setObjectName("speechModel");
+    architecture_=new QComboBox;architecture_->addItems({"Tiny Streaming","Base Streaming","Small Streaming","Medium Streaming"});
+    microphone_=new QLineEdit(settings.value("speech/microphone").toString());microphone_->setPlaceholderText(tr("Default microphone"));
+    meetingTarget_=new QLineEdit(settings.value("speech/meetingTarget").toString());meetingTarget_->setPlaceholderText(tr("PipeWire output node.name or object.serial"));
     meeting_=new QCheckBox(tr("Also transcribe meeting audio"));
-    audioForm->addRow(tr("Vosk library"),library_); audioForm->addRow(tr("Model folder"),modelPath_);
-    auto *browse=new QPushButton(tr("Choose model folder…")); audioForm->addRow(QString{},browse);
+    audioForm->addRow(tr("Speech engine"),backend_);audioForm->addRow(tr("Language"),language_);
+    audioForm->addRow(tr("Native library"),library_);audioForm->addRow(tr("Model folder"),modelPath_);
+    audioForm->addRow(tr("Moonshine model size"),architecture_);
+    auto *browse=new QPushButton(tr("Choose model folder…"));audioForm->addRow(QString{},browse);
     connect(browse,&QPushButton::clicked,this,[this]{auto path=QFileDialog::getExistingDirectory(this,tr("Choose speech model"));if(!path.isEmpty())modelPath_->setText(path);});
-    audioForm->addRow(tr("Microphone node"),microphone_); audioForm->addRow(tr("Meeting output node"),meetingTarget_); audioForm->addRow(meeting_);
-    audioForm->addRow(note(tr("Install Vosk and an extracted language model first. Use wpctl status / wpctl inspect to find audio nodes. Audio is processed locally and is not saved. Headphones prevent meeting audio from entering your microphone.")));
+    auto *systemActions=new QWidget;auto *systemLayout=new QHBoxLayout(systemActions);systemLayout->setContentsMargins(0,0,0,0);
+    checkSystem_=new QPushButton(tr("Check availability"));installSystem_=new QPushButton(tr("Install system language"));installSystem_->setEnabled(false);
+    systemLayout->addWidget(checkSystem_);systemLayout->addWidget(installSystem_);systemLayout->addStretch();
+#ifndef Q_OS_MACOS
+    installSystem_->hide();
+#endif
+    systemStatus_=note(tr("Choose a language and check its availability. No microphone is opened by this check."));
+    systemStatus_->setObjectName("systemSpeechStatus");audioForm->addRow(systemActions);audioForm->addRow(systemStatus_);
+    audioForm->addRow(tr("Microphone"),microphone_);audioForm->addRow(tr("Meeting output node"),meetingTarget_);audioForm->addRow(meeting_);
+    const auto updateFields=[this,audioForm,browse,systemActions]{
+        const bool system=backend_->currentData().toString()=="system";
+        for(auto *widget:QList<QWidget*>{library_,modelPath_,microphone_}){widget->setVisible(!system);if(auto *label=audioForm->labelForField(widget))label->setVisible(!system);}
+        const bool moon=backend_->currentData().toString()=="moonshine";
+        architecture_->setVisible(moon);audioForm->labelForField(architecture_)->setVisible(moon);
+        browse->setVisible(!system);systemActions->setVisible(system);systemStatus_->setVisible(system);
+        meeting_->setEnabled(!system);if(system)meeting_->setChecked(false);
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+        meeting_->hide();meetingTarget_->hide();audioForm->labelForField(meetingTarget_)->hide();
+#endif
+    };
+    QString initial=settings.value("speech/backend",settings.contains("speech/model")?"vosk":SystemSpeechClient::platformSupported()?"system":"moonshine").toString();
+    int selection=backend_->findData(initial);backend_->setCurrentIndex(selection<0?0:selection);
+    profile_=backend_->currentData().toString();loadSpeechProfile();updateFields();
+    connect(backend_,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,updateFields]{
+        systemCheck_.stop();installingSystem_=false;saveSpeechProfile();profile_=backend_->currentData().toString();loadSpeechProfile();updateFields();
+        systemStatus_->setText(tr("Choose a language and check its availability."));installSystem_->setEnabled(false);
+    });
+    connect(language_,&QComboBox::currentTextChanged,this,[this]{systemCheck_.stop();installingSystem_=false;installSystem_->setEnabled(false);checkSystem_->setEnabled(true);systemStatus_->setText(tr("Check availability for the selected language."));});
+    connect(checkSystem_,&QPushButton::clicked,this,[this]{systemStatus_->setText(tr("Checking installed system speech…"));systemCheck_.check(speechLanguage());});
+    connect(installSystem_,&QPushButton::clicked,this,[this]{installingSystem_=true;installSystem_->setEnabled(false);checkSystem_->setEnabled(false);systemCheck_.install(speechLanguage());});
+    connect(&systemCheck_,&SystemSpeechClient::capabilities,this,[this](const QJsonObject &result){
+        systemStatus_->setText(result.value("message").toString());installSystem_->setEnabled(result.value("supported").toBool()&&!result.value("installed").toBool());
+        const auto locales=result.value("locales").toArray();
+        for(const auto &locale:locales)if(language_->findData(locale.toString())<0)language_->addItem(locale.toString(),locale.toString());
+    });
+    connect(&systemCheck_,&SystemSpeechClient::message,systemStatus_,&QLabel::setText);
+    connect(&systemCheck_,&SystemSpeechClient::failed,this,[this](const QString &message){installingSystem_=false;systemStatus_->setText(message);checkSystem_->setEnabled(true);});
+    connect(&systemCheck_,&SystemSpeechClient::completed,this,[this]{checkSystem_->setEnabled(true);if(installingSystem_){installingSystem_=false;systemCheck_.check(speechLanguage());}});
+    audioForm->addRow(note(tr("Recognition stays on this device. Moonshine and Vosk require a matching native library and extracted model. System speech uses the default microphone; language availability depends on the operating system. Changing engines never switches to a cloud service.")));
     layout->addWidget(audio);
     auto *ai=new QGroupBox(tr("Answer generation")); auto *aiForm=new QFormLayout(ai);
     endpoint_=new QLineEdit(settings.value("llm/endpoint","http://127.0.0.1:8080/v1/chat/completions").toString());
@@ -237,8 +284,35 @@ QWidget *MainWindow::makeSettings() {
     auto *scroll=new QScrollArea; scroll->setWidgetResizable(true); scroll->setFrameShape(QFrame::NoFrame); scroll->setWidget(contents); return scroll;
 }
 MainWindow::~MainWindow() { saveSettings(); delete prompter_; }
+QString MainWindow::speechLanguage() const {
+    if(language_->currentIndex()>=0&&language_->currentText()==language_->itemText(language_->currentIndex()))return language_->currentData().toString();
+    return language_->currentText().trimmed();
+}
+void MainWindow::saveSpeechProfile(){
+    if(profile_.isEmpty())return;
+    QSettings s;const auto prefix="profiles/"+profile_+"/";
+    s.setValue(prefix+"library",library_->text());s.setValue(prefix+"model",modelPath_->text());
+    s.setValue(prefix+"language",speechLanguage());s.setValue(prefix+"architecture",architecture_->currentIndex()+2);
+}
+void MainWindow::loadSpeechProfile(){
+    QSettings s;const auto prefix="profiles/"+profile_+"/";
+    QString defaultLibrary=profile_=="moonshine"?"libmoonshine":"libvosk";
+#ifdef Q_OS_WIN
+    defaultLibrary=(profile_=="moonshine"?QString("moonshine"):QString("vosk"))+".dll";
+#elif defined(Q_OS_MACOS)
+    defaultLibrary+=".dylib";
+#else
+    defaultLibrary+=".so";
+#endif
+    library_->setText(s.value(prefix+"library",profile_=="vosk"?s.value("speech/library",defaultLibrary):QVariant(defaultLibrary)).toString());
+    modelPath_->setText(s.value(prefix+"model",profile_=="vosk"?s.value("speech/model"):QVariant{}).toString());
+    const auto language=s.value(prefix+"language").toString();
+    const QSignalBlocker block(language_);const int index=language_->findData(language);
+    if(index>=0)language_->setCurrentIndex(index);else language_->setEditText(language);
+    architecture_->setCurrentIndex(std::clamp(s.value(prefix+"architecture",2).toInt()-2,0,3));
+}
 void MainWindow::saveSettings() {
-    QSettings s; s.setValue("speech/library",library_->text()); s.setValue("speech/model",modelPath_->text());
+    QSettings s; saveSpeechProfile();s.setValue("speech/backend",backend_->currentData().toString());
     s.setValue("speech/microphone",microphone_->text()); s.setValue("speech/meetingTarget",meetingTarget_->text());
     const QUrl url(endpoint_->text());
     if(LlmClient::validateEndpoint(url).isEmpty()) s.setValue("llm/endpoint",url.toString());
@@ -260,8 +334,11 @@ void MainWindow::refreshApproval() {
 }
 void MainWindow::toggleListening() {
     if(speech_.active()) { speech_.stop(); audioStatus_->setText(tr("Listening is off. No audio is being captured.")); return; }
-    saveSettings(); waitForNewUtterance_=false; speech_.start(library_->text(),modelPath_->text(),microphone_->text(),meetingTarget_->text(),meeting_->isChecked());
-    if(speech_.active()) listen_->setText(tr("Stop listening"));
+    saveSettings();systemCheck_.stop();installingSystem_=false;waitForNewUtterance_=false;
+    speech_.setScript(script_->toPlainText(),tracker_.position());
+    const auto backend=backend_->currentData().toString();
+    speech_.start(library_->text(),modelPath_->text(),backend=="system"?QString{}:microphone_->text(),meetingTarget_->text(),meeting_->isChecked(),backend,speechLanguage(),architecture_->currentIndex()+2);
+    if(speech_.active()){checkSystem_->setEnabled(false);installSystem_->setEnabled(false);listen_->setText(tr("Stop listening"));backend_->setEnabled(false);language_->setEnabled(false);}
 }
 bool MainWindow::discardChanges() {
     if(!script_->document()->isModified()) return true;

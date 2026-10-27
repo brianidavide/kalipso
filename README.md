@@ -18,7 +18,9 @@ Edit your script while reading, keep the next words near your camera, and let lo
 
 The widget and extension work manually without speech components. Voice following requires the separately installed native companion, runtime and language model. Selecting an engine does not download it. The download catalog includes Moonshine models in English, German, Spanish, Japanese and Chinese; Vosk also includes Italian. Interface text is currently English.
 
-## Build
+Experimental standalone ports for macOS and Windows also provide selectable local system recognition. See [requirements and native build instructions](docs/system-speech.md); these are not store releases.
+
+## Build on Linux
 
 Requires a C++20 compiler, CMake 3.22+, Qt 6.4+ Core/DBus/Widgets/Network, and Qt Test for tests. Python 3.11+ is used by installation and test tools; Node.js runs frontend tests.
 
