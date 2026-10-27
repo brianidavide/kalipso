@@ -2,6 +2,7 @@
 #include "window.h"
 #include <QStandardPaths>
 #include <QtTest>
+#include <QSettings>
 
 class UiTests : public QObject {
     Q_OBJECT
@@ -10,6 +11,32 @@ private slots:
         QStandardPaths::setTestModeEnabled(true);
         QCoreApplication::setOrganizationName("kalipso-tests");
         QCoreApplication::setApplicationName("isolated-ui-tests");
+    }
+    void engineProfilesKeepTheirOwnModelsAndLanguages() {
+        QSettings{}.clear();
+        {
+            MainWindow window;
+            auto *engine=window.findChild<QComboBox*>("speechBackend");
+            auto *language=window.findChild<QComboBox*>("speechLanguage");
+            auto *model=window.findChild<QLineEdit*>("speechModel");
+            QVERIFY(engine && language && model);
+            engine->setCurrentIndex(engine->findData("moonshine"));
+            model->setText("moonshine-model");language->setEditText("de-DE");
+            engine->setCurrentIndex(engine->findData("vosk"));
+            model->setText("vosk-model");language->setCurrentIndex(language->findData("it-IT"));
+            engine->setCurrentIndex(engine->findData("moonshine"));
+            QCOMPARE(model->text(),QString("moonshine-model"));
+            QCOMPARE(language->currentData().toString(),QString("de-DE"));
+            engine->setCurrentIndex(engine->findData("vosk"));
+            QCOMPARE(model->text(),QString("vosk-model"));
+            QCOMPARE(language->currentData().toString(),QString("it-IT"));
+        }
+        {
+            MainWindow reopened;
+            QCOMPARE(reopened.findChild<QComboBox*>("speechBackend")->currentData().toString(),QString("vosk"));
+            QCOMPARE(reopened.findChild<QLineEdit*>("speechModel")->text(),QString("vosk-model"));
+        }
+        QSettings{}.clear();
     }
     void overlayEditsPreserveReadingPositionAndUndo() {
         MainWindow window;

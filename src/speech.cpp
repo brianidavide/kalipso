@@ -10,7 +10,7 @@
 #include <QMediaDevices>
 #include <QAudioDevice>
 #include <QCoreApplication>
-#include <QMicrophonePermission>
+#include <QPermissions>
 #endif
 
 SpeechWorker::~SpeechWorker() { unload(); }

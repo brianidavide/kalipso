@@ -11,6 +11,10 @@ private slots:
         SystemSpeechClient client(nullptr,FAKE_SYSTEM_SPEECH);QSignalSpy caps(&client,&SystemSpeechClient::capabilities),ready(&client,&SystemSpeechClient::ready),done(&client,&SystemSpeechClient::completed);
         client.check("en-US");QTRY_COMPARE(done.size(),1);QCOMPARE(caps.size(),1);QCOMPARE(ready.size(),0);QVERIFY(!client.busy());
     }
+    void explicitInstallCompletesWithoutListening(){
+        SystemSpeechClient client(nullptr,FAKE_SYSTEM_SPEECH);QSignalSpy done(&client,&SystemSpeechClient::completed),ready(&client,&SystemSpeechClient::ready);
+        client.install("en-US");QTRY_COMPARE(done.size(),1);QCOMPARE(ready.size(),0);QVERIFY(!client.busy());
+    }
     void malformedOutputAndPrematureExitFail(){
         for(const auto &language:{"bad-json","too-large","no-result"}){
             SystemSpeechClient client(nullptr,FAKE_SYSTEM_SPEECH);QSignalSpy failure(&client,&SystemSpeechClient::failed);

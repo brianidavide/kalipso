@@ -42,6 +42,8 @@ jobs:
           macdeployqt build/kalipso.app
           codesign --force --deep --sign - --entitlements packaging/macos/entitlements.plist build/kalipso.app
           build/kalipso.app/Contents/MacOS/kalipso --demo --quit-after 1000
+          mkdir -p artifacts
+          tar -czf artifacts/kalipso-macos.tar.gz -C build kalipso.app
       - name: Windows package
         if: runner.os == 'Windows'
         run: |
@@ -51,5 +53,5 @@ jobs:
         with:
           name: kalipso-${{ matrix.os }}
           path: |
-            build/kalipso.app
+            artifacts/kalipso-macos.tar.gz
             artifacts/kalipso

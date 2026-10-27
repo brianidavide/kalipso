@@ -11,10 +11,11 @@ public:
     enum Format { Unsigned8, Signed16, Signed32, Float32 };
     void reset(int rate,int channels,Format format){rate_=rate;channels_=channels;format_=format;pending_.clear();samples_=0;next_=0;previous_=0;}
     QByteArray convert(const QByteArray &input){
-        pending_+=input;QByteArray output;
+        QByteArray output;
+        if(rate_<=0||channels_<=0||channels_>32){pending_.clear();return output;}
+        pending_+=input;
         const int bytes=format_==Unsigned8?1:format_==Signed16?2:4;
         const int frame=bytes*channels_;
-        if(rate_<=0||channels_<=0||channels_>32)return output;
         const auto frames=pending_.size()/frame;
         for(qsizetype i=0;i<frames;++i){
             double value=0;
