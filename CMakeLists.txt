@@ -70,6 +70,13 @@ if(BUILD_TESTING)
   find_package(Python3 QUIET COMPONENTS Interpreter)
   if(Python3_Interpreter_FOUND)
     add_test(NAME speech_assets COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/speech_assets_test.py)
+    if(APPLE)
+      add_test(NAME system_helper_probe COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_helper_smoke.py "${CMAKE_CURRENT_BINARY_DIR}/kalipso-system-speech")
+    elseif(WIN32)
+      add_test(NAME system_helper_probe COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_helper_smoke.py $<TARGET_FILE:kalipso-system-speech>)
+    endif()
   endif()
   find_program(DBUS_RUN_SESSION dbus-run-session)
   find_program(GDBUS_EXECUTABLE gdbus)
