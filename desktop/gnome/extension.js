@@ -102,7 +102,7 @@ export default class Kalipso extends Extension {
     }
     button(label,action,primary=false){
         const button=new St.Button({label,can_focus:true,reactive:true,style_class:primary?'tp-button tp-primary':'tp-button'});
-        button.child.clutter_text.set_line_wrap(true);button.child.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);this._buttons.push(button);button.connect('clicked',action);return button;
+        const text=button.child.clutter_text??button.child;text.set_line_wrap(true);text.set_ellipsize(Pango.EllipsizeMode.NONE);this._buttons.push(button);button.connect('clicked',action);return button;
     }
     appearance(theme){
         this._appearance=theme;this.stopColorSampling();this.colorDetails?.set_text('Automatic samples colors around the reader. No images are saved.');

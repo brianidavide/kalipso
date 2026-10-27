@@ -38,6 +38,9 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: UI test failure details
+        if: failure()
+        run: python -c "from pathlib import Path; p=Path('build/ui-results.txt'); print(p.read_text(encoding='utf-8') if p.exists() else 'No UI test log was created')"
       - name: Collect runtime notices
         run: python tools/package-qt-notices.py ${{ matrix.qt }} artifacts/runtime-notices
       - name: macOS bundle
