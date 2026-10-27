@@ -39,6 +39,14 @@ private slots:
         QVERIFY(scriptPhrases("",-1).isEmpty());QVERIFY(scriptPhrases("hello <tag> world",-1).contains("hello tag world"));
         const auto changed=scriptPhrases("prefix "+script,151);QCOMPARE(changed,phrases);
     }
+    void downsamplingRejectsOutOfBandAudio(){
+        const auto energy=[](double frequency){
+            QByteArray pcm;for(int i=0;i<4800;++i){char bytes[2];qToLittleEndian(qint16(16000*std::sin(2*3.141592653589793*frequency*i/48000)),bytes);pcm.append(bytes,2);}
+            PcmConverter converter;converter.reset(48000,1,PcmConverter::Signed16);const auto converted=converter.convert(pcm);
+            double sum=0;for(int i=200;i<converted.size();i+=2){const double sample=qFromLittleEndian<qint16>(converted.constData()+i);sum+=sample*sample;}return sum;
+        };
+        QVERIFY(energy(13000)<energy(1000)*0.01);
+    }
     void pcmConversionPreservesChunkBoundaries(){
         QByteArray source;
         for(int i=0;i<480;++i){char frame[4];qToLittleEndian(qint16(i*10),frame);qToLittleEndian(qint16(i*10),frame+2);source.append(frame,4);}

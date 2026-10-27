@@ -56,7 +56,8 @@ bool MoonshineRecognizer::load(const QString &library,const QString &model,const
 #undef LOAD
     if(!p.load||!p.free||!p.create||!p.start||!p.stop||!p.release||!p.add||!p.transcribe){error="The library does not provide the supported Moonshine streaming API.";unload();return false;}
     const moonshine_option_t options[]={{"return_audio_data","false"},{"max_tokens_per_second","13.0"}};
-    const bool nonLatin=language=="ja"||language=="zh";
+    const auto baseLanguage=language.toLower().replace('_','-').section('-',0,0);
+    const bool nonLatin=baseLanguage=="ja"||baseLanguage=="zh";
     p.transcriber=p.load(model.toUtf8().constData(),uint32_t(architecture),options,nonLatin?2:1,MOONSHINE_HEADER_VERSION);
     if(p.transcriber<0){error="Moonshine could not load this model or API version ("+QString::number(p.transcriber)+"). Check the model architecture and runtime version.";unload();return false;}
     for(int channel=0;channel<(meeting?2:1);++channel){

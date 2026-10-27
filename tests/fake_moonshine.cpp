@@ -4,12 +4,14 @@
 #include <cstring>
 static transcript_line_t lines[65]{};
 static transcript_t result{lines,64};
-static int starts=0,stops=0,frees=0,drains=0,withoutAudio=0;
+static int starts=0,stops=0,frees=0,drains=0,withoutAudio=0,nonLatin=0;
 extern "C" {
 int fake_starts(){return starts;} int fake_stops(){return stops;} int fake_frees(){return frees;}
+int fake_non_latin(){return nonLatin;}
 int fake_drains(){return drains;} int fake_without_audio(){return withoutAudio;}
 int32_t moonshine_load_transcriber_from_files(const char*,uint32_t,const moonshine_option_t *options,uint64_t count,int32_t version){
-    starts=stops=frees=drains=withoutAudio=0;
+    starts=stops=frees=drains=withoutAudio=nonLatin=0;
+    for(uint64_t i=0;i<count;++i)if(std::strcmp(options[i].name,"max_tokens_per_second")==0)nonLatin=1;
     for(uint64_t i=0;i<count;++i)if(std::strcmp(options[i].name,"return_audio_data")==0&&std::strcmp(options[i].value,"false")==0)withoutAudio=1;
     for(auto &line:lines){line={};line.text="completed";line.is_complete=1;}
     lines[64].text="drained pending audio";

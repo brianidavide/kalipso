@@ -54,6 +54,15 @@ private slots:
         QCOMPARE(count("fake_starts"),2);QCOMPARE(count("fake_drains"),1);
         recognizer.unload();recognizer.unload();QCOMPARE(freeCount(),1);
     }
+    void regionalLanguageTagsKeepMoonshineLanguageOptions() {
+        QLibrary library(FAKE_MOONSHINE_LIBRARY);library.setLoadHints(QLibrary::PreventUnloadHint);QVERIFY(library.load());
+        const auto nonLatin=reinterpret_cast<int(*)()>(library.resolve("fake_non_latin"));QVERIFY(nonLatin);
+        for(const auto &language:{"en-US","ja-JP","zh_CN"}){
+            MoonshineRecognizer recognizer;QString error;
+            QVERIFY2(recognizer.load(FAKE_MOONSHINE_LIBRARY,"test-model",language,2,false,error),qPrintable(error));
+            QCOMPARE(nonLatin(),QString(language)=="en-US"?0:1);
+        }
+    }
     void cancelledAudioProducesNoTranscript() {
         auto epoch=std::make_shared<std::atomic<quint64>>(2);
         SpeechWorker worker(epoch); QSignalSpy transcript(&worker,&SpeechWorker::transcript); QSignalSpy consumed(&worker,&SpeechWorker::consumed);

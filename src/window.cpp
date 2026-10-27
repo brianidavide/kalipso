@@ -257,7 +257,7 @@ QWidget *MainWindow::makeSettings() {
     profile_=backend_->currentData().toString();loadSpeechProfile();updateFields();
     connect(backend_,qOverload<int>(&QComboBox::currentIndexChanged),this,[this,updateFields]{
         systemCheck_.stop();installingSystem_=false;saveSpeechProfile();profile_=backend_->currentData().toString();loadSpeechProfile();updateFields();
-        systemStatus_->setText(tr("Choose a language and check its availability."));installSystem_->setEnabled(false);
+        systemStatus_->setText(tr("Choose a language and check its availability."));checkSystem_->setEnabled(true);installSystem_->setEnabled(false);
     });
     connect(language_,&QComboBox::currentTextChanged,this,[this]{systemCheck_.stop();installingSystem_=false;installSystem_->setEnabled(false);checkSystem_->setEnabled(true);systemStatus_->setText(tr("Check availability for the selected language."));});
     connect(checkSystem_,&QPushButton::clicked,this,[this]{systemStatus_->setText(tr("Checking installed system speech…"));systemCheck_.check(speechLanguage());});
