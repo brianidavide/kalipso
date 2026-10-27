@@ -38,7 +38,7 @@ export default class Kalipso extends Extension {
             return Clutter.EVENT_PROPAGATE;
         });
         Main.panel.addToStatusArea(this.uuid,this.indicator);
-        this.actor=new St.BoxLayout({vertical:true,reactive:true,can_focus:true,style_class:'tp-dark',style:`background-color:${C.overlay};color:${C.overlayText};padding:${N.padding}px;spacing:${N.gap}px;border:2px solid ${C.overlayBorder};border-radius:${N.radius}px;`});
+        this.actor=new St.BoxLayout({vertical:true,reactive:true,can_focus:false,style_class:'tp-dark',style:`background-color:${C.overlay};color:${C.overlayText};padding:${N.padding}px;spacing:${N.gap}px;border:2px solid ${C.overlayBorder};border-radius:${N.radius}px;`});
         const row=()=>{const box=new St.BoxLayout({style:`spacing:${T.space[2]};`,x_expand:true});this._rows.push(box);return box;};
         const header=row();this.header=header;
         header.add_child(new St.Label({text:'Kalipso',x_expand:true,y_align:Clutter.ActorAlign.CENTER,style:`font-weight:bold;font-size:${N.bodySize}pt;`}));
@@ -58,6 +58,7 @@ export default class Kalipso extends Extension {
         this.editPane.add_child(new St.Label({text:'SCRIPT',style:`font-size:${N.labelSize}pt;color:${C.overlayMuted};`}));
         this.editor=new St.Entry({accessible_name:'Script',text:example,can_focus:true,x_expand:true,style:`background-color:${C.surface};color:${C.ink};border-radius:${N.buttonRadius}px;padding:${N.gap}px;font-size:${N.bodySize}pt;min-height:${N.padding*4}px;`});
         this.editor.clutter_text.set_single_line_mode(false);this.editor.clutter_text.set_line_wrap(true);
+        this.editor.clutter_text.connect('key-focus-in',()=>this.reveal(this.editor));
         this.editor.clutter_text.connect('text-changed',()=>{this.tracker.setText(this.editor.get_text());this.render();});
         const editScroll=new St.ScrollView({style:`max-height:${N.editorHeight+N.padding*2}px;`,x_expand:true});
         const editContent=new St.BoxLayout({vertical:true,x_expand:true});editContent.add_child(this.editor);editScroll.set_child(editContent);this.editPane.add_child(editScroll);
@@ -81,7 +82,7 @@ export default class Kalipso extends Extension {
         this.mainContent=new St.BoxLayout({vertical:true,x_expand:true,style:`spacing:${N.gap}px;`});
         for(const child of [header,this.readerWrap,this.transport,this.stateLabel,this.secondaryScroll])this.mainContent.add_child(child);
         this.mainScroll=new St.ScrollView({x_expand:true,hscrollbar_policy:St.PolicyType.NEVER});this.mainScroll.set_child(this.mainContent);this.actor.add_child(this.mainScroll);
-        this.actor.connect('key-press-event',(_actor,event)=>{if(event.get_key_symbol()===Clutter.KEY_Escape){if(this._pane)this.showPane('');else this.hide();return Clutter.EVENT_STOP;}return Clutter.EVENT_PROPAGATE;});
+        this.actor.connect('key-press-event',(_actor,event)=>{if(event.get_key_symbol()===Clutter.KEY_Escape){if(this._pane)this.showPane('');else this.hide();return Clutter.EVENT_STOP;}if(event.get_key_symbol()===Clutter.KEY_Tab){const direction=(event.get_state()&Clutter.ModifierType.SHIFT_MASK)?St.DirectionType.TAB_BACKWARD:St.DirectionType.TAB_FORWARD;if(this.actor.navigate_focus(global.stage.get_key_focus(),direction,false))return Clutter.EVENT_STOP;}return Clutter.EVENT_PROPAGATE;});
         Main.layoutManager.addChrome(this.actor,{trackFullscreen:true});
         this.desktopSettings=new Gio.Settings({schema_id:'org.gnome.desktop.interface'});
         this.place=()=>{const m=Main.layoutManager.primaryMonitor;if(!m)return;const scale=this.desktopSettings.get_double('text-scaling-factor');header.get_first_child().visible=scale<1.6;const width=Math.min(N.width*Math.min(scale,1.2),m.width-32);this.actor.width=width;const innerWidth=width-N.padding*2-32;this.mainContent.width=innerWidth;for(const button of this._buttons)button.height=Math.ceil(N.labelSize*4/3*scale*1.6+20);for(const row of this._rows){row.vertical=false;row.vertical=row.get_preferred_width(-1)[1]>innerWidth-24;}header.vertical=width<500*scale;this.transport.vertical=width<500*scale;this.mainScroll.set_style(`max-height:${Math.max(120,m.height-Main.panel.height-48-N.padding*2)}px;`);this.primary.width=Math.min(width-N.padding*2,Math.ceil((N.primaryWidth-28)*scale+28));this.reader.width=innerWidth;this.details.width=this.reader.width-20;this.privacy.width=this.reader.width-20;this.secondaryContent.width=this.reader.width-20;this.editor.width=this.reader.width-20;this.actor.set_position(m.x+Math.round((m.width-width)/2),m.y+Main.panel.height+16);
@@ -95,14 +96,21 @@ export default class Kalipso extends Extension {
         this.monitorSignal=Main.layoutManager.connect('monitors-changed',this.place);this.fontSignal=this.desktopSettings.connect('changed::text-scaling-factor',()=>this.render());this.place();
         if(this.diagnostics){
         const xml='<node><interface name="io.github.brianidavide.Kalipso.Reader"><method name="GetState"><arg type="s" direction="out"/></method><method name="SetScript"><arg type="s" direction="in"/></method><method name="SetAppearance"><arg type="s" direction="in"/></method><method name="Start"/><method name="Stop"/></interface></node>';
-        this.testApi=Gio.DBusExportedObject.wrapJSObject(xml,{GetState:()=>JSON.stringify({appearance:this._appearance,resolvedAppearance:this._resolvedAppearance,colorStatus:this.colorDetails.text,colorSamples:this._colorSamples,position:this.tracker.position,script:this.tracker.text,status:this._status,mode:this._mode,pane:this._pane,visible:this.actor.visible,controls:[this.primary,this.previous,this.reset,this.editButton,this.settingsButton,...this.engineButtons.map(item=>item[1]),this.manualButton,this.voiceButton].map(button=>{const [x,y]=button.get_transformed_position();return {label:button.label,x,y,width:button.width,height:button.height};}),markup:this.tracker.markup(),attributes:this.reader.get_attributes()?.to_string()}),SetScript:text=>this.editor.set_text(text),SetAppearance:theme=>{if(['auto','light','dark'].includes(theme))this.appearance(theme);},Start:()=>{this._mode='voice';this.start();},Stop:()=>this.stop()});
+        this.testApi=Gio.DBusExportedObject.wrapJSObject(xml,{GetState:()=>JSON.stringify({appearance:this._appearance,resolvedAppearance:this._resolvedAppearance,colorStatus:this.colorDetails.text,colorSamples:this._colorSamples,position:this.tracker.position,script:this.tracker.text,status:this._status,mode:this._mode,pane:this._pane,visible:this.actor.visible,controls:[this.primary,this.previous,this.reset,this.editButton,this.settingsButton,...this.engineButtons.map(item=>item[1]),this.manualButton,this.voiceButton].map(button=>{const [x,y]=button.get_transformed_position();return {label:button.label,x,y,width:button.width,height:button.height,focused:button.has_key_focus()};}),markup:this.tracker.markup(),attributes:this.reader.get_attributes()?.to_string()}),SetScript:text=>this.editor.set_text(text),SetAppearance:theme=>{if(['auto','light','dark'].includes(theme))this.appearance(theme);},Start:()=>{this._mode='voice';this.start();},Stop:()=>this.stop()});
         this.testApi.export(Gio.DBus.session,'/io/github/brianidavide/Kalipso/Reader');
         }
         this.appearance('dark');
     }
     button(label,action,primary=false){
         const button=new St.Button({label,can_focus:true,reactive:true,style_class:primary?'tp-button tp-primary':'tp-button'});
-        const text=button.child.clutter_text??button.child;text.set_line_wrap(true);text.set_ellipsize(Pango.EllipsizeMode.NONE);this._buttons.push(button);button.connect('clicked',action);return button;
+        const text=button.child.clutter_text??button.child;text.set_line_wrap(true);text.set_ellipsize(Pango.EllipsizeMode.NONE);this._buttons.push(button);button.connect('key-focus-in',()=>this.reveal(button));button.connect('clicked',()=>{button.grab_key_focus();action();});return button;
+    }
+    reveal(actor){
+        for(let parent=actor.get_parent();parent;parent=parent.get_parent())if(parent instanceof St.ScrollView){
+            const adjustment=parent.get_vadjustment(),top=parent.get_transformed_position()[1],y=actor.get_transformed_position()[1];
+            const delta=y<top?y-top:y+actor.height>top+parent.height?y+actor.height-top-parent.height:0;
+            adjustment.value=Math.max(adjustment.lower,Math.min(adjustment.upper-adjustment.page_size,adjustment.value+delta));
+        }
     }
     appearance(theme){
         this._appearance=theme;this.stopColorSampling();this.colorDetails?.set_text('Automatic samples colors around the reader. No images are saved.');

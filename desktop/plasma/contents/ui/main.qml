@@ -14,6 +14,7 @@ PlasmoidItem {
     readonly property var c:Object.assign({},Design.tokens.color,{overlay:p.background,overlayText:p.text,overlayMuted:p.muted,overlaySurface:p.surface,overlayLine:p.hover,overlayBorder:p.border,focus:p.focus,reading:p.accent})
     onAppearanceChanged:refresh()
     readonly property var n:Design.tokens.native
+    signal revealRequested(var item)
     property string pane:""
     property string mode:"manual"
     property real readerSize:Design.tokens.native.readerSize
@@ -37,6 +38,7 @@ PlasmoidItem {
         property bool primary:false
         Accessible.name:text
         activeFocusOnTab:true
+        onActiveFocusChanged:if(activeFocus)Qt.callLater(function(){root.revealRequested(control)})
         font.pointSize:Qt.application.font.pointSize
         implicitHeight:Math.max(root.n.controlHeight,contentItem.implicitHeight+16)
         implicitWidth:Math.max(contentItem.implicitWidth+24,primary?Math.max(root.n.primaryWidth,metrics.advanceWidth("Start listening")+24):0)
@@ -51,7 +53,9 @@ PlasmoidItem {
         contentItem:Text {text:control.text;color:control.primary?root.p.actionText:root.c.overlayText;font:control.font;horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter;opacity:1}
     }
     component ReaderScrollBar:ScrollBar {
-        policy:ScrollBar.AsNeeded
+        orientation:Qt.Vertical;policy:ScrollBar.AsNeeded
+        implicitWidth:24;height:parent.height;x:parent.width-width;y:0
+        visible:size<1
         contentItem:Rectangle {implicitWidth:24;implicitHeight:24;color:root.c.overlayBorder;radius:4}
         background:Rectangle {color:root.c.overlay}
     }
@@ -62,7 +66,9 @@ PlasmoidItem {
         border.width:2;border.color:root.c.overlayBorder
         Keys.onEscapePressed:function(event){root.pane="";editToggle.forceActiveFocus();event.accepted=true}
         ScrollView {
-            id:outerScroll;ScrollBar.vertical:ReaderScrollBar{};anchors.fill:parent;anchors.margins:root.n.padding;contentWidth:availableWidth;clip:true
+            id:outerScroll;ScrollBar.vertical:ReaderScrollBar{}
+            Connections {target:root;function onRevealRequested(item){const top=item.mapToItem(content,0,0).y;const flick=outerScroll.contentItem;if(top<flick.contentY)flick.contentY=top;else if(top+item.height>flick.contentY+outerScroll.availableHeight)flick.contentY=Math.min(flick.contentHeight-outerScroll.availableHeight,top+item.height-outerScroll.availableHeight);}}
+            anchors.fill:parent;anchors.margins:root.n.padding;rightPadding:ScrollBar.vertical.visible?28:0;contentWidth:availableWidth;clip:true
         ColumnLayout {
             id:content;width:outerScroll.availableWidth;spacing:root.n.gap
             Flow {
@@ -108,6 +114,7 @@ PlasmoidItem {
                         wrapMode:TextEdit.Wrap;padding:root.n.gap;selectByMouse:true
                         background:Rectangle{color:root.c.surface;radius:root.n.buttonRadius;border.width:2;border.color:editor.activeFocus?Design.tokens.palette.light.focus:Design.tokens.palette.light.border}
                         Accessible.name:"Script"
+                        onActiveFocusChanged:if(activeFocus)Qt.callLater(function(){root.revealRequested(editor)})
                         Connections{target:root;function onPaneChanged(){if(root.pane==="edit")Qt.callLater(function(){editor.forceActiveFocus()})}}
                         onTextChanged:{if(text!==root.tracker.text){root.tracker.setText(text);root.refresh()}}
                     }
