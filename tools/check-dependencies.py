@@ -24,6 +24,7 @@ def main():
     pinned = json.loads((ROOT / 'tools/dependency-versions.json').read_text())
     browser = json.loads((ROOT / 'tools/browser/package.json').read_text())['devDependencies']
     sources = {
+        'aqt': 'https://pypi.org/pypi/aqtinstall/json',
         'qt': 'https://api.github.com/repos/qt/qtbase/tags?per_page=100',
         'node': 'https://nodejs.org/dist/index.json',
         'python': 'https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json',
@@ -42,7 +43,7 @@ def main():
             elif name == 'python':
                 candidates = [row['version'] for row in data if row.get('stable') and re.fullmatch(r'\d+\.\d+\.\d+', row['version'])]
             else:
-                candidates = [data['info']['version'] if name == 'cmake' else data['version']]
+                candidates = [data['info']['version'] if name in ('cmake', 'aqt') else data['version']]
             latest = max(candidates, key=version)
             report.append({'name': name, 'pinned': current, 'latest': latest,
                            'update_available': version(latest) > version(current), 'source': sources[name]})

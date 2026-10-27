@@ -1,6 +1,8 @@
 name: Pinned tool versions
 description: Read the single source of build-tool versions.
 outputs:
+  aqt:
+    value: ${{ steps.read.outputs.aqt }}
   qt:
     value: ${{ steps.read.outputs.qt }}
   node:

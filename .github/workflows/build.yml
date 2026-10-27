@@ -27,6 +27,7 @@ jobs:
         if: matrix.qt == 'latest-stable'
         with:
           version: ${{ steps.versions.outputs.qt }}
+          aqtversion: ==${{ steps.versions.outputs.aqt }}
           host: linux
           arch: linux_gcc_64
           cache: true
