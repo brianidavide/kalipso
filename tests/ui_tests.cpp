@@ -9,6 +9,8 @@
 #include <QTabWidget>
 #include <QDir>
 #include <QSignalSpy>
+#include <QWheelEvent>
+#include <QFormLayout>
 
 class UiTests : public QObject {
     Q_OBJECT
@@ -70,6 +72,44 @@ private slots:
             auto *field=window.findChild<QWidget*>(name);QVERIFY(field);auto *interface=QAccessible::queryAccessibleInterface(field);QVERIFY(interface);QVERIFY2(!interface->text(QAccessible::Name).isEmpty(),name);
         }
     }
+    void settingsScrollDoesNotChangeSelections(){
+        QSettings{}.clear(); MainWindow window;window.show();
+        auto *tabs=window.findChild<QTabWidget*>();tabs->setCurrentIndex(tabs->count()-1);
+        auto wheel=[](QComboBox *combo){
+            QWheelEvent event(QPointF(10,10),combo->mapToGlobal(QPoint(10,10)),QPoint(),QPoint(0,-120),Qt::NoButton,Qt::NoModifier,Qt::NoScrollPhase,false);
+            QApplication::sendEvent(combo,&event);
+        };
+        for(const auto *name:{"speechBackend","speechLanguage","applicationTheme","readerTheme","interfaceTextSize"}){
+            auto *combo=window.findChild<QComboBox*>(name);QVERIFY(combo);combo->setFocus();
+            const int before=combo->currentIndex();wheel(combo);QCOMPARE(combo->currentIndex(),before);
+        }
+        QComboBox unsafe;unsafe.addItems({"First","Second"});unsafe.show();unsafe.setFocus();wheel(&unsafe);
+        QCOMPARE(unsafe.currentIndex(),1); // Counterexample: ordinary combos do change during scrolling.
+    }
+    void readerHidingStopsSpeechAndDoesNotResumeIt(){
+        QSettings{}.clear(); MainWindow window;window.setDemoScript();window.showPrompter();
+        auto *speech=window.findChild<SpeechService*>();QVERIFY(speech);
+        QSignalSpy stopped(speech,&SpeechService::stopped);
+        auto *reader=window.prompter();auto *button=reader->findChild<QPushButton*>("readerListeningButton");
+        auto *status=reader->findChild<QLabel*>("readerListeningStatus");QVERIFY(button&&status);
+        reader->setListeningState(true,"Listening");QCOMPARE(button->text(),QString("Pause listening"));
+        reader->hide();QCOMPARE(stopped.count(),1);QVERIFY(!speech->active());
+        QCOMPARE(button->text(),QString("Start listening"));QCOMPARE(status->text(),QString("Microphone off"));
+        window.showPrompter();QVERIFY(!speech->active());QCOMPARE(stopped.count(),1);
+        speech->status("Microphone unavailable");QCOMPARE(status->text(),QString("Microphone unavailable"));
+    }
+    void firstReleaseNavigationAndReaderTextScaling(){
+        QSettings{}.clear();MainWindow window;window.show();
+        auto *tabs=window.findChild<QTabWidget*>();QCOMPARE(tabs->count(),2);
+        QCOMPARE(tabs->tabText(0),QString("Script"));QCOMPARE(tabs->tabText(1),QString("Settings"));
+        auto *button=window.prompter()->findChild<QPushButton*>("readerListeningButton");
+        const double original=button->font().pointSizeF();
+        const double scriptSize=window.prompter()->text->font().pointSizeF();
+        window.findChild<QComboBox*>("interfaceTextSize")->setCurrentIndex(2);
+        QCOMPARE(button->font().pointSizeF(),std::max(8.0,original)*2);
+        QCOMPARE(window.prompter()->text->font().pointSizeF(),scriptSize);
+        QSettings{}.clear();
+    }
     void toolbarWrapsAtNarrowWidths(){
         QWidget host;auto *flow=new FlowLayout(&host);
         for(int i=0;i<4;++i)flow->addWidget(new AccessibleButton("Readable control"));
@@ -84,8 +124,23 @@ private slots:
         QVERIFY(scale->font().pointSizeF()>=16);
         auto *scroll=qobject_cast<QScrollArea*>(window.centralWidget());QVERIFY(scroll);
         QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
-        auto *tabs=window.findChild<QTabWidget*>();QVERIFY(tabs);tabs->setCurrentIndex(2);QTest::qWait(80);
+        auto *tabs=window.findChild<QTabWidget*>();QVERIFY(tabs);tabs->setCurrentIndex(tabs->count()-1);QTest::qWait(80);
         QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
+        window.resize(320,760);QTest::qWait(100);
+        for(auto *area:window.findChildren<QScrollArea*>())if(area->isVisible())QCOMPARE(area->horizontalScrollBar()->maximum(),0);
+        for(auto *form:tabs->currentWidget()->findChildren<QFormLayout*>())if(form->parentWidget()->isVisible()){
+            const auto bounds=form->parentWidget()->contentsRect();
+            for(int row=0;row<form->rowCount();++row)if(auto *item=form->itemAt(row,QFormLayout::LabelRole))
+                if(auto *label=qobject_cast<QLabel*>(item->widget());label&&label->isVisible()){
+                    QVERIFY(label->geometry().right()<=bounds.right());
+                    QVERIFY(label->height()>=label->heightForWidth(label->width()));
+                }
+        }
+        auto *settingsScroll=qobject_cast<QScrollArea*>(tabs->currentWidget());QVERIFY(settingsScroll);
+        const int previousMinimum=settingsScroll->widget()->minimumWidth();
+        settingsScroll->widget()->setMinimumWidth(900);QTest::qWait(30);
+        QVERIFY(settingsScroll->horizontalScrollBar()->maximum()>0); // Detect the nested-overflow regression.
+        settingsScroll->widget()->setMinimumWidth(previousMinimum);window.resize(640,760);QTest::qWait(80);
         if(const auto directory=qEnvironmentVariable("KALIPSO_A11Y_SHOTS");!directory.isEmpty()){
             QDir{}.mkpath(directory);window.grab().save(directory+"/qt-settings-200.png");
             if(auto *choose=window.findChild<QPushButton*>("chooseBackgroundWindow")){

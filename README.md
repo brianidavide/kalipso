@@ -1,6 +1,6 @@
 # Kalipso
 
-An open-source, local-first teleprompter for **KDE Plasma and GNOME**.
+An open-source, local-first desktop teleprompter: **KDE Plasma and GNOME**, plus a standalone Qt app with experimental **Apple Silicon macOS and Windows x64** builds.
 
 Edit your script while reading, keep the next words near your camera, and let local speech recognition follow your voice. Already-read words dim as you speak.
 
@@ -42,15 +42,19 @@ python3 desktop/package.py
 
 Frontend archives are written to `artifacts/packages/`. See [desktop installation](desktop/README.md) for installation and removal.
 
-The optional standalone Qt editor can be started with `./build/kalipso`. Its experimental conversation/LLM tools are separate from the desktop teleprompter MVP; [standalone usage](docs/standalone.md) describes their data flow. For a user-local installation, configure with `-DCMAKE_INSTALL_PREFIX="$HOME/.local"`, rebuild, then run `cmake --install build`. The configured prefix also determines the companion's D-Bus activation path.
+The optional standalone Qt editor can be started with `./build/kalipso`. Its first-release interface focuses on the script, reader and local speech; deferred conversation/LLM tools are not exposed. See [standalone usage](docs/standalone.md). For a user-local installation, configure with `-DCMAKE_INSTALL_PREFIX="$HOME/.local"`, rebuild, then run `cmake --install build`. The configured prefix also determines the companion's D-Bus activation path.
 
 ## Development
 
 `desktop/` contains the widget, extension and shared tracker; `src/` contains native code; `tests/` and `benchmarks/` contain executable checks. `site/` is the static website. `design/tokens.json` supplies shared visual values; regenerate derived sources with `python3 tools/generate-design-tokens.py`.
 
-For browser checks, serve `site/` on port 8770 and run `PLAYWRIGHT=/path/to/playwright/index.mjs node tools/check-design.mjs` with Playwright and its Chromium, Firefox and WebKit browsers installed separately.
+Build-tool versions are pinned in `tools/dependency-versions.json`: Qt 6.12.0, Node 26.12.1, Python 3.15.2 and CMake 4.4.4. CI tests the latest stable Qt on Linux/macOS/Windows and retains a distribution-Qt compatibility lane on Linux. These build versions are separate from the minimum source-build requirements above. GitHub Actions are pinned to verified commits; Dependabot checks Actions and browser tools weekly. `python3 tools/check-dependencies.py` and its scheduled workflow report newer stable build tools without silently changing release inputs. Moonshine is at 0.1.5; Vosk remains on the latest downloadable 0.3.45 wheel until a newer source build is packaged and verified ([tracking issue](https://github.com/brianidavide/kalipso/issues/26)).
 
-Generated packages, test output, recordings, models, local configuration and working notes are excluded from Git. See [CONTRIBUTING.md](CONTRIBUTING.md).
+For browser checks, run `npm ci --prefix tools/browser` and `tools/browser/node_modules/.bin/playwright install --with-deps`. Then serve `site/` on port 8770 and run `PLAYWRIGHT=/path/to/playwright/index.mjs node tools/check-design.mjs` with Playwright and its Chromium, Firefox and WebKit browsers installed separately.
+
+The [delivery plan](https://github.com/brianidavide/kalipso/issues/25) tracks native packages, real-device qualification, presentation-note integration and store publication. The Plasma widget is intended for [KDE Store](https://store.kde.org/browse/); the GNOME extension for extensions.gnome.org. Flathub is not part of the planned distribution path.
+
+Generated packages, test output, raw recordings, models, local configuration and working notes are excluded from Git. Curated product captures in `site/assets/media/` are website assets. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

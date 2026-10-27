@@ -1,0 +1,23 @@
+name: Pinned tool versions
+description: Read the single source of build-tool versions.
+outputs:
+  qt:
+    value: ${{ steps.read.outputs.qt }}
+  node:
+    value: ${{ steps.read.outputs.node }}
+  python:
+    value: ${{ steps.read.outputs.python }}
+  cmake:
+    value: ${{ steps.read.outputs.cmake }}
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      run: |
+        python - <<'PY'
+        import json, os
+        with open('tools/dependency-versions.json') as source, open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            for key, value in json.load(source).items():
+                print(f'{key}={value}', file=output)
+        PY

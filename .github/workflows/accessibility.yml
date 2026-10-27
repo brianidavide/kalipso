@@ -2,7 +2,7 @@ name: Browser accessibility
 on:
   push:
     branches: [main, feature/**]
-    paths: ['site/**', 'design/**', 'desktop/contrast.mjs', 'tests/contrast.test.mjs', 'tools/check-accessibility.mjs', '.github/workflows/accessibility.yml']
+    paths: ['site/**', 'design/**', 'tools/browser/**', 'tools/dependency-versions.json', '.github/actions/**', 'desktop/contrast.mjs', 'tests/contrast.test.mjs', 'tools/check-accessibility.mjs', 'tools/check-design.mjs', '.github/workflows/accessibility.yml']
   pull_request:
 permissions:
   contents: read
@@ -10,21 +10,29 @@ jobs:
   browser:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/versions
+        id: versions
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          node-version: '22'
+          python-version: ${{ steps.versions.outputs.python }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.versions.outputs.node }}
       - name: Install test tools
         run: |
-          npm install --prefix "$RUNNER_TEMP/a11y" --ignore-scripts playwright@1.61.1 axe-core@4.14.0
-          "$RUNNER_TEMP/a11y/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
+          npm ci --prefix tools/browser --ignore-scripts
+          tools/browser/node_modules/.bin/playwright install --with-deps chromium firefox webkit
       - name: Check palettes and browser flows
         run: |
           node tests/contrast.test.mjs
           python3 -m http.server 8770 --directory site > /tmp/kalipso-site.log 2>&1 &
-          PLAYWRIGHT="$RUNNER_TEMP/a11y/node_modules/playwright/index.mjs" AXE_CORE="$RUNNER_TEMP/a11y/node_modules/axe-core/axe.min.js" node tools/check-accessibility.mjs
-      - uses: actions/upload-artifact@v4
+          PLAYWRIGHT="$PWD/tools/browser/node_modules/playwright/index.mjs" AXE_CORE="$PWD/tools/browser/node_modules/axe-core/axe.min.js" node tools/check-accessibility.mjs
+          PLAYWRIGHT="$PWD/tools/browser/node_modules/playwright/index.mjs" node tools/check-design.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: accessibility-failures
-          path: artifacts/accessibility/browser
+          path: |
+            artifacts/accessibility/browser
+            artifacts/ui-test/browser

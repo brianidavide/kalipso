@@ -21,7 +21,10 @@ for name in tracked():
     path = PurePosixPath(name)
     if name not in allowed_files and path.parts[0] not in allowed_roots:
         errors.add(name)
-    if path.suffix in generated_suffixes:
+    # Curated product captures are shipped website content, explicitly requested
+    # by the owner. Diagnostic screenshots must still remain in ignored artifacts/.
+    product_media = path.parent == PurePosixPath('site/assets/media') and path.suffix in {'.webp', '.mp4', '.webm'}
+    if path.suffix in generated_suffixes and not product_media:
         errors.add(name)
 if errors:
     raise SystemExit('Files excluded from source distribution:\n' + '\n'.join(sorted(errors)))

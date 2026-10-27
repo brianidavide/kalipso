@@ -24,16 +24,21 @@ public:
     void highlight(int position,int length);
     void setTextSize(int points);
     void setReaderTheme(const QString &theme);
+    void setListeningState(bool active, const QString &message);
     QString colorSource() const{return backdrop_->source();}
     bool usesWindowPortal() const{return backdrop_->usesWindowPortal();}
     void chooseBackgroundWindow(){backdrop_->chooseWindow();}
     void stopWindowSharing(){backdrop_->stopWindowSharing();}
 signals:
     void colorStatus(const QString &text);
-public:
-signals:
     void step(int direction);
+    void listeningRequested();
+    void hidden();
+protected:
+    void hideEvent(QHideEvent *event) override;
 private:
+    StatusLabel *listeningStatus_;
+    QPushButton *listeningButton_;
     bool editing_ = false;
     Design::Palette colors_=Design::dark;
     Backdrop *backdrop_;

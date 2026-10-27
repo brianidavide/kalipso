@@ -38,9 +38,11 @@ inline QString style(const Design::Palette &p){
       "QSpinBox { min-height:48px; } QSpinBox::up-button, QSpinBox::down-button { width:24px; height:24px; } "
       "QTabBar::tab { padding:8px 12px; border:2px solid %3; background:%4; color:%1; } "
       "QCheckBox { spacing:8px; min-height:24px; } QCheckBox:focus { border:2px solid %8; } "
+      "QPushButton#primaryAction { background:%10; color:%11; } QPushButton#primaryAction:hover { background:%12; } "
+      "QPlainTextEdit#readingScript[readOnly=\"true\"] { background:%2; border-color:transparent; } QPlainTextEdit#readingScript:focus { border-color:%8; } "
       "QPushButton:disabled { color:%9; border-style:dashed; } "
       "QScrollBar { background:%2; } QScrollBar:vertical { width:24px; } QScrollBar:horizontal { height:24px; } QScrollBar::handle { background:%3; min-height:24px; min-width:24px; } ")
-      .arg(p.text,p.background,p.border,p.surface,p.selection,p.selectionText,p.hover,p.focus,p.muted);
+      .arg(p.text,p.background,p.border,p.surface,p.selection,p.selectionText,p.hover,p.focus,p.muted).arg(p.action,p.actionText,p.actionHover);
 }
 inline void apply(QWidget *widget,const Design::Palette &p){widget->setPalette(palette(p));widget->setAutoFillBackground(true);widget->setStyleSheet(style(p));}
 }
@@ -66,7 +68,7 @@ public:
 
 class AccessibleButton:public QPushButton {
 public:
-    explicit AccessibleButton(const QString &text,QWidget *parent=nullptr):QPushButton(text,parent){auto policy=sizePolicy();policy.setHeightForWidth(true);setSizePolicy(policy);}
+    explicit AccessibleButton(const QString &text,QWidget *parent=nullptr):QPushButton(text,parent){auto policy=sizePolicy();policy.setHorizontalPolicy(QSizePolicy::Preferred);policy.setHeightForWidth(true);setSizePolicy(policy);}
     int heightForWidth(int width) const override{return std::max(36,fontMetrics().boundingRect(QRect(0,0,std::max(24,width-24),10000),Qt::TextWordWrap|Qt::AlignCenter,text()).height()+20);}
     QSize sizeHint() const override {const int width=std::min(280,fontMetrics().horizontalAdvance(text())+28);return QSize(width,heightForWidth(width));}
     QSize minimumSizeHint() const override{return QSize(std::min(120,sizeHint().width()),36);}

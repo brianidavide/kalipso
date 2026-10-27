@@ -10,7 +10,10 @@
       {
         "Name": "Kalipso contributors"
       }
-    ]
+    ],
+    "Category": "Utilities",
+    "Website": "https://brianidavide.github.io/kalipso/",
+    "BugReportUrl": "https://github.com/brianidavide/kalipso/issues"
   },
   "KPackageStructure": "Plasma/Applet",
   "X-Plasma-API-Minimum-Version": "6.0"

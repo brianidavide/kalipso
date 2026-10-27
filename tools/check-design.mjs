@@ -10,7 +10,9 @@ const sizes=[[390,844],[360,740],[844,390],[412,915],[750,832],[466,678],[951,66
 const report=[];
 for(const engine of ['chromium','firefox','webkit']){
  const browser=await pw[engine].launch({headless:true});const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`)});
- const external=[];page.on('request',r=>{if(!r.url().startsWith(base))external.push(r.url())});
+ const isExternal=url=>new URL(url).origin!==new URL(base).origin&&!url.startsWith('data:');
+ assert.equal(isExternal('blob:'+base+'/local-video'),false);assert.equal(isExternal('https://example.invalid/remote'),true);
+ const external=[];page.on('request',r=>{if(isExternal(r.url()))external.push(r.url())});
  const overflow=()=>page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);
  let cases=0;
  for(const [width,height] of sizes)for(const route of ['/']){
@@ -21,6 +23,11 @@ for(const engine of ['chromium','firefox','webkit']){
   if(route==='/'&&engine==='chromium')await page.screenshot({path:`${out}/site-${width}x${height}.png`});
  }
  await page.setViewportSize({width:820,height:1000});await page.goto(base);
+ const video=page.locator('video');assert.equal(await video.evaluate(v=>v.paused&&v.controls&&!v.autoplay),true);
+ await video.evaluate(v=>Promise.race([v.play(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Video did not start')),10000))]));
+ await page.waitForFunction(()=>document.querySelector('video').currentTime>.1);
+ await video.evaluate(v=>v.pause());assert.equal(await video.evaluate(v=>v.error),null);
+
  const position=()=>page.locator('#reading-text').getAttribute('data-position');
  await page.locator('#next-word').click();assert.equal(await position(),'3');
  await page.locator('#edit-toggle').click();assert.equal(await page.locator('#edit-toggle').getAttribute('aria-expanded'),'true');
@@ -46,6 +53,6 @@ for(const engine of ['chromium','firefox','webkit']){
   await page.setViewportSize({width:390,height:844});for(const id of ['try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/mobile-${id}.png`})}
  }
  assert.deepEqual(errors,[],engine+' page errors');assert.deepEqual(external,[],engine+' external requests');
- report.push({engine,viewportCases:cases,interactionChecks:16,negativeControls:3,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
+ report.push({engine,viewportCases:cases,interactionChecks:19,negativeControls:3,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
 }
 await writeFile(`${out}/results.json`,JSON.stringify(report,null,2)+'\n');

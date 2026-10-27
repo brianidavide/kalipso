@@ -7,13 +7,31 @@ permissions:
   contents: read
 jobs:
   linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        qt: [distribution, latest-stable]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/versions
+        id: versions
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
       - name: Check source distribution
         run: python3 tools/check-repository.py
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build qt6-base-dev libpipewire-0.3-dev pkg-config pipewire-bin wireplumber gstreamer1.0-tools gstreamer1.0-pipewire gstreamer1.0-plugins-base desktop-file-utils appstream dbus-x11 libglib2.0-bin
+      - uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
+        if: matrix.qt == 'latest-stable'
+        with:
+          version: ${{ steps.versions.outputs.qt }}
+          host: linux
+          arch: linux_gcc_64
+          cache: true
+      - name: Install pinned CMake
+        run: python -m pip install cmake==${{ steps.versions.outputs.cmake }}
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
       - name: Build
@@ -38,7 +56,7 @@ jobs:
           git diff --exit-code -- design src/design_tokens.h site/assets/tokens.css site/assets/tokens.json site/assets/mark.svg site/assets/tracker.mjs site/assets/unicode-tokens.mjs desktop/gnome/tokens.js desktop/gnome/stylesheet.css desktop/plasma/contents/ui/Tokens.js packaging/io.github.brianidavide.kalipso.svg
       - name: Install to staging
         run: DESTDIR="$PWD/artifacts/stage" cmake --install build --prefix /usr
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: linux-development-build
+          name: linux-development-build-${{ matrix.qt }}
           path: artifacts/stage
