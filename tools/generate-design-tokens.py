@@ -53,6 +53,7 @@ for theme, p in source['palette'].items():
     rules.append(f"""{scope} .tp-button {{ font-size: {n['labelSize']}pt; font-weight: 500; border-radius: {n['buttonRadius']}px; padding: {source['space']['2']} {source['space']['3']}; min-height: 24px; background-color: {p['surface']}; color: {p['text']}; border: 2px solid {p['border']}; }}
 {scope} .tp-button:hover, {scope} .tp-button:active {{ background-color: {p['hover']}; }}
 {scope} .tp-button:focus {{ border-color: {p['focus']}; }}
+{scope} StEntry:focus {{ box-shadow: inset 0 0 0 2px {p['focus']}; }}
 {scope} StScrollBar {{ min-width: 24px; background-color: {p['background']}; }}
 {scope} StScrollBar StButton#vhandle, {scope} StScrollBar StButton#hhandle {{ background-color: {p['border']}; min-width:24px; min-height:24px; }}
 {scope} .tp-primary {{ min-width: {n['primaryWidth']-28}px; background-color: {p['action']}; color: {p['actionText']}; }}

@@ -18,7 +18,7 @@ const example='A little preparation makes room for a better conversation.\n\nTak
 const setupURL='https://github.com/brianidavide/kalipso/blob/main/docs/local-engine.md';
 export default class Kalipso extends Extension {
     enable() {
-        Object.assign(C,T.color);this._appearance='dark';this._paletteChoice=new PaletteChoice();this._colorTimer=0;this._colorBusy=false;this._colorPoint=0;this._originalStyles=new WeakMap();
+        Object.assign(C,T.color);this._appearance='dark';this._paletteChoice=new PaletteChoice();this._colorTimer=0;this._colorBusy=false;this._colorPoint=0;this._colorSamples=0;this._originalStyles=new WeakMap();this._buttons=[];this._rows=[];
         this.diagnostics=GLib.getenv('KALIPSO_TEST_API')==='1';
         this.tracker=new Tracker(example);this._status='Choose a speech engine to check its setup.';
         this._lastSequence=-1;this._backend='moonshine';this._active=false;this._mode='manual';this._pane='';this._speechState='idle';
@@ -39,7 +39,7 @@ export default class Kalipso extends Extension {
         });
         Main.panel.addToStatusArea(this.uuid,this.indicator);
         this.actor=new St.BoxLayout({vertical:true,reactive:true,can_focus:true,style_class:'tp-dark',style:`background-color:${C.overlay};color:${C.overlayText};padding:${N.padding}px;spacing:${N.gap}px;border:2px solid ${C.overlayBorder};border-radius:${N.radius}px;`});
-        const row=()=>new St.BoxLayout({style:`spacing:${T.space[2]};`,x_expand:true});
+        const row=()=>{const box=new St.BoxLayout({style:`spacing:${T.space[2]};`,x_expand:true});this._rows.push(box);return box;};
         const header=row();this.header=header;
         header.add_child(new St.Label({text:'Kalipso',x_expand:true,y_align:Clutter.ActorAlign.CENTER,style:`font-weight:bold;font-size:${N.bodySize}pt;`}));
         this.editButton=this.button('Edit script',()=>this.showPane(this._pane==='edit'?'':'edit'));
@@ -80,11 +80,11 @@ export default class Kalipso extends Extension {
         this.secondaryScroll=new St.ScrollView({x_expand:true});this.secondaryScroll.set_child(this.secondaryContent);
         this.mainContent=new St.BoxLayout({vertical:true,x_expand:true,style:`spacing:${N.gap}px;`});
         for(const child of [header,this.readerWrap,this.transport,this.stateLabel,this.secondaryScroll])this.mainContent.add_child(child);
-        this.mainScroll=new St.ScrollView({x_expand:true});this.mainScroll.set_child(this.mainContent);this.actor.add_child(this.mainScroll);
+        this.mainScroll=new St.ScrollView({x_expand:true,hscrollbar_policy:St.PolicyType.NEVER});this.mainScroll.set_child(this.mainContent);this.actor.add_child(this.mainScroll);
         this.actor.connect('key-press-event',(_actor,event)=>{if(event.get_key_symbol()===Clutter.KEY_Escape){if(this._pane)this.showPane('');else this.hide();return Clutter.EVENT_STOP;}return Clutter.EVENT_PROPAGATE;});
         Main.layoutManager.addChrome(this.actor,{trackFullscreen:true});
         this.desktopSettings=new Gio.Settings({schema_id:'org.gnome.desktop.interface'});
-        this.place=()=>{const m=Main.layoutManager.primaryMonitor;if(!m)return;const scale=this.desktopSettings.get_double('text-scaling-factor');header.get_first_child().visible=scale<1.6;const width=Math.min(N.width*Math.min(scale,1.2),m.width-32);this.actor.width=width;this.mainContent.width=width-N.padding*2;header.vertical=width<500*scale;this.transport.vertical=width<500*scale;this.mainScroll.set_style(`max-height:${Math.max(120,m.height-Main.panel.height-48-N.padding*2)}px;`);this.primary.width=Math.min(width-N.padding*2,Math.ceil((N.primaryWidth-28)*scale+28));this.reader.width=width-N.padding*2;this.details.width=this.reader.width-20;this.privacy.width=this.reader.width-20;this.secondaryContent.width=this.reader.width-20;this.editor.width=this.reader.width-20;this.actor.set_position(m.x+Math.round((m.width-width)/2),m.y+Main.panel.height+16);
+        this.place=()=>{const m=Main.layoutManager.primaryMonitor;if(!m)return;const scale=this.desktopSettings.get_double('text-scaling-factor');header.get_first_child().visible=scale<1.6;const width=Math.min(N.width*Math.min(scale,1.2),m.width-32);this.actor.width=width;const innerWidth=width-N.padding*2-32;this.mainContent.width=innerWidth;for(const button of this._buttons)button.height=Math.ceil(N.labelSize*4/3*scale*1.6+20);for(const row of this._rows){row.vertical=false;row.vertical=row.get_preferred_width(-1)[1]>innerWidth-24;}header.vertical=width<500*scale;this.transport.vertical=width<500*scale;this.mainScroll.set_style(`max-height:${Math.max(120,m.height-Main.panel.height-48-N.padding*2)}px;`);this.primary.width=Math.min(width-N.padding*2,Math.ceil((N.primaryWidth-28)*scale+28));this.reader.width=innerWidth;this.details.width=this.reader.width-20;this.privacy.width=this.reader.width-20;this.secondaryContent.width=this.reader.width-20;this.editor.width=this.reader.width-20;this.actor.set_position(m.x+Math.round((m.width-width)/2),m.y+Main.panel.height+16);
             const controls=N.padding*2+N.gap*5+header.get_preferred_height(width)[1]+this.transport.get_preferred_height(width)[1]+this.stateLabel.get_preferred_height(width)[1];
             this.readerWrap.height=Math.min(Math.round(this._readerSize*scale*4/3*4.5),Math.max(60,m.height-Main.panel.height-32-controls-(this._pane?120:0)));
             const line=this.reader.get_layout().get_line_readonly(0);
@@ -94,18 +94,18 @@ export default class Kalipso extends Extension {
             this.secondaryScroll.set_style(`max-height:${Math.max(80,m.height-Main.panel.height-32-base)}px;`);};
         this.monitorSignal=Main.layoutManager.connect('monitors-changed',this.place);this.fontSignal=this.desktopSettings.connect('changed::text-scaling-factor',()=>this.render());this.place();
         if(this.diagnostics){
-        const xml='<node><interface name="io.github.brianidavide.Kalipso.Reader"><method name="GetState"><arg type="s" direction="out"/></method><method name="SetScript"><arg type="s" direction="in"/></method><method name="Start"/><method name="Stop"/></interface></node>';
-        this.testApi=Gio.DBusExportedObject.wrapJSObject(xml,{GetState:()=>JSON.stringify({position:this.tracker.position,script:this.tracker.text,status:this._status,mode:this._mode,pane:this._pane,visible:this.actor.visible,controls:[this.primary,this.previous,this.reset,this.editButton,this.settingsButton,...this.engineButtons.map(item=>item[1]),this.manualButton,this.voiceButton].map(button=>{const [x,y]=button.get_transformed_position();return {label:button.label,x,y,width:button.width,height:button.height};}),markup:this.tracker.markup(),attributes:this.reader.get_attributes()?.to_string()}),SetScript:text=>this.editor.set_text(text),Start:()=>{this._mode='voice';this.start();},Stop:()=>this.stop()});
+        const xml='<node><interface name="io.github.brianidavide.Kalipso.Reader"><method name="GetState"><arg type="s" direction="out"/></method><method name="SetScript"><arg type="s" direction="in"/></method><method name="SetAppearance"><arg type="s" direction="in"/></method><method name="Start"/><method name="Stop"/></interface></node>';
+        this.testApi=Gio.DBusExportedObject.wrapJSObject(xml,{GetState:()=>JSON.stringify({appearance:this._appearance,resolvedAppearance:this._resolvedAppearance,colorStatus:this.colorDetails.text,colorSamples:this._colorSamples,position:this.tracker.position,script:this.tracker.text,status:this._status,mode:this._mode,pane:this._pane,visible:this.actor.visible,controls:[this.primary,this.previous,this.reset,this.editButton,this.settingsButton,...this.engineButtons.map(item=>item[1]),this.manualButton,this.voiceButton].map(button=>{const [x,y]=button.get_transformed_position();return {label:button.label,x,y,width:button.width,height:button.height};}),markup:this.tracker.markup(),attributes:this.reader.get_attributes()?.to_string()}),SetScript:text=>this.editor.set_text(text),SetAppearance:theme=>{if(['auto','light','dark'].includes(theme))this.appearance(theme);},Start:()=>{this._mode='voice';this.start();},Stop:()=>this.stop()});
         this.testApi.export(Gio.DBus.session,'/io/github/brianidavide/Kalipso/Reader');
         }
         this.appearance('dark');
     }
     button(label,action,primary=false){
         const button=new St.Button({label,can_focus:true,reactive:true,style_class:primary?'tp-button tp-primary':'tp-button'});
-        button.connect('clicked',action);return button;
+        button.child.clutter_text.set_line_wrap(true);button.child.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);this._buttons.push(button);button.connect('clicked',action);return button;
     }
     appearance(theme){
-        this._appearance=theme;this.stopColorSampling();
+        this._appearance=theme;this.stopColorSampling();this.colorDetails?.set_text('Automatic samples colors around the reader. No images are saved.');
         if(theme==='auto'){
             this.sampleColors();this._colorTimer=GLib.timeout_add(GLib.PRIORITY_DEFAULT,2000,()=>{this.sampleColors();return GLib.SOURCE_CONTINUE;});
         }else this.applyAppearance(theme);
@@ -122,9 +122,9 @@ export default class Kalipso extends Extension {
             this._colorBusy=false;if(!this.actor?.visible||this._appearance!=='auto')return;
             try{
                 const [ok,color]=object.pick_color_finish(result);if(!ok)throw new Error('No screen color');
-                const hex='#'+[color.get_red_byte(),color.get_green_byte(),color.get_blue_byte()].map(value=>value.toString(16).padStart(2,'0')).join('');
-                const theme=this._paletteChoice.sample(hex,GLib.get_monotonic_time()/1000);if(theme!==this._resolvedAppearance)this.applyAppearance(theme);
-            }catch(error){this.stopColorSampling();this.colorDetails.set_text('Screen colors are unavailable. The opaque reader keeps its contrast.');}
+                const hex='#'+[color.red,color.green,color.blue].map(value=>value.toString(16).padStart(2,'0')).join('');
+                ++this._colorSamples;const theme=this._paletteChoice.sample(hex,GLib.get_monotonic_time()/1000);if(theme!==this._resolvedAppearance)this.applyAppearance(theme);
+            }catch(error){if(this.diagnostics)console.error('Color sampling: '+error.stack);this.stopColorSampling();this.colorDetails.set_text('Screen colors are unavailable. The opaque reader keeps its contrast.');}
         });
     }
     applyAppearance(theme){

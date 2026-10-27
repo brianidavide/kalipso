@@ -8,6 +8,7 @@
 #include <QScrollBar>
 #include <QTabWidget>
 #include <QDir>
+#include <QSignalSpy>
 
 class UiTests : public QObject {
     Q_OBJECT
@@ -52,6 +53,7 @@ private slots:
                 QVERIFY(Accessibility::contrast(colors.color(group,QPalette::HighlightedText),colors.color(group,QPalette::Highlight))>=4.5);
             }
             Prompter reader;reader.setReaderTheme(QString(p.background)==Design::light.background?"light":"dark");reader.text->setPlainText("Read current next");reader.highlight(5,7);
+            reader.show();QTest::qWait(30);QCOMPARE(reader.grab().toImage().pixelColor(3,3),QColor(p.background));
             const auto selections=reader.text->extraSelections();QCOMPARE(selections.size(),2);
             QVERIFY(Accessibility::contrast(selections[0].format.foreground().color(),QColor(p.surface))>=4.5);
             QVERIFY(Accessibility::contrast(selections[1].format.foreground().color(),selections[1].format.background().color())>=4.5);
@@ -78,7 +80,8 @@ private slots:
     void interfaceTextCanGrowWithoutHorizontalScrolling(){
         QSettings{}.clear();MainWindow window;window.resize(640,760);window.show();
         auto *scale=window.findChild<QComboBox*>("interfaceTextSize");QVERIFY(scale);scale->setCurrentIndex(2);
-        QTest::qWait(80);
+        QTest::qWait(80);QCOMPARE(scale->currentData().toDouble(),2.0);
+        QVERIFY(scale->font().pointSizeF()>=16);
         auto *scroll=qobject_cast<QScrollArea*>(window.centralWidget());QVERIFY(scroll);
         QCOMPARE(scroll->horizontalScrollBar()->maximum(),0);
         auto *tabs=window.findChild<QTabWidget*>();QVERIFY(tabs);tabs->setCurrentIndex(2);QTest::qWait(80);
@@ -89,6 +92,15 @@ private slots:
             window.setDemoScript();window.showPrompter();window.prompter()->setReaderTheme("light");QTest::qWait(80);window.prompter()->grab().save(directory+"/qt-reader-light.png");
             window.prompter()->setReaderTheme("dark");QTest::qWait(80);window.prompter()->grab().save(directory+"/qt-reader-dark.png");
         }
+    }
+    void realScreenSamplingExcludesReaderAndStopsWhenDisabled(){
+        if(QGuiApplication::platformName()!="xcb")QSKIP("Real X11 framebuffer required; offscreen tests cannot verify pixels behind windows.");
+        QWidget background;background.setGeometry(100,100,400,400);background.setStyleSheet("background:#000000;");background.show();
+        QWidget reader(nullptr,Qt::Window|Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint);reader.setGeometry(220,220,100,100);reader.setStyleSheet("background:#ffffff;");reader.show();reader.raise();QTest::qWait(100);
+        Backdrop sampler(&reader);QSignalSpy colors(&sampler,&Backdrop::colorChanged);sampler.setEnabled(true);
+        QTRY_VERIFY(!colors.isEmpty());QCOMPARE(colors.last()[0].value<QColor>(),QColor("#000000"));
+        background.setStyleSheet("background:#ffffff;");const auto before=colors.size();QTRY_VERIFY_WITH_TIMEOUT(colors.size()>before,4000);QCOMPARE(colors.last()[0].value<QColor>(),QColor("#ffffff"));
+        sampler.setEnabled(false);const auto stopped=colors.size();QTest::qWait(2200);QCOMPARE(colors.size(),stopped);
     }
     void overlayEditsPreserveReadingPositionAndUndo() {
         MainWindow window;

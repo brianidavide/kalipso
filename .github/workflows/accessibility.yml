@@ -1,0 +1,30 @@
+name: Browser accessibility
+on:
+  push:
+    branches: [main, feature/**]
+    paths: ['site/**', 'design/**', 'desktop/contrast.mjs', 'tests/contrast.test.mjs', 'tools/check-accessibility.mjs', '.github/workflows/accessibility.yml']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/a11y" --ignore-scripts playwright@1.61.1 axe-core@4.14.0
+          "$RUNNER_TEMP/a11y/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
+      - name: Check palettes and browser flows
+        run: |
+          node tests/contrast.test.mjs
+          python3 -m http.server 8770 --directory site > /tmp/kalipso-site.log 2>&1 &
+          PLAYWRIGHT="$RUNNER_TEMP/a11y/node_modules/playwright/index.mjs" AXE_CORE="$RUNNER_TEMP/a11y/node_modules/axe-core/axe.min.js" node tools/check-accessibility.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: accessibility-failures
+          path: artifacts/accessibility/browser

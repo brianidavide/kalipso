@@ -83,9 +83,9 @@ struct SystemSpeech {
             guard let display = content.displays.first(where: { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) }) else {
                 throw SpeechFailure(message: "The reader's display is unavailable.")
             }
-            let applications = content.applications.filter { $0.processID == getppid() || $0.processID == getpid() }
-            guard !applications.isEmpty else { throw SpeechFailure(message: "Cannot exclude Kalipso from screen color sampling.") }
-            let filter = SCContentFilter(display: display, excludingApplications: applications, exceptingWindows: [])
+            let windows = content.windows.filter { $0.owningApplication?.processID == getppid() && $0.title == "Kalipso — reading" }
+            guard !windows.isEmpty else { throw SpeechFailure(message: "Cannot exclude Kalipso's reader from screen color sampling.") }
+            let filter = SCContentFilter(display: display, excludingWindows: windows)
             let config = SCStreamConfiguration()
             config.sourceRect = rect.intersection(display.frame).offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
             config.width = 32; config.height = 16; config.showsCursor = false

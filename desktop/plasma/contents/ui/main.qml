@@ -104,6 +104,7 @@ PlasmoidItem {
                     Layout.fillWidth:true;Layout.preferredHeight:root.n.editorHeight
                     TextArea {
                         id:editor;objectName:"scriptEditor";text:root.tracker.text;color:root.c.ink;font.pointSize:Qt.application.font.pointSize*1.15
+                        selectionColor:Design.tokens.palette.light.selection;selectedTextColor:Design.tokens.palette.light.selectionText
                         wrapMode:TextEdit.Wrap;padding:root.n.gap;selectByMouse:true
                         background:Rectangle{color:root.c.surface;radius:root.n.buttonRadius;border.width:2;border.color:editor.activeFocus?Design.tokens.palette.light.focus:Design.tokens.palette.light.border}
                         Accessible.name:"Script"

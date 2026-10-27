@@ -14,7 +14,7 @@ Automatic color changes select a complete, verified palette, rather than applyin
 
 | Surface | Automatic color source |
 | --- | --- |
-| macOS standalone | ScreenCaptureKit samples the region behind the reader, excluding Kalipso. Selecting automatic screen colors can request Screen Recording permission. No image files are saved. Real-device capture and multi-monitor placement still need validation. |
+| macOS standalone | ScreenCaptureKit samples the region behind the reader, excluding the reading window. Selecting automatic screen colors can request Screen Recording permission. No image files are saved. Real-device capture and multi-monitor placement still need validation. |
 | Windows standalone | A few pixels immediately outside the reader, every two seconds. These describe the surroundings, not pixels hidden behind the window. No video stream is opened. |
 | Linux standalone on X11 | Small samples immediately outside the reader, every two seconds. |
 | Linux standalone on Wayland | Screen pixels are unavailable through this sampling backend. A fixed opaque palette remains; the app reports this limitation. |

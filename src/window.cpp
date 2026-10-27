@@ -247,7 +247,7 @@ QWidget *MainWindow::makeSettings() {
         const auto widgets=findChildren<QWidget*>();for(auto *widget:widgets)if(!widget->property("baseAccessibleFont").isValid())widget->setProperty("baseAccessibleFont",widget->font());
         const double scale=uiScale->currentData().toDouble();for(auto *widget:widgets){auto font=widget->property("baseAccessibleFont").value<QFont>();font.setPointSizeF(std::max(8.0,font.pointSizeF())*scale);widget->setFont(font);}QSettings{}.setValue("appearance/textScale",scale);
     });
-    const double savedScale=settings.value("appearance/textScale",1.0).toDouble();QTimer::singleShot(0,this,[uiScale,savedScale]{const int index=uiScale->findData(savedScale);if(index>=0)uiScale->setCurrentIndex(index);});
+    const double savedScale=settings.value("appearance/textScale",1.0).toDouble();if(savedScale!=1.0)QTimer::singleShot(0,this,[uiScale,savedScale]{const int index=uiScale->findData(savedScale);if(index>=0&&uiScale->currentIndex()==0)uiScale->setCurrentIndex(index);});
     layout->addWidget(reading);
     auto *audio=new QGroupBox(tr("Local speech recognition")); auto *audioForm=new QFormLayout(audio);audioForm->setRowWrapPolicy(QFormLayout::WrapAllRows);
     backend_=new QComboBox;backend_->setObjectName("speechBackend");

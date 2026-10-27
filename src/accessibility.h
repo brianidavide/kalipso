@@ -30,7 +30,7 @@ inline QPalette palette(const Design::Palette &p){
     }return result;
 }
 inline QString style(const Design::Palette &p){
-    return QString("QWidget { color:%1; } QMainWindow, QDialog, QScrollArea, QScrollArea>QWidget>QWidget { background:%2; } "
+    return QString("QWidget { color:%1; } QMainWindow, QDialog, QWidget#readingWindow, QScrollArea, QScrollArea>QWidget>QWidget { background:%2; } "
       "QLabel { background:transparent; } QGroupBox { margin-top:16px; padding-top:16px; border:1px solid %3; } "
       "QPushButton, QToolButton, QComboBox, QLineEdit, QSpinBox, QPlainTextEdit, QAbstractItemView { background:%4; color:%1; border:2px solid %3; border-radius:4px; padding:6px; selection-background-color:%5; selection-color:%6; } "
       "QPushButton, QToolButton, QComboBox, QSpinBox { min-height:24px; } QPushButton:hover, QToolButton:hover { background:%7; } "
