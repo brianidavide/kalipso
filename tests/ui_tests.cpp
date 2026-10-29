@@ -420,6 +420,12 @@ private slots:
                 if (area->isVisible())
                     QVERIFY2(area->horizontalScrollBar()->maximum() == 0,
                              qPrintable(QString("width %1: ").arg(width) + overflowReport(area)));
+            // At 320 px every text in the settings can wrap: a single-line label as wide as the
+            // window overflows with wider fonts (Linux CI) even when it fits here.
+            if (width == 320)
+                for (auto *label : settings->findChildren<QLabel *>())
+                    if (label->isVisible() && !label->text().isEmpty())
+                        QVERIFY2(label->wordWrap(), qPrintable(label->text()));
             // Every visible control fits inside its window.
             for (QWidget *top : {static_cast<QWidget *>(&window), static_cast<QWidget *>(settings)})
                 for (auto *control : top->findChildren<QAbstractButton *>())
