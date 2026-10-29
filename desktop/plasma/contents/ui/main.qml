@@ -51,7 +51,7 @@ PlasmoidItem {
         markup = tracker.words.length
             ? tracker.readingMarkup(c.overlayMuted, c.overlayText)
                 .replace(/<span foreground=/g, "<font color=").replace(/<\/span>/g, "</font>")
-            : "Add your script to begin."
+            : i18n("Add your script to begin.")
         readCount = tracker.position + 1
         wordCount = tracker.words.length
         lost = tracker.lost
@@ -162,7 +162,7 @@ PlasmoidItem {
         font.pointSize: Qt.application.font.pointSize
         implicitHeight: Math.max(root.n.controlHeight, contentItem.implicitHeight + 16)
         implicitWidth: Math.max(contentItem.implicitWidth + 24,
-            primary ? Math.max(root.n.primaryWidth, metrics.advanceWidth("Start listening") + 24) : 0)
+            primary ? Math.max(root.n.primaryWidth, metrics.advanceWidth(i18n("Start listening")) + 24) : 0)
         FontMetrics { id: metrics; font: control.font }
         width: Math.min(implicitWidth, parent ? parent.width : implicitWidth)
         padding: 8; leftPadding: 12; rightPadding: 12
@@ -290,7 +290,7 @@ PlasmoidItem {
                     }
                     ReaderButton {
                         objectName: "sectionsButton"
-                        text: "Sections"
+                        text: i18n("Sections")
                         visible: root.sectionList.length > 0
                         onClicked: sectionMenu.popup(this, 0, height)
                         Menu {
@@ -310,12 +310,12 @@ PlasmoidItem {
                     ReaderButton {
                         id: editToggle
                         objectName: "editToggle"
-                        text: root.pane === "edit" ? "Done editing" : "Edit script"
+                        text: root.pane === "edit" ? i18n("Done editing") : i18n("Edit script")
                         onClicked: root.showPane("edit")
                     }
                     ReaderButton {
                         objectName: "settingsToggle"
-                        text: root.pane === "settings" ? "Done" : "Settings"
+                        text: root.pane === "settings" ? i18n("Done") : i18n("Settings")
                         onClicked: root.showPane("settings")
                     }
                 }
@@ -331,8 +331,8 @@ PlasmoidItem {
                     Layout.minimumHeight: font.pixelSize * 4.5
                     topPadding: 12
                     bottomPadding: 12
-                    Accessible.name: "Reading excerpt"
-                    Accessible.description: "Open Edit script to read or change the complete script."
+                    Accessible.name: i18n("Reading excerpt")
+                    Accessible.description: i18n("Open Edit script to read or change the complete script.")
                     // Beam-splitter rigs show the reader through a mirror.
                     transform: Scale {
                         origin.x: width / 2
@@ -349,16 +349,16 @@ PlasmoidItem {
                     ReaderButton {
                         objectName: "readAction"
                         primary: true
-                        text: root.mode === "manual" ? "Next words"
-                            : root.mode === "steady" ? (steady.running ? "Pause" : "Start scrolling")
-                            : audio.active ? "Pause" : audio.busy ? "Cancel" : "Start listening"
+                        text: root.mode === "manual" ? i18n("Next words")
+                            : root.mode === "steady" ? (steady.running ? i18n("Pause") : i18n("Start scrolling"))
+                            : audio.active ? i18n("Pause") : audio.busy ? i18n("Cancel") : i18n("Start listening")
                         enabled: root.wordCount > 0 && (root.mode !== "manual" || !root.atEnd)
                         onClicked: root.toggle()
                     }
-                    ReaderButton { text: "Previous"; enabled: root.readCount > 0; onClicked: root.seek(root.tracker.position - 4) }
+                    ReaderButton { text: i18n("Previous"); enabled: root.readCount > 0; onClicked: root.seek(root.tracker.position - 4) }
                     ReaderButton {
                         objectName: "resetPosition"
-                        text: "Reset"
+                        text: i18n("Reset")
                         enabled: root.readCount > 0
                         onClicked: root.seek(-1)
                     }
@@ -372,9 +372,9 @@ PlasmoidItem {
                     visible: root.mode === "steady"
                     spacing: 8
                     Layout.fillWidth: true
-                    ReaderButton { text: "Slower"; onClicked: root.changeSpeed(-10) }
-                    Label { text: root.speed + " words/min"; color: root.c.overlayText }
-                    ReaderButton { text: "Faster"; onClicked: root.changeSpeed(10) }
+                    ReaderButton { text: i18n("Slower"); onClicked: root.changeSpeed(-10) }
+                    Label { text: i18n("%1 words/min", root.speed); color: root.c.overlayText }
+                    ReaderButton { text: i18n("Faster"); onClicked: root.changeSpeed(10) }
                 }
                 Label {
                     objectName: "readingState"
@@ -382,13 +382,13 @@ PlasmoidItem {
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                     Accessible.role: Accessible.StatusBar
-                    text: root.mode === "manual" ? (root.atEnd ? "End of script · Microphone off" : "Manual · Microphone off")
-                        : root.mode === "steady" ? (steady.running ? "Scrolling · Microphone off"
-                            : root.atEnd ? "End of script · Microphone off" : "Paused · Microphone off")
-                        : audio.active ? (root.lost ? "Off script · Kalipso catches up when you return to the text"
-                            : "Listening · On this device")
-                        : audio.busy ? "Starting local speech…"
-                        : audio.failed ? "Speech unavailable · Open Settings" : "Paused · Microphone off"
+                    text: root.mode === "manual" ? (root.atEnd ? i18n("End of script · Microphone off") : i18n("Manual · Microphone off"))
+                        : root.mode === "steady" ? (steady.running ? i18n("Scrolling · Microphone off")
+                            : root.atEnd ? i18n("End of script · Microphone off") : i18n("Paused · Microphone off"))
+                        : audio.active ? (root.lost ? i18n("Off script · Kalipso catches up when you return to the text")
+                            : i18n("Listening · On this device"))
+                        : audio.busy ? i18n("Starting local speech…")
+                        : audio.failed ? i18n("Speech unavailable · Open Settings") : i18n("Paused · Microphone off")
                 }
 
                 Rectangle { visible: root.pane !== ""; Layout.fillWidth: true; implicitHeight: 1; color: root.c.overlayLine }
@@ -397,7 +397,7 @@ PlasmoidItem {
                     visible: root.pane === "edit"
                     Layout.fillWidth: true
                     spacing: root.n.gap
-                    Label { text: "Script"; font.capitalization: Font.AllUppercase; color: root.c.overlayMuted }
+                    Label { text: i18n("Script"); font.capitalization: Font.AllUppercase; color: root.c.overlayMuted }
                     ScrollView {
                         ScrollBar.vertical: ReaderScrollBar {}
                         Layout.fillWidth: true
@@ -419,7 +419,7 @@ PlasmoidItem {
                                 border.width: 2
                                 border.color: editor.activeFocus ? Design.tokens.palette.light.focus : Design.tokens.palette.light.border
                             }
-                            Accessible.name: "Script"
+                            Accessible.name: i18n("Script")
                             onActiveFocusChanged: if (activeFocus) Qt.callLater(function() { root.revealRequested(editor) })
                             Connections {
                                 target: root
@@ -435,7 +435,7 @@ PlasmoidItem {
                             }
                         }
                     }
-                    Note { text: "Saved automatically. [Bracketed cues] are shown but not read aloud. Lines starting with # are sections." }
+                    Note { text: i18n("Saved automatically. [Bracketed cues] are shown but not read aloud. Lines starting with # are sections.") }
                 }
 
                 ColumnLayout {
@@ -445,9 +445,9 @@ PlasmoidItem {
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        ChoiceButton { objectName: "manualMode"; label: "Manual"; selected: root.mode === "manual"; onClicked: root.setMode("manual") }
-                        ChoiceButton { objectName: "steadyMode"; label: "Steady speed"; selected: root.mode === "steady"; onClicked: root.setMode("steady") }
-                        ChoiceButton { objectName: "voiceMode"; label: "Follow my voice"; selected: root.mode === "voice"; onClicked: root.setMode("voice") }
+                        ChoiceButton { objectName: "manualMode"; label: i18n("Manual"); selected: root.mode === "manual"; onClicked: root.setMode("manual") }
+                        ChoiceButton { objectName: "steadyMode"; label: i18n("Steady speed"); selected: root.mode === "steady"; onClicked: root.setMode("steady") }
+                        ChoiceButton { objectName: "voiceMode"; label: i18n("Follow my voice"); selected: root.mode === "voice"; onClicked: root.setMode("voice") }
                     }
                     Flow {
                         Layout.fillWidth: true
@@ -465,23 +465,23 @@ PlasmoidItem {
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        Label { text: "Reader colors"; color: root.c.overlayText }
-                        ChoiceButton { objectName: "autoAppearance"; label: "Desktop theme"; selected: root.appearance === "auto"; onClicked: root.chooseAppearance("auto") }
-                        ChoiceButton { objectName: "darkAppearance"; label: "Dark"; selected: root.appearance === "dark"; onClicked: root.chooseAppearance("dark") }
-                        ChoiceButton { objectName: "lightAppearance"; label: "Light"; selected: root.appearance === "light"; onClicked: root.chooseAppearance("light") }
+                        Label { text: i18n("Reader colors"); color: root.c.overlayText }
+                        ChoiceButton { objectName: "autoAppearance"; label: i18n("Desktop theme"); selected: root.appearance === "auto"; onClicked: root.chooseAppearance("auto") }
+                        ChoiceButton { objectName: "darkAppearance"; label: i18n("Dark"); selected: root.appearance === "dark"; onClicked: root.chooseAppearance("dark") }
+                        ChoiceButton { objectName: "lightAppearance"; label: i18n("Light"); selected: root.appearance === "light"; onClicked: root.chooseAppearance("light") }
                     }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
                         ReaderButton {
                             objectName: "chooseBackgroundWindow"
-                            text: "Choose background window…"
+                            text: i18n("Choose background window…")
                             enabled: !windowColors.active && !windowColors.busy
                             onClicked: { root.followWindow = true; windowColors.start() }
                         }
                         ReaderButton {
                             objectName: "stopWindowSharing"
-                            text: "Stop window sharing"
+                            text: i18n("Stop window sharing")
                             enabled: windowColors.active || windowColors.busy
                             onClicked: { windowColors.stop(); root.followWindow = false }
                         }
@@ -492,28 +492,28 @@ PlasmoidItem {
                         Accessible.role: Accessible.StaticText
                         Accessible.name: text
                     }
-                    Note { text: "Window colors follow the window you select while this reader is visible. Images stay in memory and are never saved or sent. Requires the Kalipso companion, PipeWire and the desktop sharing portal. Every color mode keeps an opaque reading background." }
+                    Note { text: i18n("Window colors follow the window you select while this reader is visible. Images stay in memory and are never saved or sent. Requires the Kalipso companion, PipeWire and the desktop sharing portal. Every color mode keeps an opaque reading background.") }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        Label { text: "Mirror"; color: root.c.overlayText }
-                        ChoiceButton { label: "Off"; selected: root.mirror === "none"; onClicked: root.config.mirror = "none" }
-                        ChoiceButton { objectName: "mirrorHorizontal"; label: "Horizontal"; selected: root.mirror === "horizontal"; onClicked: root.config.mirror = "horizontal" }
-                        ChoiceButton { label: "Vertical"; selected: root.mirror === "vertical"; onClicked: root.config.mirror = "vertical" }
+                        Label { text: i18n("Mirror"); color: root.c.overlayText }
+                        ChoiceButton { label: i18n("Off"); selected: root.mirror === "none"; onClicked: root.config.mirror = "none" }
+                        ChoiceButton { objectName: "mirrorHorizontal"; label: i18n("Horizontal"); selected: root.mirror === "horizontal"; onClicked: root.config.mirror = "horizontal" }
+                        ChoiceButton { label: i18n("Vertical"); selected: root.mirror === "vertical"; onClicked: root.config.mirror = "vertical" }
                     }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        Label { text: "Reading size"; color: root.c.overlayText }
-                        ReaderButton { text: "Smaller"; onClicked: root.config.readerSize = Math.max(18, root.readerSize - 2) }
-                        ReaderButton { text: "Larger"; onClicked: root.config.readerSize = Math.min(64, root.readerSize + 2) }
+                        Label { text: i18n("Reading size"); color: root.c.overlayText }
+                        ReaderButton { text: i18n("Smaller"); onClicked: root.config.readerSize = Math.max(18, root.readerSize - 2) }
+                        ReaderButton { text: i18n("Larger"); onClicked: root.config.readerSize = Math.min(64, root.readerSize + 2) }
                     }
                     ReaderButton {
-                        text: "Local speech setup ↗"
-                        Accessible.name: "Local speech setup, opens in your browser"
+                        text: i18n("Local speech setup ↗")
+                        Accessible.name: i18n("Local speech setup, opens in your browser")
                         onClicked: Qt.openUrlExternally("https://github.com/brianidavide/kalipso/blob/main/docs/local-engine.md")
                     }
-                    Note { text: "Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed. Screen sharing may include this widget; check what other participants see." }
+                    Note { text: i18n("Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed. Screen sharing may include this widget; check what other participants see.") }
                 }
                 Item { Layout.fillHeight: true }
             }

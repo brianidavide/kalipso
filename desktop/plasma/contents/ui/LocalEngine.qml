@@ -4,7 +4,7 @@ import org.kde.plasma.workspace.dbus as DBus
 Item {
     id:engine
     visible:false
-    property string status:"Choose a speech engine to check its setup."
+    property string status:i18n("Choose a speech engine to check its setup.")
     property bool active:false
     property bool failed:false
     property bool busy:false
@@ -20,7 +20,7 @@ Item {
             try {
             if(epoch!==generation)return
             busy=false
-            if(reply.isError){failed=true;active=false;poll.stop();console.warn("Local speech: "+reply.error.message);status="Local speech is unavailable. Open Local speech setup to install the companion and a language model.";return}
+            if(reply.isError){failed=true;active=false;poll.stop();console.warn("Local speech: "+reply.error.message);status=i18n("Local speech is unavailable. Open Local speech setup to install the companion and a language model.");return}
             callback(reply.value)
             } finally {reply.destroy()}
         }
@@ -49,7 +49,7 @@ Item {
     }
     function start() {
         if(active||busy)return
-        const epoch=++generation;failed=false;lastSequence=-1;busy=true;status="Checking local speech components"
+        const epoch=++generation;failed=false;lastSequence=-1;busy=true;status=i18n("Checking local speech components")
         call('GetDependencies',function(value){
             const deps=JSON.parse(value)
             if(!deps.ready){failed=true;status=deps.missing.join(' ');return}
@@ -59,7 +59,7 @@ Item {
     }
     function stop() {
         ++generation;poll.stop();active=false;busy=false;failed=false
-        call('Stop',function(){status="Microphone stopped"},generation)
+        call('Stop',function(){status=i18n("Microphone stopped")},generation)
     }
     Timer{id:poll;interval:250;repeat:true;onTriggered:{if(!engine.busy){engine.busy=true;engine.call('GetState',engine.receive,engine.generation)}}}
     Component.onDestruction:{if(active||busy)stop()}

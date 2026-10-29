@@ -48,6 +48,17 @@ lupdate -no-obsolete -locations none src -ts translations/kalipso_it.ts
 
 Open the `.ts` file in Qt Linguist, translate, and rebuild. Add a language by creating `translations/kalipso_<code>.ts` and listing it in Settings → Interface language (`src/window.cpp`).
 
+The Plasma widget (`i18n()`) and GNOME extension (`_()`) share one gettext catalog in `desktop/po/`:
+
+```sh
+cd desktop
+xgettext --from-code=UTF-8 --language=JavaScript --keyword=i18n --keyword=_ --no-location \
+  -o po/kalipso-desktop.pot plasma/contents/ui/*.qml gnome/*.js
+msgmerge --update po/it.po po/kalipso-desktop.pot
+```
+
+`desktop/package.py` compiles every `po/<language>.po` into both packages.
+
 ## Dependencies and CI
 
 Build-tool versions are pinned in `tools/dependency-versions.json` (Qt, Node, Python, CMake, aqt) and GitHub Actions are pinned to commits. `python3 tools/check-dependencies.py` and a weekly workflow report newer stable releases without changing anything. Linux CI builds against both the distribution's Qt and the latest stable Qt; macOS and Windows CI build, test and package the standalone app. Windows temporarily installs aqt from an upstream commit because aqt 3.3.0 cannot locate the Qt 6.11+ Windows repositories (#1).
