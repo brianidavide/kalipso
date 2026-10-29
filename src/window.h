@@ -24,6 +24,8 @@ public:
     explicit MainWindow(const QString &libraryDirectory = {});
     // Writes the last voice session's report (More → Save session report…).
     bool saveSessionReport(const QString &path);
+    // Imports a text, document or presentation file as a new script and opens it.
+    bool importFile(const QString &path);
     ~MainWindow() override;
 
     void showPrompter();
@@ -44,6 +46,7 @@ private:
     bool saveScript(); // False when the current script could not be written.
     void newScript();
     void importScript();
+    void followSlide(int number, const QString &notes);
     void exportScript();
     void deleteScript();
 
@@ -95,6 +98,8 @@ private:
     QAction *reportAction_ = nullptr;
     ReaderWindow *prompter_;
     RemoteControl *remote_ = nullptr;
+    class ImpressFollower *impress_ = nullptr;
+    QAction *impressAction_ = nullptr;
     ReadingMode mode_ = ReadingMode::Voice;
     QTimer steady_, countdown_;
     int countdownLeft_ = 0;

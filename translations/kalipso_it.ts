@@ -32,6 +32,49 @@
     </message>
 </context>
 <context>
+    <name>ImpressFollower</name>
+    <message>
+        <source>LibreOffice's Python bridge is missing (on Debian and Ubuntu: python3-uno).</source>
+        <translation>Manca il collegamento Python di LibreOffice (su Debian e Ubuntu: python3-uno).</translation>
+    </message>
+    <message>
+        <source>Stopped following Impress.</source>
+        <translation>Non segue più Impress.</translation>
+    </message>
+    <message>
+        <source>LibreOffice was not found. Install it to follow an Impress slideshow.</source>
+        <translation>LibreOffice non è stato trovato. Installalo per seguire una presentazione di Impress.</translation>
+    </message>
+    <message>
+        <source>Cannot prepare the Impress connection.</source>
+        <translation>Impossibile preparare il collegamento con Impress.</translation>
+    </message>
+    <message>
+        <source>LibreOffice could not be started.</source>
+        <translation>Impossibile avviare LibreOffice.</translation>
+    </message>
+    <message>
+        <source>Connecting to LibreOffice…</source>
+        <translation>Collegamento a LibreOffice…</translation>
+    </message>
+    <message>
+        <source>Connected to Impress. Start the slideshow; Kalipso follows its slides.</source>
+        <translation>Collegato a Impress. Avvia la presentazione: Kalipso ne segue le diapositive.</translation>
+    </message>
+    <message>
+        <source>The slideshow ended. Start it again to keep following.</source>
+        <translation>La presentazione è finita. Riavviala per continuare a seguirla.</translation>
+    </message>
+    <message>
+        <source>The presentation was closed. Stopped following Impress.</source>
+        <translation>La presentazione è stata chiusa. Non segue più Impress.</translation>
+    </message>
+    <message>
+        <source>Cannot follow Impress: %1</source>
+        <translation>Impossibile seguire Impress: %1</translation>
+    </message>
+</context>
+<context>
     <name>MainWindow</name>
     <message>
         <source>Kalipso</source>
@@ -682,6 +725,38 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Pedals and clickers usually send the arrows, Page Up/Down or Space, which work without any setup. Choose a key here to add one for an action, or to give a built-in key another action, for example the arrows to change speed. Escape always hides the reader.</source>
         <translation>Pedali e telecomandi di solito inviano le frecce, Pagina su/giù o Spazio, che funzionano senza configurazione. Scegli qui un tasto per aggiungerlo a un'azione, o per dare a un tasto predefinito un'altra azione, per esempio le frecce per cambiare velocità. Esc nasconde sempre il lettore.</translation>
+    </message>
+    <message>
+        <source>Present with Impress…</source>
+        <translation>Presenta con Impress…</translation>
+    </message>
+    <message>
+        <source>Open a presentation in LibreOffice Impress and follow its slideshow: the reader jumps to the notes of the slide being shown.</source>
+        <translation>Apri una presentazione in LibreOffice Impress e segui la proiezione: il lettore salta alle note della diapositiva mostrata.</translation>
+    </message>
+    <message>
+        <source>Present with Impress</source>
+        <translation>Presenta con Impress</translation>
+    </message>
+    <message>
+        <source>Presentations (*.odp *.pptx)</source>
+        <translation>Presentazioni (*.odp *.pptx)</translation>
+    </message>
+    <message>
+        <source>Stop following Impress</source>
+        <translation>Smetti di seguire Impress</translation>
+    </message>
+    <message>
+        <source>Impress · slide %1 has no notes.</source>
+        <translation>Impress · la diapositiva %1 non ha note.</translation>
+    </message>
+    <message>
+        <source>Impress · the notes of slide %1 are not in this script.</source>
+        <translation>Impress · le note della diapositiva %1 non sono in questo copione.</translation>
+    </message>
+    <message>
+        <source>Following Impress · slide %1</source>
+        <translation>Segue Impress · diapositiva %1</translation>
     </message>
 </context>
 <context>

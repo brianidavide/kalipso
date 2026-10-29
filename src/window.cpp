@@ -3,6 +3,7 @@
 #include "design_tokens.h"
 #include "icons.h"
 #include "import.h"
+#include "impress.h"
 #include "platform/capture_exclusion.h"
 #include "remote.h"
 #include "script_highlighter.h"
@@ -389,6 +390,11 @@ MainWindow::MainWindow(const QString &libraryDirectory)
         audioStatus_->setText(message);
         refreshRunning();
     });
+    impress_ = new ImpressFollower(this);
+    connect(impress_, &ImpressFollower::slideChanged, this, &MainWindow::followSlide);
+    connect(impress_, &ImpressFollower::statusChanged, audioStatus_, &QLabel::setText);
+    connect(impress_, &ImpressFollower::finished, this,
+            [this] { impressAction_->setText(tr("Present with Impress…")); });
     connect(&speech_, &SpeechService::listening, this,
             [this] { session_.start(tracker_.position(), QDateTime::currentMSecsSinceEpoch()); });
     connect(&speech_, &SpeechService::stopped, this, [this] {
@@ -479,6 +485,10 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     auto *import = menu->addAction(tr("Import…"));
     import->setToolTip(tr("Text, Markdown, Word (.docx) and OpenDocument (.odt) documents, or speaker notes from "
                           "PowerPoint (.pptx) and Impress (.odp)"));
+    impressAction_ = menu->addAction(tr("Present with Impress…"));
+    impressAction_->setObjectName("presentWithImpress");
+    impressAction_->setToolTip(tr("Open a presentation in LibreOffice Impress and follow its slideshow: the reader "
+                                  "jumps to the notes of the slide being shown."));
     auto *exportAction = menu->addAction(tr("Export…"));
     reportAction_ = menu->addAction(tr("Save session report…"));
     reportAction_->setObjectName("saveSessionReport");
@@ -494,6 +504,16 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     connect(import, &QAction::triggered, this, &MainWindow::importScript);
     connect(exportAction, &QAction::triggered, this, &MainWindow::exportScript);
     connect(remove, &QAction::triggered, this, &MainWindow::deleteScript);
+    connect(impressAction_, &QAction::triggered, this, [this] {
+        if (impress_->active()) {
+            impress_->stop();
+            return;
+        }
+        const auto path =
+            QFileDialog::getOpenFileName(this, tr("Present with Impress"), {}, tr("Presentations (*.odp *.pptx)"));
+        if (!path.isEmpty() && importFile(path) && impress_->start(path))
+            impressAction_->setText(tr("Stop following Impress"));
+    });
     connect(reportAction_, &QAction::triggered, this, [this] {
         const auto path = QFileDialog::getSaveFileName(
             this, tr("Save session report"), tr("%1 - session.md").arg(ScriptLibrary::titleFor(lastSessionScript_)),
@@ -598,23 +618,27 @@ void MainWindow::newScript() {
 
 void MainWindow::importScript() {
     const auto path = QFileDialog::getOpenFileName(this, tr("Import script"), {}, ScriptImport::dialogFilter());
-    if (path.isEmpty())
-        return;
+    if (!path.isEmpty())
+        importFile(path);
+}
+
+bool MainWindow::importFile(const QString &path) {
     const auto result = ScriptImport::read(path);
     if (!result.error.isEmpty()) {
         QMessageBox::warning(this, tr("Cannot import"), result.error);
-        return;
+        return false;
     }
     const auto id = library_.create(result.text);
     if (id.isEmpty()) {
         audioStatus_->setText(tr("Cannot save the imported script."));
-        return;
+        return false;
     }
     openScript(id);
     audioStatus_->setText(result.sections ? tr("Imported speaker notes from %n slide(s). Use Sections in the reader "
                                                "to jump between slides.",
                                                nullptr, result.sections)
                                           : tr("Script imported."));
+    return true;
 }
 
 void MainWindow::exportScript() {
@@ -801,6 +825,29 @@ void MainWindow::changeSpeed(int delta) {
     prompter_->setSpeed(wordsPerMinute_);
     steady_.setInterval(60000 / wordsPerMinute_); // Also applies after a countdown.
     refreshReading();
+}
+
+// Impress showed another slide: continue just before the first line of its notes.
+// Matching the text, not the slide number, keeps working after edits and in any language.
+void MainWindow::followSlide(int number, const QString &notes) {
+    const auto lines = notes.split(u'\n');
+    const auto first =
+        std::find_if(lines.begin(), lines.end(), [](const QString &line) { return !line.trimmed().isEmpty(); });
+    if (first == lines.end()) {
+        audioStatus_->setText(tr("Impress · slide %1 has no notes.").arg(number));
+        return;
+    }
+    const int at = int(script_->toPlainText().indexOf(first->trimmed()));
+    if (at < 0) {
+        audioStatus_->setText(tr("Impress · the notes of slide %1 are not in this script.").arg(number));
+        return;
+    }
+    if (at == 0)
+        tracker_.seek(-1);
+    else
+        tracker_.seekCharacter(at - 1);
+    seekWord(tracker_.position());
+    audioStatus_->setText(tr("Following Impress · slide %1").arg(number));
 }
 
 void MainWindow::jumpSection(int direction) {

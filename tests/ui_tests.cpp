@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include "impress.h"
 #include "remote.h"
 #include "speech.h"
 #include "window.h"
@@ -12,6 +13,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QPlainTextEdit>
+#include <QProcess>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSettings>
@@ -414,6 +416,80 @@ private slots:
         QTest::keyClick(reader->text, Qt::Key_Up);
         QVERIFY(positionLabel(window)->text().startsWith("Word 1 of 4"));
         QSettings().remove("keys");
+    }
+
+    void impressSlidesMoveTheReaderToTheirNotes() {
+        auto python = QStandardPaths::findExecutable("python3");
+        if (python.isEmpty())
+            python = QStandardPaths::findExecutable("python");
+        if (python.isEmpty())
+            QSKIP("Needs Python to stand in for LibreOffice");
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("# Slide 1: Welcome\n\nThank everyone for coming.\nMention the  two  spaces.\n\n"
+                                     "# Slide 3: Results\n\nRevenue grew by twelve percent.\nPause for questions.\n");
+        auto *impress = window.findChild<ImpressFollower *>();
+        auto *status = window.findChild<QLabel *>("audioStatus");
+        QVERIFY(impress && status);
+        // The same JSON lines impress_follow.py prints for a real slideshow.
+        impress->startHelper(python, {"-c", R"(import json, time
+for event in [{"state": "connecting"}, {"state": "waiting"},
+              {"state": "slide", "slide": 3, "notes": "Revenue grew by twelve percent.\nPause for questions."}]:
+    print(json.dumps(event), flush=True)
+time.sleep(0.4)
+for event in [{"state": "slide", "slide": 2, "notes": ""},
+              {"state": "slide", "slide": 4, "notes": "Not in this script"}, {"state": "closed"}]:
+    print(json.dumps(event), flush=True)
+    time.sleep(0.2)
+)"});
+        QTRY_VERIFY_WITH_TIMEOUT(positionLabel(window)->text().startsWith("Word 8 of 16"), 5000); // Before "Revenue".
+        QCOMPARE(status->text(), QString("Following Impress · slide 3"));
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Impress · slide 2 has no notes."), 5000);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 8 of 16")); // Stays put.
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Impress · the notes of slide 4 are not in this script."),
+                                  5000);
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("The presentation was closed. Stopped following Impress."),
+                                  5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!impress->active(), 5000);
+        QCOMPARE(window.findChild<QAction *>("presentWithImpress")->text(), QString("Present with Impress…"));
+    }
+
+    // Opt-in (KALIPSO_IMPRESS_E2E=1, with LibreOffice, xdotool and an X11 display): opens the
+    // fixture in real Impress and presses F5 and the right arrow there, as a presenter would.
+    void realImpressSlideshowIsFollowed() {
+        if (qEnvironmentVariable("KALIPSO_IMPRESS_E2E") != "1")
+            QSKIP("Set KALIPSO_IMPRESS_E2E=1 to drive a real LibreOffice Impress");
+        const auto xdotool = QStandardPaths::findExecutable("xdotool");
+        if (xdotool.isEmpty() || ImpressFollower::findOffice().soffice.isEmpty())
+            QSKIP("Needs LibreOffice and xdotool");
+        QTemporaryDir work;
+        const auto path = work.filePath("talk notes.odp");
+        QVERIFY(QFile::copy(QFINDTESTDATA("fixtures/notes.odp"), path));
+        MainWindow window(scripts_.path());
+        QVERIFY(window.importFile(path));
+        auto *impress = window.findChild<ImpressFollower *>();
+        auto *status = window.findChild<QLabel *>("audioStatus");
+        QVERIFY(impress->start(path));
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("Connected to Impress"), 90000);
+        const auto press = [&xdotool](const QString &key) {
+            QProcess::execute(xdotool, {"search", "--sync", "--name", "talk notes", "windowactivate", "--sync"});
+            QProcess::execute(xdotool, {"key", key});
+        };
+        press("F5");
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Following Impress · slide 1"), 30000);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 0 of"));
+        // A click advances the full-screen slideshow (keyboard focus is unreliable without a window manager).
+        const auto advance = [&xdotool] {
+            QTest::qWait(2000); // The slideshow reports a slide before its window takes input.
+            QProcess::execute(xdotool, {"mousemove", "300", "300", "click", "1"});
+        };
+        advance();
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Impress · slide 2 has no notes."), 30000);
+        advance();
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Following Impress · slide 3"), 30000);
+        QVERIFY2(positionLabel(window)->text().startsWith("Word 8 of"), qPrintable(positionLabel(window)->text()));
+        impress->stop();
+        QProcess::execute(xdotool, {"key", "Escape"});
+        QProcess::execute("pkill", {"-f", "--", "--accept=pipe,name=kalipso-"}); // The LibreOffice started here.
     }
 
     void readerKeysStepTheScript() {
