@@ -7,7 +7,7 @@ Item {
     property bool active:false
     property bool busy:false
     property int generation:0
-    property string status:"Choose the window behind the reader. Desktop permission is required."
+    property string status:i18n("Choose the window behind the reader. Desktop permission is required.")
     property string sample:""
     signal sampled(string color)
     readonly property string clientToken:Date.now().toString(36)+"_"+Math.random().toString(36).slice(2)
@@ -18,7 +18,7 @@ Item {
             try {
                 if(epoch!==generation)return
                 busy=false
-                if(reply.isError){active=false;poll.stop();status="Window colors unavailable. Install or update the Kalipso companion and the desktop sharing portal.";return}
+                if(reply.isError){active=false;poll.stop();status=i18n("Window colors unavailable. Install or update the Kalipso companion and the desktop sharing portal.");return}
                 callback(reply.value)
             } finally {reply.destroy()}
         }
@@ -27,12 +27,12 @@ Item {
     function start(){
         if(active||busy)return
         const epoch=++generation;busy=true;sample="";active=true
-        status="Choose the window behind your reader in the desktop sharing dialog"
+        status=i18n("Choose the window behind your reader in the desktop sharing dialog")
         call("StartColors",function(started){active=started;if(started)poll.start()},epoch)
     }
     function stop(){
         const wasActive=active||busy;++generation;active=false;busy=false;poll.stop();sample=""
-        status="Window sharing stopped · Choose a background window to resume"
+        status=i18n("Window sharing stopped · Choose a background window to resume")
         if(wasActive)call("StopColors",function(){},generation)
     }
     Timer {

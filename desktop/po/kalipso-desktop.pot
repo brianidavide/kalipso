@@ -1,0 +1,253 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the kalipso-desktop package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: kalipso-desktop\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-29 14:41+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Add your script to begin."
+msgstr ""
+
+msgid "Sections"
+msgstr ""
+
+msgid "Done editing"
+msgstr ""
+
+msgid "Edit script"
+msgstr ""
+
+msgid "Done"
+msgstr ""
+
+msgid "Settings"
+msgstr ""
+
+msgid "Reading excerpt"
+msgstr ""
+
+msgid "Open Edit script to read or change the complete script."
+msgstr ""
+
+msgid "Next words"
+msgstr ""
+
+msgid "Pause"
+msgstr ""
+
+msgid "Start scrolling"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Start listening"
+msgstr ""
+
+msgid "Previous"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Slower"
+msgstr ""
+
+msgid "%1 words/min"
+msgstr ""
+
+msgid "Faster"
+msgstr ""
+
+msgid "End of script · Microphone off"
+msgstr ""
+
+msgid "Manual · Microphone off"
+msgstr ""
+
+msgid "Scrolling · Microphone off"
+msgstr ""
+
+msgid "Paused · Microphone off"
+msgstr ""
+
+msgid "Off script · Kalipso catches up when you return to the text"
+msgstr ""
+
+msgid "Listening · On this device"
+msgstr ""
+
+msgid "Starting local speech…"
+msgstr ""
+
+msgid "Speech unavailable · Open Settings"
+msgstr ""
+
+msgid "Script"
+msgstr ""
+
+msgid ""
+"Saved automatically. [Bracketed cues] are shown but not read aloud. Lines "
+"starting with # are sections."
+msgstr ""
+
+msgid "Manual"
+msgstr ""
+
+msgid "Steady speed"
+msgstr ""
+
+msgid "Follow my voice"
+msgstr ""
+
+msgid "Reader colors"
+msgstr ""
+
+msgid "Desktop theme"
+msgstr ""
+
+msgid "Dark"
+msgstr ""
+
+msgid "Light"
+msgstr ""
+
+msgid "Choose background window…"
+msgstr ""
+
+msgid "Stop window sharing"
+msgstr ""
+
+msgid ""
+"Window colors follow the window you select while this reader is visible. "
+"Images stay in memory and are never saved or sent. Requires the Kalipso "
+"companion, PipeWire and the desktop sharing portal. Every color mode keeps "
+"an opaque reading background."
+msgstr ""
+
+msgid "Mirror"
+msgstr ""
+
+msgid "Off"
+msgstr ""
+
+msgid "Horizontal"
+msgstr ""
+
+msgid "Vertical"
+msgstr ""
+
+msgid "Reading size"
+msgstr ""
+
+msgid "Smaller"
+msgstr ""
+
+msgid "Larger"
+msgstr ""
+
+msgid "Local speech setup ↗"
+msgstr ""
+
+msgid "Local speech setup, opens in your browser"
+msgstr ""
+
+msgid ""
+"Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change "
+"the steady speed. Screen sharing may include this widget; check what other "
+"participants see."
+msgstr ""
+
+msgid "Choose a speech engine to check its setup."
+msgstr ""
+
+msgid ""
+"Local speech is unavailable. Open Local speech setup to install the "
+"companion and a language model."
+msgstr ""
+
+msgid "Checking local speech components"
+msgstr ""
+
+msgid "Microphone stopped"
+msgstr ""
+
+msgid "Choose the window behind the reader. Desktop permission is required."
+msgstr ""
+
+msgid ""
+"Window colors unavailable. Install or update the Kalipso companion and the "
+"desktop sharing portal."
+msgstr ""
+
+msgid "Choose the window behind your reader in the desktop sharing dialog"
+msgstr ""
+
+msgid "Window sharing stopped · Choose a background window to resume"
+msgstr ""
+
+msgid ""
+"A little preparation makes room for a better conversation. [smile]\n"
+"\n"
+"Take your time. Leave space for a pause. Your next words will be here when "
+"you are ready."
+msgstr ""
+
+msgid "Automatic samples colors around the reader. No images are saved."
+msgstr ""
+
+msgid "‹ Section"
+msgstr ""
+
+msgid "Previous section"
+msgstr ""
+
+msgid "Section ›"
+msgstr ""
+
+msgid "Next section"
+msgstr ""
+
+msgid "Hide"
+msgstr ""
+
+msgid "SCRIPT"
+msgstr ""
+
+msgid "Automatic"
+msgstr ""
+
+msgid "Screen colors are unavailable. The opaque reader keeps its contrast."
+msgstr ""
+
+msgid ""
+"Local speech is not installed. Open Local speech setup to install a "
+"companion and language model."
+msgstr ""
+
+#, javascript-format
+msgid "%s · %s · Ready"
+msgstr ""
+
+msgid "configured language"
+msgstr ""
+
+#, javascript-format
+msgid "%d words/min"
+msgstr ""
+
+#, javascript-format
+msgid "Local speech unavailable. %s See docs/local-engine.md."
+msgstr ""

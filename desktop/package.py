@@ -7,7 +7,9 @@ speech model or recording. Output: artifacts/packages/. File timestamps are
 fixed so identical sources produce identical archives.
 """
 from pathlib import Path
+import ast
 import hashlib
+import struct
 import subprocess
 import sys
 import zipfile
@@ -19,6 +21,52 @@ SOURCE_SUFFIXES = {'.qml', '.mjs', '.js', '.css', '.json', '.xml'}
 NOTICES = [(ROOT / 'LICENSE', 'LICENSE'), (ROOT / 'LICENSES/Unicode-3.0.txt', 'Unicode-LICENSE.txt'),
            (ROOT / 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_NOTICES.md')]
 GNOME_SHARED = ['tracker.mjs', 'contrast.mjs', 'unicode-tokens.mjs']
+PLASMA_DOMAIN = 'plasma_applet_io.github.brianidavide.kalipso'
+GNOME_DOMAIN = 'kalipso'
+
+
+def compile_po(path):
+    """Compile a simple .po file (no plurals or contexts) to .mo bytes."""
+    messages, key, field = {}, None, None
+    entry = {'msgid': '', 'msgstr': ''}
+    for line in path.read_text(encoding='utf-8').splitlines() + ['']:
+        line = line.strip()
+        if line.startswith('msgid '):
+            if field == 'msgstr':
+                messages[entry['msgid']] = entry['msgstr']
+            entry, field = {'msgid': '', 'msgstr': ''}, 'msgid'
+            line = line[6:]
+        elif line.startswith('msgstr '):
+            field = 'msgstr'
+            line = line[7:]
+        elif not line.startswith('"'):
+            continue
+        entry[field] += ast.literal_eval(line)
+    if field == 'msgstr':
+        messages[entry['msgid']] = entry['msgstr']
+    keys = sorted(messages)
+    ids = [key.encode() for key in keys]
+    strs = [messages[key].encode() for key in keys]
+    header_size = 7 * 4
+    table = header_size + 16 * len(keys)
+    ids_data = b''.join(item + b'\0' for item in ids)
+    offsets, position = [], table
+    for item in ids:
+        offsets.append((len(item), position))
+        position += len(item) + 1
+    str_offsets = []
+    for item in strs:
+        str_offsets.append((len(item), position))
+        position += len(item) + 1
+    output = struct.pack('<7I', 0x950412de, 0, len(keys), header_size, header_size + 8 * len(keys), 0, 0)
+    output += b''.join(struct.pack('<2I', *pair) for pair in offsets)
+    output += b''.join(struct.pack('<2I', *pair) for pair in str_offsets)
+    return output + ids_data + b''.join(item + b'\0' for item in strs)
+
+
+def translations(prefix, domain):
+    return [(path, f'{prefix}{path.stem}/LC_MESSAGES/{domain}.mo', compile_po(path))
+            for path in sorted((BASE / 'po').glob('*.po'))]
 
 
 def plasma_files():
@@ -39,21 +87,23 @@ def kwin_files():
             if path.is_file() and path.suffix in SOURCE_SUFFIXES]
 
 
-def write(name, files):
+def write(name, files, generated=()):
     with zipfile.ZipFile(OUT / name, 'w', zipfile.ZIP_DEFLATED) as archive:
-        for source, destination in files + NOTICES:
+        entries = [(destination, source.read_bytes()) for source, destination in files + NOTICES]
+        entries += [(destination, data) for _, destination, data in generated]
+        for destination, data in entries:
             info = zipfile.ZipInfo(destination, (2026, 10, 26, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, source.read_bytes())
+            archive.writestr(info, data)
     print(hashlib.sha256((OUT / name).read_bytes()).hexdigest(), name)
 
 
 def main():
     subprocess.run([sys.executable, str(ROOT / 'tools/sync-shared.py'), '--check'], check=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    write('kalipso-plasma.plasmoid', plasma_files())
-    write('kalipso-gnome.zip', gnome_files())
+    write('kalipso-plasma.plasmoid', plasma_files(), translations('contents/locale/', PLASMA_DOMAIN))
+    write('kalipso-gnome.zip', gnome_files(), translations('locale/', GNOME_DOMAIN))
     write('kalipso-kwin.kwinscript', kwin_files())
 
 

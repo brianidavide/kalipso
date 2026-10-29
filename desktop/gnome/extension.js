@@ -8,7 +8,7 @@ import Atk from 'gi://Atk';
 import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {PaletteChoice} from './contrast.mjs';
 import {Tracker, sections} from './tracker.mjs';
 import {LocalEngine} from './local-engine.js';
@@ -16,10 +16,10 @@ import {tokens as T} from './tokens.js';
 
 const C = {...T.color};
 const N = T.native;
-const SAMPLE = 'A little preparation makes room for a better conversation. [smile]\n\n' +
-    'Take your time. Leave space for a pause. Your next words will be here when you are ready.';
+// Translated when used: translations are only available once the extension is loaded.
+const sample = () => _('A little preparation makes room for a better conversation. [smile]\n\nTake your time. Leave space for a pause. Your next words will be here when you are ready.');
 const SETUP_URL = 'https://github.com/brianidavide/kalipso/blob/main/docs/local-engine.md';
-const COLOR_NOTE = 'Automatic samples colors around the reader. No images are saved.';
+const colorNote = () => _('Automatic samples colors around the reader. No images are saved.');
 const ROLES = {overlay: 'background', overlayText: 'text', overlayMuted: 'muted', overlaySurface: 'surface',
     overlayLine: 'hover', overlayBorder: 'border', focus: 'focus', reading: 'accent'};
 
@@ -105,13 +105,13 @@ export default class Kalipso extends Extension {
         this._mirror = 'none';
         this._readerSize = N.readerSize;
         this._pane = '';
-        this._status = 'Choose a speech engine to check its setup.';
+        this._status = _('Choose a speech engine to check its setup.');
         this._speechState = 'idle';
         this._lastSequence = -1;
         this._backend = 'moonshine';
         this._active = false;
         this.diagnostics = GLib.getenv('KALIPSO_TEST_API') === '1';
-        this.tracker = new Tracker(SAMPLE);
+        this.tracker = new Tracker(sample());
         this.state = new SavedState();
 
         this.local = new LocalEngine(state => {
@@ -223,14 +223,14 @@ export default class Kalipso extends Extension {
         this.header = header;
         header.add_child(new St.Label({text: 'Kalipso', x_expand: true, y_align: Clutter.ActorAlign.CENTER,
             style: `font-weight:bold;font-size:${N.bodySize}pt;`}));
-        this.previousSection = this.button('‹ Section', () => this.jumpSection(-1));
-        this.previousSection.accessible_name = 'Previous section';
-        this.nextSection = this.button('Section ›', () => this.jumpSection(1));
-        this.nextSection.accessible_name = 'Next section';
-        this.editButton = this.button('Edit script', () => this.showPane(this._pane === 'edit' ? '' : 'edit'));
-        this.settingsButton = this.button('Settings', () => this.showPane(this._pane === 'settings' ? '' : 'settings'));
+        this.previousSection = this.button(_('‹ Section'), () => this.jumpSection(-1));
+        this.previousSection.accessible_name = _('Previous section');
+        this.nextSection = this.button(_('Section ›'), () => this.jumpSection(1));
+        this.nextSection.accessible_name = _('Next section');
+        this.editButton = this.button(_('Edit script'), () => this.showPane(this._pane === 'edit' ? '' : 'edit'));
+        this.settingsButton = this.button(_('Settings'), () => this.showPane(this._pane === 'settings' ? '' : 'settings'));
         for (const child of [this.previousSection, this.nextSection, this.editButton, this.settingsButton,
-            this.button('Hide', () => this.hide())])
+            this.button(_('Hide'), () => this.hide())])
             header.add_child(child);
 
         this.reader = new Clutter.Text({font_name: `Sans ${N.readerSize}`, line_wrap: true, ellipsize: 0,
@@ -241,9 +241,9 @@ export default class Kalipso extends Extension {
         this.readerWrap.clip_to_allocation = true;
 
         this.transport = this._row();
-        this.primary = this.button('Next words', () => this.primaryAction(), true);
-        this.previous = this.button('Previous', () => this.seek(this.tracker.position - 4));
-        this.reset = this.button('Reset', () => this.seek(-1));
+        this.primary = this.button(_('Next words'), () => this.primaryAction(), true);
+        this.previous = this.button(_('Previous'), () => this.seek(this.tracker.position - 4));
+        this.reset = this.button(_('Reset'), () => this.seek(-1));
         for (const child of [this.primary, this.previous, this.reset])
             this.transport.add_child(child);
         this.counter = new St.Label({x_expand: true, x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER,
@@ -252,9 +252,9 @@ export default class Kalipso extends Extension {
 
         this.speedRow = this._row();
         this.speedLabel = new St.Label({y_align: Clutter.ActorAlign.CENTER});
-        this.speedRow.add_child(this.button('Slower', () => this.changeSpeed(-10)));
+        this.speedRow.add_child(this.button(_('Slower'), () => this.changeSpeed(-10)));
         this.speedRow.add_child(this.speedLabel);
-        this.speedRow.add_child(this.button('Faster', () => this.changeSpeed(10)));
+        this.speedRow.add_child(this.button(_('Faster'), () => this.changeSpeed(10)));
 
         this.stateLabel = new St.Label({accessible_role: Atk.Role.STATUSBAR, style: `font-size:${N.labelSize}pt;color:${C.reading};`});
 
@@ -279,8 +279,8 @@ export default class Kalipso extends Extension {
     _buildEditPane() {
         this.editPane = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL,
             style: `spacing:${N.gap}px;padding-top:${N.gap}px;border-top:1px solid ${C.overlayLine};`});
-        this.editPane.add_child(new St.Label({text: 'SCRIPT', style: `font-size:${N.labelSize}pt;color:${C.overlayMuted};`}));
-        this.editor = new St.Entry({accessible_name: 'Script', text: SAMPLE, can_focus: true, x_expand: true,
+        this.editPane.add_child(new St.Label({text: _('SCRIPT'), style: `font-size:${N.labelSize}pt;color:${C.overlayMuted};`}));
+        this.editor = new St.Entry({accessible_name: _('Script'), text: sample(), can_focus: true, x_expand: true,
             style: `background-color:${C.surface};color:${C.ink};border-radius:${N.buttonRadius}px;padding:${N.gap}px;` +
                 `font-size:${N.bodySize}pt;min-height:${N.padding * 4}px;`});
         this.editor.clutter_text.set_single_line_mode(false);
@@ -299,15 +299,14 @@ export default class Kalipso extends Extension {
         editContent.add_child(this.editor);
         editScroll.set_child(editContent);
         this.editPane.add_child(editScroll);
-        this.editPane.add_child(this._note('Saved automatically. [Bracketed cues] are shown but not read aloud. ' +
-            'Lines starting with # are sections.'));
+        this.editPane.add_child(this._note('Saved automatically. [Bracketed cues] are shown but not read aloud. Lines starting with # are sections.'));
     }
 
     _buildSettingsPane() {
         this.settingsPane = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL,
             style: `spacing:${N.gap}px;padding-top:${N.gap}px;border-top:1px solid ${C.overlayLine};`});
         const modeRow = this._row();
-        this.modeButtons = [['manual', 'Manual'], ['steady', 'Steady speed'], ['voice', 'Follow my voice']]
+        this.modeButtons = [['manual', _('Manual')], ['steady', _('Steady speed')], ['voice', _('Follow my voice')]]
             .map(([id, label]) => [id, label, this.button(label, () => this.mode(id))]);
         for (const [, , button] of this.modeButtons)
             modeRow.add_child(button);
@@ -315,7 +314,7 @@ export default class Kalipso extends Extension {
 
         const engineRow = this._row();
         this.engineButtons = [];
-        for (const id of ['moonshine', 'vosk']) {
+        for (const id of ['moonshine', 'vosk']) { // Product names, not translated.
             const button = this.button(id === 'moonshine' ? 'Moonshine' : 'Vosk', () => this.chooseEngine(id));
             this.engineButtons.push([id, button]);
             engineRow.add_child(button);
@@ -325,30 +324,30 @@ export default class Kalipso extends Extension {
         this.settingsPane.add_child(this.details);
 
         const sizeRow = this._row();
-        sizeRow.add_child(new St.Label({text: 'Reading size', x_expand: true, y_align: Clutter.ActorAlign.CENTER}));
-        sizeRow.add_child(this.button('Smaller', () => this.resize(-2)));
-        sizeRow.add_child(this.button('Larger', () => this.resize(2)));
+        sizeRow.add_child(new St.Label({text: _('Reading size'), x_expand: true, y_align: Clutter.ActorAlign.CENTER}));
+        sizeRow.add_child(this.button(_('Smaller'), () => this.resize(-2)));
+        sizeRow.add_child(this.button(_('Larger'), () => this.resize(2)));
         this.settingsPane.add_child(sizeRow);
 
         const colors = this._row();
-        colors.add_child(new St.Label({text: 'Reader colors', y_align: Clutter.ActorAlign.CENTER}));
-        this.appearanceButtons = [['auto', 'Automatic'], ['dark', 'Dark'], ['light', 'Light']]
+        colors.add_child(new St.Label({text: _('Reader colors'), y_align: Clutter.ActorAlign.CENTER}));
+        this.appearanceButtons = [['auto', _('Automatic')], ['dark', _('Dark')], ['light', _('Light')]]
             .map(([id, label]) => [id, label, this.button(label, () => this.appearance(id))]);
         for (const [, , button] of this.appearanceButtons)
             colors.add_child(button);
         this.settingsPane.add_child(colors);
-        this.colorDetails = this._note(COLOR_NOTE);
+        this.colorDetails = this._note(colorNote());
         this.settingsPane.add_child(this.colorDetails);
 
         const mirror = this._row();
-        mirror.add_child(new St.Label({text: 'Mirror', y_align: Clutter.ActorAlign.CENTER}));
-        this.mirrorButtons = [['none', 'Off'], ['horizontal', 'Horizontal'], ['vertical', 'Vertical']]
+        mirror.add_child(new St.Label({text: _('Mirror'), y_align: Clutter.ActorAlign.CENTER}));
+        this.mirrorButtons = [['none', _('Off')], ['horizontal', _('Horizontal')], ['vertical', _('Vertical')]]
             .map(([id, label]) => [id, label, this.button(label, () => this.setMirror(id))]);
         for (const [, , button] of this.mirrorButtons)
             mirror.add_child(button);
         this.settingsPane.add_child(mirror);
 
-        this.settingsPane.add_child(this.button('Local speech setup ↗', () => {
+        this.settingsPane.add_child(this.button(_('Local speech setup ↗'), () => {
             try {
                 Gio.AppInfo.launch_default_for_uri(SETUP_URL, null);
             } catch (error) {
@@ -356,8 +355,7 @@ export default class Kalipso extends Extension {
                 this.render();
             }
         }));
-        this.privacy = this._note('Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the ' +
-            'steady speed. The reader may appear in screen sharing; check what other participants see.');
+        this.privacy = this._note('Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed. The reader may appear in screen sharing; check what other participants see.');
         this.settingsPane.add_child(this.privacy);
     }
 
@@ -497,7 +495,7 @@ export default class Kalipso extends Extension {
     appearance(theme) {
         this._appearance = theme;
         this.stopColorSampling();
-        this.colorDetails?.set_text(COLOR_NOTE);
+        this.colorDetails?.set_text(colorNote());
         this.state?.update({appearance: theme});
         if (theme === 'auto') {
             this.sampleColors();
@@ -543,7 +541,7 @@ export default class Kalipso extends Extension {
                 if (this.diagnostics)
                     console.error('Color sampling: ' + error.stack);
                 this.stopColorSampling();
-                this.colorDetails.set_text('Screen colors are unavailable. The opaque reader keeps its contrast.');
+                this.colorDetails.set_text(_('Screen colors are unavailable. The opaque reader keeps its contrast.'));
             }
         });
     }
@@ -692,7 +690,7 @@ export default class Kalipso extends Extension {
                 this.showSettings(settings);
         } catch {
             if (this.actor) {
-                this._status = 'Local speech is not installed. Open Local speech setup to install a companion and language model.';
+                this._status = _('Local speech is not installed. Open Local speech setup to install a companion and language model.');
                 this.render();
             }
         }
@@ -702,7 +700,7 @@ export default class Kalipso extends Extension {
         this._backend = settings.selected;
         const dependencies = settings.dependencies;
         this._status = dependencies.ready
-            ? `${this._backend === 'moonshine' ? 'Moonshine' : 'Vosk'} · ${dependencies.language || 'configured language'} · Ready`
+            ? _('%s · %s · Ready').format(this._backend === 'moonshine' ? 'Moonshine' : 'Vosk', dependencies.language || _('configured language'))
             : dependencies.missing.join(' ');
         this.render();
     }
@@ -728,14 +726,14 @@ export default class Kalipso extends Extension {
     _stateText(listening, pending) {
         const end = this.tracker.words.length && this.tracker.position === this.tracker.words.length - 1;
         if (this._mode === 'manual')
-            return end ? 'End of script · Microphone off' : 'Manual · Microphone off';
+            return end ? _('End of script · Microphone off') : _('Manual · Microphone off');
         if (this._mode === 'steady')
-            return this._steadyTimer ? 'Scrolling · Microphone off' : end ? 'End of script · Microphone off' : 'Paused · Microphone off';
+            return this._steadyTimer ? _('Scrolling · Microphone off') : end ? _('End of script · Microphone off') : _('Paused · Microphone off');
         if (pending)
-            return 'Starting local speech…';
+            return _('Starting local speech…');
         if (listening)
-            return this.tracker.lost ? 'Off script · Kalipso catches up when you return to the text' : 'Listening · On this device';
-        return this._speechState === 'error' ? 'Speech unavailable · Open Settings' : 'Paused · Microphone off';
+            return this.tracker.lost ? _('Off script · Kalipso catches up when you return to the text') : _('Listening · On this device');
+        return this._speechState === 'error' ? _('Speech unavailable · Open Settings') : _('Paused · Microphone off');
     }
 
     render() {
@@ -748,9 +746,9 @@ export default class Kalipso extends Extension {
         this.counter.set_text(`${this.tracker.position + 1} / ${this.tracker.words.length}`);
         const listening = this._active || this.local.owned, pending = this.local.pending;
         const hasWords = Boolean(this.tracker.words.length);
-        this.primary.label = this._mode === 'manual' ? 'Next words'
-            : this._mode === 'steady' ? (this._steadyTimer ? 'Pause' : 'Start scrolling')
-            : listening ? 'Pause' : pending ? 'Cancel' : 'Start listening';
+        this.primary.label = this._mode === 'manual' ? _('Next words')
+            : this._mode === 'steady' ? (this._steadyTimer ? _('Pause') : _('Start scrolling'))
+            : listening ? _('Pause') : pending ? _('Cancel') : _('Start listening');
         const setEnabled = (button, enabled) => {
             button.reactive = enabled;
             button.can_focus = enabled;
@@ -762,13 +760,13 @@ export default class Kalipso extends Extension {
         this.previousSection.visible = hasSections;
         this.nextSection.visible = hasSections;
         this.speedRow.visible = this._mode === 'steady';
-        this.speedLabel.set_text(`${this._speed} words/min`);
+        this.speedLabel.set_text(_('%d words/min').format(this._speed));
         this.stateLabel.set_text(this._stateText(listening, pending));
         this.editPane.visible = this._pane === 'edit';
         this.settingsPane.visible = this._pane === 'settings';
         this.secondaryScroll.visible = Boolean(this._pane);
-        this.editButton.label = this._pane === 'edit' ? 'Done editing' : 'Edit script';
-        this.settingsButton.label = this._pane === 'settings' ? 'Done' : 'Settings';
+        this.editButton.label = this._pane === 'edit' ? _('Done editing') : _('Edit script');
+        this.settingsButton.label = this._pane === 'settings' ? _('Done') : _('Settings');
         this.details.set_text(this._status);
         const mark = (items, current) => {
             for (const [id, label, button] of items) {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 const name='io.github.brianidavide.Kalipso.Engine';
 const path='/io/github/brianidavide/Kalipso/Engine';
 export class LocalEngine {
@@ -27,7 +28,7 @@ export class LocalEngine {
     async start() {
         if(this.closed||this.pending||this.owned)return;
         this.pending=true;this.cancelled=false;
-        this.update({status:'loading',message:'Checking local speech components',text:'',sequence:-1});
+        this.update({status:'loading',message:_('Checking local speech components'),text:'',sequence:-1});
         try {
             const dependencies=JSON.parse(await this.call('GetDependencies'));
             if(this.closed||this.cancelled)return;
@@ -46,7 +47,7 @@ export class LocalEngine {
                 return GLib.SOURCE_CONTINUE;
             });
         }catch(error){
-            if(!this.closed&&!this.cancelled)this.update({status:'error',message:'Local speech unavailable. '+String(error.message)+' See docs/local-engine.md.',text:'',sequence:-1});
+            if(!this.closed&&!this.cancelled)this.update({status:'error',message:_('Local speech unavailable. %s See docs/local-engine.md.').format(String(error.message)),text:'',sequence:-1});
         }finally{this.pending=false;}
     }
     release(){this.owned=false;if(this.timer)GLib.source_remove(this.timer);this.timer=0;}
