@@ -24,6 +24,38 @@
 namespace {
 QPlainTextEdit *editor(MainWindow &window) { return window.findChild<QPlainTextEdit *>("scriptEditor"); }
 QLabel *positionLabel(MainWindow &window) { return window.findChild<QLabel *>("readingPosition"); }
+// The widgets that need the most width in a scroll area, so an overflow seen
+// only on another machine (fonts, Qt version) can be fixed without guessing.
+QString overflowReport(QScrollArea *area) {
+    auto *content = area->widget();
+    QList<QPair<int, QString>> needs;
+    for (auto *child : content->findChildren<QWidget *>()) {
+        if (!child->isVisible())
+            continue;
+        const int left = child->mapTo(content, QPoint(0, 0)).x();
+        const int need = left + std::max(child->minimumSizeHint().width(), child->minimumWidth());
+        QString text;
+        if (auto *label = qobject_cast<QLabel *>(child))
+            text = label->text().left(40);
+        else if (auto *button = qobject_cast<QAbstractButton *>(child))
+            text = button->text().left(40);
+        needs.append({need, QString("%1#%2 '%3' x=%4 min=%5 hint=%6")
+                                .arg(child->metaObject()->className(), child->objectName(), text)
+                                .arg(left)
+                                .arg(child->minimumSizeHint().width())
+                                .arg(child->sizeHint().width())});
+    }
+    std::sort(needs.begin(), needs.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+    QStringList lines{QString("%1 viewport=%2 content min=%3 width=%4")
+                          .arg(area->objectName())
+                          .arg(area->viewport()->width())
+                          .arg(content->minimumSizeHint().width())
+                          .arg(content->width())};
+    for (int i = 0; i < std::min<qsizetype>(5, needs.size()); ++i)
+        lines.append(QString("  needs %1: %2").arg(needs[i].first).arg(needs[i].second));
+    return lines.join(u'\n');
+}
+
 QDialog *openSettings(MainWindow &window) {
     window.findChild<QPushButton *>("settingsButton")->click();
     return window.findChild<QDialog *>("settingsDialog");
@@ -386,7 +418,8 @@ private slots:
             QTest::qWait(100);
             for (auto *area : window.findChildren<QScrollArea *>())
                 if (area->isVisible())
-                    QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
+                    QVERIFY2(area->horizontalScrollBar()->maximum() == 0,
+                             qPrintable(QString("width %1: ").arg(width) + overflowReport(area)));
             // Every visible control fits inside its window.
             for (QWidget *top : {static_cast<QWidget *>(&window), static_cast<QWidget *>(settings)})
                 for (auto *control : top->findChildren<QAbstractButton *>())
