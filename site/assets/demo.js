@@ -7,7 +7,10 @@ if(script){
  function render(){
   reading.replaceChildren();
   const first=Math.max(0,tracker.position-4),last=Math.min(tracker.words.length,tracker.position+13),start=tracker.words[first]?.start??0,finish=last<tracker.words.length?tracker.words[last].start:tracker.text.length,end=tracker.position<0?0:tracker.words[tracker.position].start+tracker.words[tracker.position].length;
-  for(const [className,text] of [['read-word',(first?'… ':'')+tracker.text.slice(start,end)],['next-word',tracker.text.slice(Math.max(start,end),finish)+(last<tracker.words.length?' …':'')]]){const span=document.createElement('span');span.className=className;span.textContent=text.replace(/\s+/g,' ');reading.append(span)}
+  // Read words dimmed, the current word marked as in the app, the next words bright.
+  const word=tracker.words[tracker.position],current=word?word.start:end;
+  for(const [className,text] of [['read-word',(first?'… ':'')+tracker.text.slice(start,current)],['current-word',word?tracker.text.slice(word.start,end):''],['next-word',tracker.text.slice(Math.max(start,end),finish)+(last<tracker.words.length?' …':'')]]){if(!text)continue;const span=document.createElement('span');span.className=className;span.textContent=text.replace(/\s+/g,' ');reading.append(span)}
+  document.querySelector('#read-progress').style.inlineSize=`${tracker.words.length?100*(tracker.position+1)/tracker.words.length:0}%`;
   if(!tracker.words.length)reading.textContent='Add your script to begin.';
   count.textContent=`${tracker.position+1} / ${tracker.words.length}`;
   const next=document.querySelector('#next-word'),previous=document.querySelector('#previous-word'),focused=document.activeElement;
