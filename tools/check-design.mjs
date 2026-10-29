@@ -45,6 +45,11 @@ for(const engine of ['chromium','firefox','webkit']){
  await page.reload();assert.equal(await page.locator('#reader-mirror').inputValue(),'horizontal');await page.goto(base+'/?mirror=vertical');assert.match(await page.locator('#reading-text').evaluate(e=>getComputedStyle(e).transform),/^matrix\(1, 0, 0, -1/);
  await page.locator('#reader-mirror').selectOption('none');assert.equal(new URL(page.url()).searchParams.has('mirror'),false);
  await page.goto(base);await page.keyboard.press('Tab');assert.equal(await page.locator('.skip').evaluate(e=>e===document.activeElement),true);
+ // Icons move by meaning on hover, and stay still with reduced motion (negative control: a rule that freezes them is caught).
+ const iconMoves=async()=>{await page.locator('#download').hover();await page.waitForTimeout(300);const t=await page.locator('#download .icon').evaluate(e=>getComputedStyle(e).transform);await page.mouse.move(1,1);return t!=='none'};
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.goto(base);assert.equal(await iconMoves(),true);
+ await page.addStyleTag({content:'.icon{transform:none!important}'});assert.equal(await iconMoves(),false);
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto(base);assert.equal(await iconMoves(),false);await page.emulateMedia({reducedMotion:'no-preference'});
  // Negative control: deliberately broken layout must be detected.
  await page.addStyleTag({content:'body{width:220vw!important}'});assert.equal(await overflow(),true);await page.reload();assert.equal(await overflow(),false);
  // Negative control: remove the advance handler; a click must fail our behavior assertion.
@@ -57,6 +62,6 @@ for(const engine of ['chromium','firefox','webkit']){
   await page.setViewportSize({width:390,height:844});for(const id of ['try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/mobile-${id}.png`})}
  }
  assert.deepEqual(errors,[],engine+' page errors');assert.deepEqual(external,[],engine+' external requests');
- report.push({engine,viewportCases:cases,interactionChecks:20,negativeControls:3,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
+ report.push({engine,viewportCases:cases,interactionChecks:21,negativeControls:4,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
 }
 await writeFile(`${out}/results.json`,JSON.stringify(report,null,2)+'\n');
