@@ -12,10 +12,11 @@ def tracked(*arguments):
 
 allowed_roots = {'.github', 'benchmarks', 'design', 'desktop', 'docs', 'packaging',
                  'site', 'src', 'tests', 'third_party', 'tools', 'LICENSES'}
-allowed_files = {'.gitignore', 'CMakeLists.txt', 'CONTRIBUTING.md', 'LICENSE',
+allowed_files = {'.clang-format', '.gitignore', 'CMakeLists.txt', 'CONTRIBUTING.md', 'LICENSE',
                  'README.md', 'THIRD_PARTY_NOTICES.md'}
-generated_suffixes = {'.png', '.jpg', '.jpeg', '.webp', '.wav', '.mp3', '.pcm',
-                      '.zip', '.plasmoid', '.so', '.bin', '.log', '.jsonl', '.pyc'}
+generated_suffixes = {'.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm', '.wav', '.mp3', '.pcm',
+                      '.zip', '.plasmoid', '.so', '.dll', '.dylib', '.exe', '.bin', '.onnx', '.ort',
+                      '.log', '.jsonl', '.pyc'}
 errors = set(tracked('-ci', '--exclude-standard'))
 for name in tracked():
     path = PurePosixPath(name)

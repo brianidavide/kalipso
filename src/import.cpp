@@ -16,8 +16,6 @@ namespace {
 constexpr qint64 kMaxFile = 200 * 1024 * 1024;
 constexpr quint32 kMaxEntry = 64 * 1024 * 1024;
 
-QString tr(const char *text) { return QCoreApplication::translate("ScriptImport", text); }
-
 // Reads stored and deflated members of a ZIP archive (no ZIP64, no encryption).
 class ZipArchive {
 public:
@@ -184,8 +182,10 @@ QString shapeText(const QByteArray &part, Shapes kind) {
 }
 
 QString section(int number, const QString &title, const QString &notes) {
-    const auto heading = title.simplified().isEmpty() ? tr("Slide %1").arg(number)
-                                                      : tr("Slide %1: %2").arg(number).arg(title.simplified());
+    const auto heading =
+        title.simplified().isEmpty()
+            ? QCoreApplication::translate("ScriptImport", "Slide %1").arg(number)
+            : QCoreApplication::translate("ScriptImport", "Slide %1: %2").arg(number).arg(title.simplified());
     return "# " + heading + "\n\n" + notes + "\n";
 }
 
@@ -215,16 +215,17 @@ QString odfParagraph(QXmlStreamReader &xml) {
 
 namespace ScriptImport {
 QString dialogFilter() {
-    return tr("Scripts and presentations (*.txt *.md *.markdown *.pptx *.odp);;Text (*.txt *.md *.markdown);;"
-              "PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;All files (*)");
+    return QCoreApplication::translate(
+        "ScriptImport", "Scripts and presentations (*.txt *.md *.markdown *.pptx *.odp);;Text (*.txt *.md *.markdown);;"
+                        "PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;All files (*)");
 }
 
 Result read(const QString &path) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly))
-        return {{}, tr("Cannot open this file."), 0};
+        return {{}, QCoreApplication::translate("ScriptImport", "Cannot open this file."), 0};
     if (file.size() > kMaxFile)
-        return {{}, tr("This file is too large to import."), 0};
+        return {{}, QCoreApplication::translate("ScriptImport", "This file is too large to import."), 0};
     const auto data = file.readAll();
     const auto suffix = QFileInfo(path).suffix().toLower();
     if (suffix == QLatin1String("pptx"))
@@ -232,11 +233,11 @@ Result read(const QString &path) {
     if (suffix == QLatin1String("odp"))
         return fromOdp(data);
     if (data.size() > 2 * 1024 * 1024)
-        return {{}, tr("Choose a text file smaller than 2 MiB."), 0};
+        return {{}, QCoreApplication::translate("ScriptImport", "Choose a text file smaller than 2 MiB."), 0};
     QStringDecoder utf8(QStringDecoder::Utf8);
     const QString text = utf8.decode(data);
     if (utf8.hasError())
-        return {{}, tr("Choose a UTF-8 text file."), 0};
+        return {{}, QCoreApplication::translate("ScriptImport", "Choose a UTF-8 text file."), 0};
     QString normalized = text;
     normalized.replace(QLatin1String("\r\n"), QLatin1String("\n"));
     if (normalized.startsWith(QChar(0xfeff)))
@@ -248,7 +249,7 @@ Result fromPptx(const QByteArray &archive) {
     const ZipArchive zip(archive);
     const QString presentation = "ppt/presentation.xml";
     if (!zip.valid() || !zip.contains(presentation))
-        return {{}, tr("This is not a readable PowerPoint (.pptx) file."), 0};
+        return {{}, QCoreApplication::translate("ScriptImport", "This is not a readable PowerPoint (.pptx) file."), 0};
     const auto slides = relationships(zip, presentation, "/slide");
     QStringList order;
     QXmlStreamReader xml(zip.file(presentation));
@@ -272,14 +273,16 @@ Result fromPptx(const QByteArray &archive) {
         ++result.sections;
     }
     if (!result.sections)
-        result.error = tr("This presentation has no speaker notes.");
+        result.error = QCoreApplication::translate("ScriptImport", "This presentation has no speaker notes.");
     return result;
 }
 
 Result fromOdp(const QByteArray &archive) {
     const ZipArchive zip(archive);
     if (!zip.valid() || !zip.contains("content.xml"))
-        return {{}, tr("This is not a readable LibreOffice Impress (.odp) file."), 0};
+        return {{},
+                QCoreApplication::translate("ScriptImport", "This is not a readable LibreOffice Impress (.odp) file."),
+                0};
     QXmlStreamReader xml(zip.file("content.xml"));
     Result result;
     int page = 0;
@@ -324,9 +327,9 @@ Result fromOdp(const QByteArray &archive) {
         }
     }
     if (xml.hasError())
-        return {{}, tr("This presentation could not be read."), 0};
+        return {{}, QCoreApplication::translate("ScriptImport", "This presentation could not be read."), 0};
     if (!result.sections)
-        result.error = tr("This presentation has no speaker notes.");
+        result.error = QCoreApplication::translate("ScriptImport", "This presentation has no speaker notes.");
     return result;
 }
 } // namespace ScriptImport

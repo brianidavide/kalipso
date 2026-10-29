@@ -860,6 +860,18 @@ QWidget *MainWindow::makeReadingSettings() {
                 scale->setCurrentIndex(index);
         });
 
+    auto *language = new SettingsComboBox;
+    language->setObjectName("interfaceLanguage");
+    language->addItem(tr("System language"), QString());
+    language->addItem("English", "en");
+    language->addItem("Italiano", "it");
+    language->setCurrentIndex(std::max(0, language->findData(settings.value("appearance/language").toString())));
+    connect(language, &QComboBox::currentIndexChanged, this, [this, language] {
+        QSettings().setValue("appearance/language", language->currentData());
+        audioStatus_->setText(tr("The interface language changes the next time Kalipso starts."));
+    });
+    form->addRow(tr("Interface language"), language);
+
     auto *hiddenRow = new WrappingCheckBox(tr("Hide the reader from screen sharing and recordings"));
     auto *hidden = hiddenRow->box;
     hidden->setObjectName("excludeFromCapture");
