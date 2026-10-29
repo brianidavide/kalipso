@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Build the Plasma widget and GNOME extension archives from source.
+"""Build the Plasma widget, GNOME extension and KWin script archives from source.
 
 Archives contain only frontend source and notices: no companion binary,
 speech model or recording. Output: artifacts/packages/. File timestamps are
@@ -33,6 +33,12 @@ def gnome_files():
     return own + [(BASE / name, name) for name in GNOME_SHARED]
 
 
+def kwin_files():
+    package = ROOT / 'packaging/kwin'
+    return [(path, path.relative_to(package).as_posix()) for path in sorted(package.rglob('*'))
+            if path.is_file() and path.suffix in SOURCE_SUFFIXES]
+
+
 def write(name, files):
     with zipfile.ZipFile(OUT / name, 'w', zipfile.ZIP_DEFLATED) as archive:
         for source, destination in files + NOTICES:
@@ -48,6 +54,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     write('kalipso-plasma.plasmoid', plasma_files())
     write('kalipso-gnome.zip', gnome_files())
+    write('kalipso-kwin.kwinscript', kwin_files())
 
 
 if __name__ == '__main__':

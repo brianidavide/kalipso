@@ -2,10 +2,14 @@
   "KPlugin": {
     "Id": "kalipso-companion",
     "Name": "Kalipso companion",
-    "Description": "Position the reading window near the camera and request capture exclusion",
+    "Description": "Keeps the Kalipso reader on top near the camera and asks KWin to leave it out of screen captures",
     "Version": "0.1.0",
     "License": "AGPL-3.0-or-later",
-    "Authors": [{"Name": "Davide Briani and contributors"}],
+    "Authors": [
+      {
+        "Name": "Kalipso contributors"
+      }
+    ],
     "Website": "https://github.com/brianidavide/kalipso"
   },
   "X-Plasma-API": "javascript",

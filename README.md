@@ -1,65 +1,83 @@
 # Kalipso
 
-An open-source, local-first desktop teleprompter: **KDE Plasma and GNOME**, plus a standalone Qt app with experimental **Apple Silicon macOS and Windows x64** builds.
+A local-first teleprompter for your desktop. Keep your script next to your camera, read naturally, and let Kalipso follow your voice — speech recognition runs on your device.
 
-Edit your script while reading, keep the next words near your camera, and let local speech recognition follow your voice. Already-read words dim as you speak.
+[Website](https://brianidavide.github.io/kalipso/) · [Writing scripts](docs/scripts.md) · [Standalone app](docs/standalone.md) · [Plasma and GNOME](desktop/README.md) · [Voice following](docs/local-engine.md)
 
-[Website](https://brianidavide.github.io/kalipso/) · [Install the widget or extension](desktop/README.md) · [Set up local speech](docs/local-engine.md)
+> **Development preview.** There is no store listing or signed installer yet; you build from source or use the draft packages attached to [releases](https://github.com/brianidavide/kalipso/releases).
 
-## Features
+## What it does
 
-- KDE Plasma widget and GNOME Shell extension.
-- Live script editing, manual advance, previous words and reset.
-- Optional local voice following with selectable Moonshine and Vosk engines.
-- Separate language/model profiles; only the selected model loads while listening.
-- Pause releases the microphone and preserves the reading position.
+- **Three ways to advance:** follow your voice, scroll at a steady speed (words per minute, with a countdown), or step manually with the keyboard, a foot pedal, a presentation clicker or your phone.
+- **Live editing:** change the script while you read; your place is kept.
+- **Your scripts are kept:** saved automatically on your device with your reading position.
+- **Script cues:** `[look at camera]` is shown but never read by voice following; `# Heading` lines become sections you can jump to. See [writing scripts](docs/scripts.md).
+- **Speaker notes:** import notes from PowerPoint (`.pptx`) and LibreOffice Impress (`.odp`), one section per slide.
+- **Teleprompter rigs:** mirror the text horizontally or vertically for beam-splitter glass.
+- **Readable everywhere:** light, dark or automatic colors with WCAG AA contrast, large text and full keyboard control. See [accessibility](docs/accessibility.md).
+- **Private by design:** recognition runs locally (Moonshine, Vosk, or the operating system's on-device recognizer on macOS and Windows). Nothing is uploaded.
 
-**Development preview.** No store release is available yet. GNOME metadata currently targets Shell 48. The Plasma frontend has been exercised with Plasma 6.3 and Qt 6.8; other desktop versions need testing. Scripts in the widget/extension last for the session, so keep a separate copy. The reader may appear in screen sharing.
+## Choose your version
 
-The widget and extension work manually without speech components. Voice following requires the separately installed native companion, runtime and language model. Selecting an engine does not download it. The download catalog includes Moonshine models in English, German, Spanish, Japanese and Chinese; Vosk also includes Italian. Interface text is currently English.
+| Version | Runs on | Best for |
+| --- | --- | --- |
+| [Standalone app](docs/standalone.md) | Linux, Windows x64, Apple Silicon Macs | The full feature set: script library, import, movable reader, phone remote |
+| [Plasma widget](desktop/README.md#kde-plasma-6) | KDE Plasma 6 | A reader on your desktop or panel |
+| [GNOME extension](desktop/README.md#gnome-shell-48) | GNOME Shell 48 | A reader under the top bar |
 
-Experimental standalone ports for macOS and Windows also provide selectable local system recognition. See [requirements and native build instructions](docs/system-speech.md); these are not store releases.
+All three work without speech components (manual and steady modes). Voice following on Linux needs the [local speech companion and a language model](docs/local-engine.md).
 
-[Accessibility settings and verification status](docs/accessibility.md) describe the WCAG 2.2 AA target, opaque contrast palettes and platform-specific automatic color sources. Full AA conformance is not yet declared.
+## Install
 
-## Build on Linux
+### Standalone app on Linux
 
-Requires a C++20 compiler, CMake 3.22+, Qt 6.4+ Core/DBus/Widgets/Network, and Qt Test for tests. Python 3.11+ is used by installation and test tools; Node.js runs frontend tests.
+Debian 13 / Ubuntu 24.04 or newer:
 
 ```sh
-# Arch / EndeavourOS
-sudo pacman -S --needed base-devel cmake ninja qt6-base qt6-wayland pipewire pipewire-audio pkgconf python nodejs
+sudo apt install build-essential cmake ninja-build git qt6-base-dev qt6-l10n-tools qt6-tools-dev libpipewire-0.3-dev pkg-config pipewire-bin
+```
 
-# Debian / Ubuntu
-sudo apt install build-essential cmake ninja-build qt6-base-dev qt6-wayland pipewire-bin libpipewire-0.3-dev pkg-config python3 nodejs
+Arch / EndeavourOS:
 
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
-node desktop/tracker.test.mjs
+```sh
+sudo pacman -S --needed base-devel cmake ninja git qt6-base qt6-tools pipewire pipewire-audio pkgconf
+```
+
+Then:
+
+```sh
+git clone https://github.com/brianidavide/kalipso.git
+cd kalipso
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+cmake --build build
+cmake --install build
+```
+
+Run `kalipso`, or try it with a sample script: `kalipso --demo --prompter`. To build a `.deb` instead, run `cd build && cpack -G DEB`.
+
+### Windows and macOS
+
+Build instructions and requirements are in [macOS and Windows builds](docs/system-speech.md). The builds are unsigned development previews.
+
+### Plasma widget and GNOME extension
+
+```sh
+git clone https://github.com/brianidavide/kalipso.git
+cd kalipso
 python3 desktop/package.py
 ```
 
-Frontend archives are written to `artifacts/packages/`. See [desktop installation](desktop/README.md) for installation and removal.
+Then follow [installing the widget or extension](desktop/README.md).
 
-The optional standalone Qt editor can be started with `./build/kalipso`. See [standalone usage](docs/standalone.md). For a user-local installation, configure with `-DCMAKE_INSTALL_PREFIX="$HOME/.local"`, rebuild, then run `cmake --install build`. The configured prefix also determines the companion's D-Bus activation path.
+## Limitations
 
-## Development
-
-`desktop/` contains the widget, extension and shared tracker; `src/` contains native code; `tests/` and `benchmarks/` contain executable checks. `site/` is the static website. `design/tokens.json` supplies shared visual values; regenerate derived sources with `python3 tools/generate-design-tokens.py`.
-
-Build-tool versions are pinned in `tools/dependency-versions.json`: Qt 6.12.0, Node 26.12.1, Python 3.15.2 and CMake 4.4.4. CI tests the latest stable Qt on Linux/macOS/Windows and retains a distribution-Qt compatibility lane on Linux. These build versions are separate from the minimum source-build requirements above. The published aqt installer is pinned at 3.3.0; Windows temporarily uses upstream commit `076e1659807d0b362a3ed684d54c2e9c775eb9c7` because 3.3.0 cannot locate the Qt 6.11+ Windows repositories. This build-tool exception is tracked in #1 until a release includes the fix. GitHub Actions are pinned to verified commits; Dependabot checks Actions and browser tools weekly. `python3 tools/check-dependencies.py` and its scheduled workflow report newer stable build tools without silently changing release inputs. Moonshine is at 0.1.5; Vosk remains on the latest downloadable 0.3.45 wheel until a newer source build is packaged and verified ([tracking issue](https://github.com/brianidavide/kalipso/issues/26)).
-
-For browser checks, run `npm ci --prefix tools/browser` and `tools/browser/node_modules/.bin/playwright install --with-deps`. Then serve `site/` on port 8770 and run `PLAYWRIGHT=/path/to/playwright/index.mjs node tools/check-design.mjs` with Playwright and its Chromium, Firefox and WebKit browsers installed separately.
-
-The [delivery plan](https://github.com/brianidavide/kalipso/issues/25) tracks native packages, real-device qualification, presentation-note integration and store publication. The Plasma widget is intended for [KDE Store](https://store.kde.org/browse/); the GNOME extension for extensions.gnome.org. Flathub is not part of the planned distribution path.
-
-Generated packages, test output, raw recordings, models, local configuration and working notes are excluded from Git. Curated product captures in `site/assets/media/` are website assets. See [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Screen sharing:** on Windows and macOS the standalone app asks the system to keep the reader out of screen shares and recordings. On Linux this depends on the compositor (see the optional [KWin script](docs/standalone.md#screen-sharing)). Always check what other participants see.
+- **Desktop versions:** the GNOME extension declares Shell 48; the Plasma widget is tested with Plasma 6.3.
+- **Speech models:** the download catalog has Moonshine models for English, German, Spanish, Japanese and Chinese, and Vosk models for those plus Italian. Other compatible models can be configured by hand.
+- **Interface languages:** English and Italian in the standalone app; English in the widget and extension.
 
 ## License
 
-Original code is **AGPL-3.0-or-later**. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md). AppStream metadata is CC0-1.0. Dependencies and models retain their own licenses.
+Kalipso is free software under the **AGPL-3.0-or-later** ([LICENSE](LICENSE)); third-party components keep their own licenses ([notices](THIRD_PARTY_NOTICES.md)). AppStream metadata is CC0-1.0. Kalipso is an independent project, not affiliated with KDE or GNOME.
 
-Kalipso is an independent project and is not affiliated with KDE or GNOME.
-
-On KDE/Wayland, **Choose background window…** follows the colors of a window selected through the desktop sharing dialog. Install `xdg-desktop-portal` and `xdg-desktop-portal-kde` for this optional mode. See [color sources and sharing controls](docs/accessibility.md#window-colors-on-kdewayland).
+Contributing, tests and the release process: [CONTRIBUTING.md](CONTRIBUTING.md).
