@@ -7,12 +7,14 @@ const axe=await readFile(process.env.AXE_CORE,'utf8');
 const base=process.env.DESIGN_URL||'http://localhost:8770';
 const out='artifacts/accessibility/browser';await mkdir(out,{recursive:true});
 const report=[];
+// Judge the page as a visitor sees it: every entrance revealed and finished (the first-screen reader keeps going).
+const settle=page=>page.evaluate(async()=>{for(let y=0;y<document.documentElement.scrollHeight;y+=400){scrollTo(0,y);await new Promise(r=>setTimeout(r,40))}scrollTo(0,0);await new Promise(r=>setTimeout(r,150));await Promise.all(document.getAnimations().filter(a=>a.effect.getComputedTiming().activeDuration!==Infinity).map(a=>a.finished.catch(()=>{})))});
 for(const engine of ['chromium','firefox','webkit']){
  const browser=await pw[engine].launch();const page=await browser.newPage({viewport:{width:1280,height:960}});
  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
  for(const theme of ['dark','light']){
   await page.goto(base);await page.locator('#reader-appearance').selectOption(theme);await page.locator('#edit-toggle').click();await page.locator('#next-word').click();
-  await page.evaluate(axe);
+  await settle(page);await page.evaluate(axe);
   const result=await page.evaluate(async()=>axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}));
   await writeFile(`${out}/${engine}-${theme}.json`,JSON.stringify(result,null,2));
   assert.deepEqual(result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)})),[],`${engine} ${theme}`);

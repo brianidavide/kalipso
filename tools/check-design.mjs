@@ -54,14 +54,31 @@ for(const engine of ['chromium','firefox','webkit']){
  await page.addStyleTag({content:'body{width:220vw!important}'});assert.equal(await overflow(),true);await page.reload();assert.equal(await overflow(),false);
  // Negative control: remove the advance handler; a click must fail our behavior assertion.
  await page.locator('#next-word').evaluate(e=>e.replaceWith(e.cloneNode(true)));await page.locator('#next-word').click();assert.equal(await position(),'-1');await page.reload();await page.locator('#next-word').click();assert.equal(await position(),'3');
- await page.goto(base);await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').length),0);
- await page.addStyleTag({content:'@keyframes bad{to{opacity:.5}}h1{animation:bad 1s infinite!important}'});await page.waitForTimeout(80);assert.ok(await page.evaluate(()=>document.getAnimations().some(a=>a.playState==='running')));await page.reload();
+ // Motion (WCAG 2.2.2): entrances and scenes end within five seconds; only the first-screen reader keeps moving,
+ // inside a [data-pausable] figure whose button stops it; with reduced motion nothing moves and nothing is hidden.
+ const moving=()=>page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').map(a=>{const t=a.effect?.target;return t?.closest?.('[data-pausable]')?'pausable':`${t?.tagName}.${t?.getAttribute?.('class')}`}));
+ const scrollThrough=()=>page.evaluate(async()=>{for(let y=0;y<document.documentElement.scrollHeight;y+=400){scrollTo(0,y);await new Promise(r=>setTimeout(r,40))}scrollTo(0,0)});
+ const word=()=>page.locator('[data-live-reader]').getAttribute('data-word'),toggle=page.locator('[data-live-toggle]');
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:1280,height:900});await page.goto(base);
+ const start=await word();await page.waitForTimeout(1500);assert.notEqual(await word(),start,`${engine} the first-screen reader follows the demo voice`);
+ await scrollThrough();await page.waitForTimeout(5500);
+ assert.deepEqual((await moving()).filter(m=>m!=='pausable'),[],`${engine} only pausable motion continues after five seconds`);
+ await toggle.click();const held=await word();await page.waitForTimeout(1200);
+ assert.equal(await word(),held,`${engine} pause stops the reader`);assert.deepEqual(await moving(),[],`${engine} pause stops every animation`);assert.equal(await toggle.innerText(),'Play animation');
+ await toggle.click();await page.waitForTimeout(1500);assert.notEqual(await word(),held,`${engine} play resumes`);
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto(base);const still=await word();await scrollThrough();await page.waitForTimeout(800);
+ assert.deepEqual(await moving(),[],`${engine} reduced motion: nothing moves`);assert.equal(await word(),still);assert.equal(await toggle.innerText(),'Play animation');
+ assert.equal(await page.locator('.ways-list li').first().evaluate(e=>getComputedStyle(e).opacity),'1',`${engine} reduced motion: nothing waits hidden for an entrance`);
+ // Negative control: a pause button that lost its handler is caught.
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.goto(base);await toggle.evaluate(e=>e.replaceWith(e.cloneNode(true)));await toggle.click();const loose=await word();await page.waitForTimeout(1500);assert.notEqual(await word(),loose);
+ // Negative control: an endless animation outside a pausable figure is caught.
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.goto(base);await page.addStyleTag({content:'@keyframes bad{to{opacity:.5}}h1{animation:bad 1s infinite!important}'});await page.waitForTimeout(80);assert.ok((await moving()).some(m=>m!=='pausable'));await page.reload();
  await page.setViewportSize({width:1440,height:1000});
  if(engine==='chromium'){
-  for(const id of ['headline','try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/desktop-${id}.png`})}
-  await page.setViewportSize({width:390,height:844});for(const id of ['try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/mobile-${id}.png`})}
+  for(const id of ['headline','try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(900);await page.screenshot({path:`${out}/desktop-${id}.png`})}
+  await page.setViewportSize({width:390,height:844});for(const id of ['try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(900);await page.screenshot({path:`${out}/mobile-${id}.png`})}
  }
  assert.deepEqual(errors,[],engine+' page errors');assert.deepEqual(external,[],engine+' external requests');
- report.push({engine,viewportCases:cases,interactionChecks:21,negativeControls:4,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
+ report.push({engine,viewportCases:cases,interactionChecks:28,negativeControls:5,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
 }
 await writeFile(`${out}/results.json`,JSON.stringify(report,null,2)+'\n');

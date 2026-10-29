@@ -9,7 +9,7 @@ if(script){
   const first=Math.max(0,tracker.position-4),last=Math.min(tracker.words.length,tracker.position+13),start=tracker.words[first]?.start??0,finish=last<tracker.words.length?tracker.words[last].start:tracker.text.length,end=tracker.position<0?0:tracker.words[tracker.position].start+tracker.words[tracker.position].length;
   // Read words dimmed, the current word marked as in the app, the next words bright.
   const word=tracker.words[tracker.position],current=word?word.start:end;
-  for(const [className,text] of [['read-word',(first?'… ':'')+tracker.text.slice(start,current)],['current-word',word?tracker.text.slice(word.start,end):''],['next-word',tracker.text.slice(Math.max(start,end),finish)+(last<tracker.words.length?' …':'')]]){if(!text)continue;const span=document.createElement('span');span.className=className;span.textContent=text.replace(/\s+/g,' ');reading.append(span)}
+  for(const [className,text] of [['read-word',(first?'… ':'')+tracker.text.slice(start,current)],['current-word',word?tracker.text.slice(word.start,end):''],['next-word',tracker.text.slice(Math.max(start,end),finish)+(last<tracker.words.length?' …':'')]]){if(!text)continue;const span=document.createElement('span');span.className=className;for(const part of text.replace(/\s+/g,' ').split(/(\[[^\]]*\])/)){if(!part)continue;if(/^\[.*\]$/.test(part)){const cue=document.createElement('span');cue.className='cue';cue.textContent=part;span.append(cue)}else span.append(part)}reading.append(span)}
   document.querySelector('#read-progress').style.inlineSize=`${tracker.words.length?100*(tracker.position+1)/tracker.words.length:0}%`;
   if(!tracker.words.length)reading.textContent='Add your script to begin.';
   count.textContent=`${tracker.position+1} / ${tracker.words.length}`;
@@ -63,8 +63,8 @@ for(const button of document.querySelectorAll('[data-copy]')){
  button.addEventListener('click',async()=>{
   const text=document.getElementById(button.dataset.copy)?.innerText??'';
   const status=document.querySelector('.copied');
-  try{await navigator.clipboard.writeText(text);button.querySelector('span').textContent='Copied';if(status)status.textContent='Command copied to the clipboard.'}
+  try{await navigator.clipboard.writeText(text);button.classList.add('done');button.querySelector('span').textContent='Copied';if(status)status.textContent='Command copied to the clipboard.'}
   catch{if(status)status.textContent='Copying is not allowed here: select the command and copy it.'}
-  setTimeout(()=>{button.querySelector('span').textContent='Copy'},2000);
+  setTimeout(()=>{button.classList.remove('done');button.querySelector('span').textContent='Copy'},2000);
  });
 }
