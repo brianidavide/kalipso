@@ -10,6 +10,7 @@
 #include <QComboBox>
 #include <QGraphicsOpacityEffect>
 #include <QKeyEvent>
+#include <QLinearGradient>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
@@ -103,6 +104,19 @@ void ReaderView::resizeEvent(QResizeEvent *event) {
     scrollToCharacter(anchor_, false);
 }
 
+void ReaderView::setLineSpacing(int percent) {
+    // New blocks inherit the block format, so the minimal edits of the script
+    // keep this spacing; only the format change itself must not reach the editor.
+    const QSignalBlocker block(this);
+    QTextCursor all(document());
+    all.select(QTextCursor::Document);
+    QTextBlockFormat format;
+    format.setLineHeight(std::clamp(percent, 100, 200), QTextBlockFormat::ProportionalHeight);
+    all.mergeBlockFormat(format);
+    QResizeEvent event(size(), size()); // Same reading line, new line positions.
+    resizeEvent(&event);
+}
+
 void ReaderView::scrollToCharacter(int character, bool animate) {
     anchor_ = character;
     QTextCursor cursor(document());
@@ -145,6 +159,31 @@ void ReaderView::paintMarker(QPainter &painter, int lineCenter) const {
     painter.restore();
 }
 
+// Lines cut by the top and bottom edges fade into the background instead of
+// ending abruptly. The top fade stops above the current line, so it never dims it.
+void ReaderView::paintEdges(QPainter &painter) const {
+    if (!isReadOnly() || !fadeColor_.isValid())
+        return;
+    const auto area = viewport()->rect();
+    const int line = fontMetrics().lineSpacing();
+    QColor clear = fadeColor_;
+    clear.setAlpha(0);
+    const int bottom = std::min(line, area.height() / 5);
+    QLinearGradient down(0, area.bottom() - bottom, 0, area.bottom());
+    down.setColorAt(0, clear);
+    down.setColorAt(1, fadeColor_);
+    painter.fillRect(QRect(0, area.bottom() - bottom, area.width(), bottom + 1), down);
+    QTextCursor cursor(document());
+    cursor.setPosition(std::clamp(anchor_, 0, std::max(0, document()->characterCount() - 1)));
+    const int top = std::clamp(cursorRect(cursor).top() - 2, 0, line / 2);
+    if (top <= 0)
+        return;
+    QLinearGradient up(0, 0, 0, top);
+    up.setColorAt(0, fadeColor_);
+    up.setColorAt(1, clear);
+    painter.fillRect(QRect(0, 0, area.width(), top), up);
+}
+
 int ReaderView::currentLineCenter() const {
     QTextCursor cursor(document());
     cursor.setPosition(std::clamp(anchor_, 0, std::max(0, document()->characterCount() - 1)));
@@ -156,6 +195,7 @@ void ReaderView::paintEvent(QPaintEvent *event) {
     if (mirror_ == Mirror::None || !isReadOnly()) {
         QTextEdit::paintEvent(event);
         QPainter painter(viewport());
+        paintEdges(painter);
         paintMarker(painter, currentLineCenter());
         return;
     }
@@ -175,7 +215,8 @@ void ReaderView::paintEvent(QPaintEvent *event) {
     for (const auto &selection : extraSelections())
         context.selections.append({selection.cursor, selection.format});
     document()->documentLayout()->draw(&painter, context);
-    painter.translate(dx, dy); // Marker in viewport coordinates, mirrored with the text.
+    painter.translate(dx, dy); // Marker and edges in viewport coordinates, mirrored with the text.
+    paintEdges(painter);
     paintMarker(painter, currentLineCenter());
 }
 
@@ -385,6 +426,7 @@ void ReaderWindow::applyPalette(const Design::Palette &palette) {
     text->setTextColor(QColor(palette.text));
     text->highlighter()->setColors(QColor(palette.muted), QColor(palette.accent));
     text->setMarkerColor(QColor(palette.accent));
+    text->setFadeColor(QColor(palette.background));
     countdown_->setStyleSheet(QString("color:%1; background:%2; border: 1px solid %3; border-radius:16px;")
                                   .arg(palette.text, palette.surface, palette.border));
     for (const auto &[button, name] : icons_)
@@ -402,8 +444,14 @@ void ReaderWindow::setReaderTheme(const QString &theme) {
     backdrop_->setEnabled(theme == "auto");
 }
 
+void ReaderWindow::setTextFont(const QString &family) {
+    fontFamily_ = family;
+    setTextSize(textPoints_);
+}
+
 void ReaderWindow::setTextSize(int points) {
-    auto font = text->font();
+    textPoints_ = points;
+    QFont font = fontFamily_.isEmpty() ? QApplication::font() : QFont(fontFamily_);
     font.setPointSize(points);
     text->setFont(font);
     QFont large = countdown_->font();

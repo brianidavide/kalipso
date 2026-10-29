@@ -32,11 +32,14 @@ public:
     void setReadingLine(double fraction);
     void scrollToCharacter(int character, bool animate);
     void setTextColor(const QColor &color) { textColor_ = color; }
+    void setFadeColor(const QColor &color) { fadeColor_ = color; }
     void setMarkerColor(const QColor &color) {
         markerColor_ = color;
         viewport()->update();
     }
     ScriptHighlighter *highlighter() const { return highlighter_; }
+    // Line height in percent of the normal one (100 = font default).
+    void setLineSpacing(int percent);
 signals:
     void characterClicked(int character);
 
@@ -48,12 +51,13 @@ protected:
 private:
     QPoint unmirrored(QPoint point) const;
     void paintMarker(QPainter &painter, int lineCenter) const;
+    void paintEdges(QPainter &painter) const;
     int currentLineCenter() const;
     static constexpr int kMarkerSpace = 22;
     Mirror mirror_ = Mirror::None;
     double readingLine_ = 0.3;
     int anchor_ = 0;
-    QColor textColor_, markerColor_;
+    QColor textColor_, markerColor_, fadeColor_;
     ScriptHighlighter *highlighter_;
     QPropertyAnimation *scroll_;
 };
@@ -68,6 +72,9 @@ public:
     void showOn(QScreen *screen);
     void highlight(int position, int length);
     void setTextSize(int points);
+    // Empty: the interface font. Any installed family, e.g. one designed for dyslexia.
+    void setTextFont(const QString &family);
+    void setLineSpacing(int percent) { text->setLineSpacing(percent); }
     void setReaderTheme(const QString &theme);
     void setMirror(Mirror mirror) { text->setMirror(mirror); }
     void setReadingLine(double fraction) { text->setReadingLine(fraction); }
@@ -134,6 +141,8 @@ private:
     bool running_ = false;
     bool editing_ = false;
     bool compact_ = false;
+    QString fontFamily_;
+    int textPoints_ = 28;
     bool autoHide_ = true;
     bool controlsVisible_ = true;
     QTimer idle_;

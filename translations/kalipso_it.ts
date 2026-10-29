@@ -490,10 +490,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Apri il lettore vicino alla videocamera (Ctrl+Invio)</translation>
     </message>
     <message>
-        <source>Ctrl+Enter opens the reader. In the reader, arrow keys step and Space starts or pauses.</source>
-        <translation>Ctrl+Invio apre il lettore. Nel lettore le frecce avanzano e Spazio avvia o mette in pausa.</translation>
-    </message>
-    <message>
         <source>Start reading at the word under the text cursor</source>
         <translation>Inizia a leggere dalla parola sotto il cursore</translation>
     </message>
@@ -567,6 +563,51 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Text, Markdown, Word (.docx) and OpenDocument (.odt) documents, or speaker notes from PowerPoint (.pptx) and Impress (.odp)</source>
         <translation>Testo, Markdown, documenti Word (.docx) e OpenDocument (.odt), o note del relatore da PowerPoint (.pptx) e Impress (.odp)</translation>
+    </message>
+    <message>
+        <source>The reading time is estimated at the steady speed. Ctrl+Enter opens the reader. In the reader, arrow keys step and Space starts or pauses.</source>
+        <translation>Il tempo di lettura è stimato alla velocità costante. Ctrl+Invio apre il lettore. Nel lettore, le frecce avanzano e lo Spazio avvia o mette in pausa.</translation>
+    </message>
+    <message>
+        <source>under a minute</source>
+        <translation>meno di un minuto</translation>
+    </message>
+    <message numerus="yes">
+        <source>about %n min</source>
+        <translation>
+            <numerusform>circa %n min</numerusform><numerusform>circa %n min</numerusform></translation>
+    </message>
+    <message>
+        <source>Word %1 of %2 · %3</source>
+        <translation>Parola %1 di %2 · %3</translation>
+    </message>
+    <message>
+        <source>Interface font</source>
+        <translation>Carattere dell'interfaccia</translation>
+    </message>
+    <message>
+        <source>Any installed font, for example one designed for easier reading such as Atkinson Hyperlegible or OpenDyslexic.</source>
+        <translation>Qualsiasi carattere installato, per esempio uno pensato per una lettura più facile come Atkinson Hyperlegible o OpenDyslexic.</translation>
+    </message>
+    <message>
+        <source>Font</source>
+        <translation>Carattere</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normale</translation>
+    </message>
+    <message>
+        <source>Relaxed</source>
+        <translation>Ampia</translation>
+    </message>
+    <message>
+        <source>Wide</source>
+        <translation>Molto ampia</translation>
+    </message>
+    <message>
+        <source>Line spacing</source>
+        <translation>Interlinea</translation>
     </message>
 </context>
 <context>

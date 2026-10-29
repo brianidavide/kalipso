@@ -18,6 +18,7 @@
 #include <QTemporaryDir>
 #include <QToolButton>
 #include <QWheelEvent>
+#include <QTextBlock>
 #include <QtTest>
 
 namespace {
@@ -250,6 +251,37 @@ private slots:
         QTest::qWait(3000);
         QVERIFY(reader->controlsVisible());
         QVERIFY(status->text().startsWith("Paused · "));
+    }
+
+    void readerFontAndLineSpacingFollowSettingsAndEdits() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText(QString("word ").repeated(300));
+        QVERIFY(positionLabel(window)->text().endsWith(" · about 3 min")); // 300 words at 140 words/min.
+        window.showPrompter();
+        auto *reader = window.prompter();
+        openSettings(window);
+        auto *spacing = window.findChild<QComboBox *>("readerLineSpacing");
+        auto *font = window.findChild<QComboBox *>("readerFont");
+        QVERIFY(spacing && font);
+        const auto lineHeight = [reader] { return reader->text->document()->lastBlock().blockFormat().lineHeight(); };
+        const int before = reader->text->cursorRect(QTextCursor(reader->text->document()->lastBlock())).height();
+        spacing->setCurrentIndex(spacing->findData(150));
+        emit spacing->activated(spacing->currentIndex());
+        QCOMPARE(lineHeight(), 150.0);
+        QCOMPARE(QSettings().value("reading/lineSpacing").toInt(), 150);
+        // The script keeps the spacing through edits that add paragraphs.
+        editor(window)->setPlainText(QString("word ").repeated(300) + "\n\nA new paragraph");
+        QCOMPARE(lineHeight(), 150.0);
+        QVERIFY(reader->text->toPlainText().endsWith("A new paragraph"));
+        QVERIFY(before > 0);
+        // A chosen font reaches the reader; "Interface font" goes back to the default.
+        QVERIFY(font->count() > 1);
+        font->setCurrentIndex(1);
+        emit font->activated(1);
+        QCOMPARE(reader->text->font().family(), font->itemData(1).toString());
+        font->setCurrentIndex(0);
+        emit font->activated(0);
+        QCOMPARE(reader->text->font().family(), QApplication::font().family());
     }
 
     void readerKeysStepTheScript() {

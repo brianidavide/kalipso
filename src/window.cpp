@@ -16,6 +16,7 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
+#include <QFontDatabase>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -280,8 +281,8 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     audioStatus_->setProperty("role", "muted");
     position_ = new StatusLabel(tr("Ready to write."));
     position_->setObjectName("readingPosition");
-    position_->setToolTip(tr("Ctrl+Enter opens the reader. In the reader, arrow keys step and Space starts or "
-                             "pauses."));
+    position_->setToolTip(tr("The reading time is estimated at the steady speed. Ctrl+Enter opens the reader. In "
+                             "the reader, arrow keys step and Space starts or pauses."));
     position_->setProperty("role", "muted");
     auto *readHere = new AccessibleButton(tr("Read from cursor"));
     readHere->setObjectName("readHere");
@@ -686,7 +687,14 @@ void MainWindow::refreshReading() {
         position_->setText(tr("Resumes after your next pause"));
         return;
     }
-    position_->setText(tr("Word %1 of %2").arg(tracker_.position() + 1).arg(tracker_.count()));
+    // Reading time of the whole script at the steady speed, as a rehearsal guide.
+    const int minutes = (tracker_.count() + wordsPerMinute_ - 1) / wordsPerMinute_;
+    const auto length = tracker_.count() == 0 ? QString()
+                        : minutes <= 1        ? tr("under a minute")
+                                              : tr("about %n min", nullptr, minutes);
+    position_->setText(length.isEmpty()
+                           ? tr("Word %1 of %2").arg(tracker_.position() + 1).arg(tracker_.count())
+                           : tr("Word %1 of %2 · %3").arg(tracker_.position() + 1).arg(tracker_.count()).arg(length));
 }
 
 void MainWindow::setMode(ReadingMode mode) {
@@ -899,6 +907,37 @@ QWidget *MainWindow::makeReadingSettings() {
         QSettings().setValue("reading/fontSize", value);
     });
     form->addRow(tr("Text size"), size);
+
+    auto *font = new SettingsComboBox;
+    font->setObjectName("readerFont");
+    font->addItem(tr("Interface font"), QString());
+    for (const auto &family : QFontDatabase::families())
+        if (!QFontDatabase::isPrivateFamily(family) &&
+            QFontDatabase::writingSystems(family).contains(QFontDatabase::Latin))
+            font->addItem(family, family);
+    font->setToolTip(tr("Any installed font, for example one designed for easier reading such as Atkinson "
+                        "Hyperlegible or OpenDyslexic."));
+    const auto savedFont = settings.value("reading/fontFamily").toString();
+    font->setCurrentIndex(std::max(0, font->findData(savedFont)));
+    prompter_->setTextFont(font->currentData().toString());
+    connect(font, &QComboBox::activated, this, [this, font] {
+        prompter_->setTextFont(font->currentData().toString());
+        QSettings().setValue("reading/fontFamily", font->currentData().toString());
+    });
+    form->addRow(tr("Font"), font);
+
+    auto *spacing = new SettingsComboBox;
+    spacing->setObjectName("readerLineSpacing");
+    spacing->addItem(tr("Normal"), 100);
+    spacing->addItem(tr("Relaxed"), 125);
+    spacing->addItem(tr("Wide"), 150);
+    spacing->setCurrentIndex(std::max(0, spacing->findData(settings.value("reading/lineSpacing", 100).toInt())));
+    prompter_->setLineSpacing(spacing->currentData().toInt());
+    connect(spacing, &QComboBox::activated, this, [this, spacing] {
+        prompter_->setLineSpacing(spacing->currentData().toInt());
+        QSettings().setValue("reading/lineSpacing", spacing->currentData().toInt());
+    });
+    form->addRow(tr("Line spacing"), spacing);
 
     auto *line = new SettingsComboBox;
     line->setObjectName("readingLine");
