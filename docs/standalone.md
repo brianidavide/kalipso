@@ -45,7 +45,7 @@ Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow 
 
 ### Phone remote
 
-**Settings → Remote control → Allow a phone on this network to control the reader** shows a link and a QR code. Open it on a phone on the same network to start, pause, step and change speed. The page never receives the script text. A new secret link is created every time you turn it on, and it stops when Kalipso closes.
+**Settings → Remote control → Allow a phone on this network to control the reader** shows a link and a QR code. Open it on a phone on the same network to start, pause, step and change speed. The page never receives the script text. A new secret link is created every time you turn it on, and it stops when Kalipso closes. Windows and some Linux firewalls ask whether to allow Kalipso on the network the first time; the phone must be on the same network as the computer.
 
 ### Mirroring
 
@@ -55,7 +55,9 @@ Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow 
 
 On **Windows** (10 version 2004 or later) and **macOS**, **Settings → Hide the reader from screen sharing and recordings** asks the system to leave the reader out of screen captures. It is on by default. Apps that capture through the system's APIs respect it; always check what other participants see before relying on it.
 
-On **Linux**, applications cannot hide their own windows from capture. On KDE Plasma, the optional KWin script asks KWin to exclude the reader where KWin supports it, keeps it above other windows and places it near the camera (on Wayland, only the compositor can position windows):
+On **Linux**, applications cannot hide their own windows from capture; the compositor decides. On **KDE Plasma 6.6 or later**, focus the reader, press Alt+F3 and choose **More Actions → Hide from Screencast**. Plasma 6.7 or later can make this permanent with a window rule (System Settings → Window Management → Window Rules) matching the window class `io.github.brianidavide.kalipso` and the title `Kalipso — reading`.
+
+The optional KWin script keeps the reader above other windows, places it near the camera (on Wayland only the compositor can position windows) and requests the same exclusion where KWin lets scripts set it:
 
 ```sh
 python3 desktop/package.py

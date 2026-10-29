@@ -27,6 +27,10 @@ Revenue grew by twelve percent.
 
 Jumping to a section places the reading position just before its first word.
 
+## Emphasis
+
+`**bold**` and `*italic*` (Markdown) are shown in bold and italics in the standalone app, with the asterisks dimmed. Voice following ignores the asterisks.
+
 ## Importing
 
 The standalone app imports:

@@ -32,6 +32,7 @@
 #include <QTextBlock>
 #include <QVBoxLayout>
 #include <QWheelEvent>
+#include <algorithm>
 
 namespace {
 // Scrolling a settings page must not silently change a language or model.

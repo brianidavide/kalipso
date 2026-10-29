@@ -19,6 +19,8 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWindow>
+#include <algorithm>
+#include <cmath>
 
 namespace {
 bool horizontal(Mirror mirror) { return mirror == Mirror::Horizontal || mirror == Mirror::Both; }
