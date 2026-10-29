@@ -26,24 +26,31 @@ GNOME_DOMAIN = 'kalipso'
 
 
 def compile_po(path):
-    """Compile a simple .po file (no plurals or contexts) to .mo bytes."""
-    messages, key, field = {}, None, None
-    entry = {'msgid': '', 'msgstr': ''}
+    """Compile a .po file (plurals included, no contexts) to .mo bytes."""
+    messages = {}
+    entry, field = {}, None
+
+    def finish():
+        if 'msgid' not in entry or 'msgstr' not in entry and 'msgstr[0]' not in entry:
+            return
+        if 'msgid_plural' in entry:  # .mo plural: "singular\0plural" -> "form0\0form1..."
+            forms = [entry[f'msgstr[{n}]'] for n in range(10) if f'msgstr[{n}]' in entry]
+            if any(forms):
+                messages[entry['msgid'] + '\0' + entry['msgid_plural']] = '\0'.join(forms)
+        elif entry['msgstr'] or not entry['msgid']:
+            messages[entry['msgid']] = entry['msgstr']
+
     for line in path.read_text(encoding='utf-8').splitlines() + ['']:
         line = line.strip()
         if line.startswith('msgid '):
-            if field == 'msgstr':
-                messages[entry['msgid']] = entry['msgstr']
-            entry, field = {'msgid': '', 'msgstr': ''}, 'msgid'
-            line = line[6:]
-        elif line.startswith('msgstr '):
-            field = 'msgstr'
-            line = line[7:]
+            finish()
+            entry, field = {}, 'msgid'
+        elif line.startswith(('msgid_plural ', 'msgstr ', 'msgstr[')):
+            field = line.split(' ', 1)[0]
         elif not line.startswith('"'):
             continue
-        entry[field] += ast.literal_eval(line)
-    if field == 'msgstr':
-        messages[entry['msgid']] = entry['msgstr']
+        entry[field] = entry.get(field, '') + ast.literal_eval(line[line.index('"'):])
+    finish()
     keys = sorted(messages)
     ids = [key.encode() for key in keys]
     strs = [messages[key].encode() for key in keys]

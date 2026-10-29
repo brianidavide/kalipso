@@ -183,6 +183,8 @@ if(BUILD_TESTING)
 
   if(Python3_Interpreter_FOUND)
     add_test(NAME speech_assets COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/speech_assets_test.py)
+    add_test(NAME package_translations COMMAND ${Python3_EXECUTABLE}
+                                               ${CMAKE_CURRENT_SOURCE_DIR}/tests/package_translations_test.py)
     # Real LibreOffice Impress slideshow; skipped (77) without LibreOffice, uno or a display.
     add_test(NAME impress_follow COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/impress_follow_test.py)
     set_tests_properties(impress_follow PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
