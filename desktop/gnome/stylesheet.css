@@ -15,6 +15,7 @@
 .tp-light .tp-title { color: #626875; }
 .tp-light .tp-progress { background-color: #DDE0E7; height: 3px; }
 .tp-light .tp-progress-fill { background-color: #2447D3; height: 3px; }
+.tp-light .tp-countdown { font-size: 52pt; font-weight: bold; color: #17191F; background-color: #FFFFFF; border: 1px solid #747C8B; border-radius: 12px; padding: 8px 24px; }
 
 .tp-dark .tp-button { font-size: 12pt; font-weight: 500; border-radius: 8px; padding: 8px 12px; min-height: 24px; background-color: #242933; color: #F7F8FC; border: 2px solid #8F98A9; }
 .tp-dark .tp-button:hover, .tp-dark .tp-button:active { background-color: #363C48; }
@@ -32,3 +33,4 @@
 .tp-dark .tp-title { color: #A7AFBF; }
 .tp-dark .tp-progress { background-color: #2E333D; height: 3px; }
 .tp-dark .tp-progress-fill { background-color: #C8D4FF; height: 3px; }
+.tp-dark .tp-countdown { font-size: 52pt; font-weight: bold; color: #F7F8FC; background-color: #242933; border: 1px solid #8F98A9; border-radius: 12px; padding: 8px 24px; }
