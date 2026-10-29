@@ -37,7 +37,7 @@ private:
     void buildLibraryBar(QWidget *bar);
     void refreshLibrary();
     void openScript(const QString &id);
-    void saveScript();
+    bool saveScript(); // False when the current script could not be written.
     void newScript();
     void importScript();
     void exportScript();

@@ -386,10 +386,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Le app di condivisione che usano il servizio di cattura del sistema escludono il lettore. Verifica la vista di un altro partecipante prima di farci affidamento.</translation>
     </message>
     <message>
-        <source>Screen sharing may include the reader. On KDE Plasma, the optional Kalipso KWin script asks KWin to leave it out. Check the view from another participant.</source>
-        <translation>La condivisione dello schermo può includere il lettore. Su KDE Plasma lo script KWin opzionale di Kalipso chiede a KWin di escluderlo. Verifica la vista di un altro partecipante.</translation>
-    </message>
-    <message>
         <source>%1 · primary</source>
         <translation>%1 · principale</translation>
     </message>
@@ -532,6 +528,18 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Interface language</source>
         <translation>Lingua dell'interfaccia</translation>
+    </message>
+    <message>
+        <source>Screen sharing may include the reader. Share a single window instead of the whole screen, or on KDE Plasma 6.6 or later use Hide from Screencast in the reader's window menu (Alt+F3). Check the view from another participant.</source>
+        <translation>La condivisione dello schermo può includere il lettore. Condividi una singola finestra invece dell'intero schermo, oppure su KDE Plasma 6.6 o successivo usa, nel menu della finestra del lettore (Alt+F3), l'opzione che la nasconde dalle trasmissioni dello schermo. Verifica la vista di un altro partecipante.</translation>
+    </message>
+    <message>
+        <source>Close without saving?</source>
+        <translation>Chiudere senza salvare?</translation>
+    </message>
+    <message>
+        <source>Your latest changes could not be saved. Close Kalipso anyway and lose them?</source>
+        <translation>Le ultime modifiche non sono state salvate. Chiudere comunque Kalipso e perderle?</translation>
     </message>
 </context>
 <context>
@@ -764,6 +772,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Slide %1: %2</source>
         <translation>Diapositiva %1: %2</translation>
     </message>
+    <message>
+        <source>These speaker notes are too long to import.</source>
+        <translation>Queste note del relatore sono troppo lunghe da importare.</translation>
+    </message>
 </context>
 <context>
     <name>SpeechService</name>
@@ -911,6 +923,14 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Kalipso — local teleprompter</source>
         <translation>Kalipso — teleprompter locale</translation>
+    </message>
+    <message>
+        <source>Kalipso</source>
+        <translation>Kalipso</translation>
+    </message>
+    <message>
+        <source>Kalipso is already open.</source>
+        <translation>Kalipso è già aperto.</translation>
     </message>
 </context>
 </TS>

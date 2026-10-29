@@ -11,11 +11,11 @@ In Settings, select **System speech**, choose a language and click **Check avail
 
 Moonshine and Vosk remain selectable alternatives. Supply an extracted model and a compatible native library for your OS and CPU architecture; a Linux `.so` cannot be used on macOS or Windows. The existing automatic asset installation tools target Linux. These alternatives use Qt Multimedia for microphone capture on macOS/Windows. Backend settings are stored separately, and choosing an engine does not download anything.
 
-On both systems the reader asks to be left out of screen sharing and recordings (Settings → Hide the reader from screen sharing and recordings). Check the view seen by another participant before relying on it.
+On Windows the reader asks to be left out of screen sharing and recordings (Settings → Hide the reader from screen sharing and recordings). macOS has no reliable equivalent; share a single window instead of the whole screen. Check the view seen by another participant.
 
 ## Build
 
-Both ports require CMake 3.22+, a C++20 compiler and Qt Core, Widgets, Network, Multimedia, Test and (for translations) LinguistTools: Qt 6.10+ on macOS, Qt 6.8+ on Windows. Point CMake at Qt with `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.x/<platform>`. Python is optional for additional tests. Windows uses MSVC 2022 and the Windows SDK. macOS additionally requires Xcode 26+ with the macOS 26 SDK and Swift compiler.
+Both ports require CMake 3.22+, a C++20 compiler and Qt Core, Widgets, Network, Multimedia, Test and (for translations) LinguistTools: Qt 6.10+ on macOS, Qt 6.8+ on Windows. The macOS app runs on macOS 14.4 or later with Qt 6.12 (the minimum of the Qt version you build with); system speech additionally needs macOS 26. Point CMake at Qt with `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.x/<platform>`. Python is optional for additional tests. Windows uses MSVC 2022 and the Windows SDK. macOS additionally requires Xcode 26+ with the macOS 26 SDK and Swift compiler.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

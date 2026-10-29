@@ -21,7 +21,7 @@ A local-first teleprompter for your desktop. Keep your script next to your camer
 
 | Version | Runs on | Best for |
 | --- | --- | --- |
-| [Standalone app](docs/standalone.md) | Linux, Windows x64, Apple Silicon Macs | The full feature set: script library, import, movable reader, phone remote |
+| [Standalone app](docs/standalone.md) | Linux, Windows x64, Apple Silicon Macs (macOS 14.4+) | The full feature set: script library, import, movable reader, phone remote |
 | [Plasma widget](desktop/README.md#kde-plasma-6) | KDE Plasma 6 | A reader on your desktop or panel |
 | [GNOME extension](desktop/README.md#gnome-shell-48) | GNOME Shell 48 | A reader under the top bar |
 
@@ -71,7 +71,7 @@ Then follow [installing the widget or extension](desktop/README.md).
 
 ## Limitations
 
-- **Screen sharing:** on Windows and macOS the standalone app asks the system to keep the reader out of screen shares and recordings. On Linux this depends on the compositor: KDE Plasma 6.6+ can hide it ([how](docs/standalone.md#screen-sharing)). Always check what other participants see.
+- **Screen sharing:** on Windows the standalone app asks the system to keep the reader out of screen shares and recordings; KDE Plasma 6.6+ can hide it too ([how](docs/standalone.md#screen-sharing)). macOS offers no reliable way for an app to do this, so share a single window there. Always check what other participants see.
 - **Desktop versions:** the GNOME extension declares Shell 48; the Plasma widget is tested with Plasma 6.3.
 - **Speech models:** the download catalog has Moonshine models for English, German, Spanish, Japanese and Chinese, and Vosk models for those plus Italian. Other compatible models can be configured by hand.
 - **Interface languages:** English and Italian.

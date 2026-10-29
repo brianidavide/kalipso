@@ -9,4 +9,5 @@
 <key>CFBundleVersion</key><string>${PROJECT_VERSION}</string>
 <key>NSMicrophoneUsageDescription</key><string>Kalipso uses your microphone to follow your script locally while you speak.</string>
 <key>NSHighResolutionCapable</key><true/>
+<key>LSMinimumSystemVersion</key><string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
 </dict></plist>

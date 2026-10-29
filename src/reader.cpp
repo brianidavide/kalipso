@@ -2,6 +2,7 @@
 #include "reader.h"
 #include "platform/capture_exclusion.h"
 #include "script_highlighter.h"
+#include <QAbstractButton>
 #include <QAbstractTextDocumentLayout>
 #include <QApplication>
 #include <QComboBox>
@@ -93,8 +94,8 @@ void ReaderView::scrollToCharacter(int character, bool animate) {
     cursor.setPosition(std::clamp(character, 0, std::max(0, document()->characterCount() - 1)));
     const QRect line = cursorRect(cursor);
     const int center = line.center().y() + verticalScrollBar()->value();
-    const double fraction = vertical(mirror_) ? 1.0 - readingLine_ : readingLine_;
-    const int target = std::clamp(center - int(viewport()->height() * fraction), verticalScrollBar()->minimum(),
+    // Through the glass, a mirrored line appears where the unmirrored one would.
+    const int target = std::clamp(center - int(viewport()->height() * readingLine_), verticalScrollBar()->minimum(),
                                   verticalScrollBar()->maximum());
     scroll_->stop();
     if (!animate || std::abs(target - verticalScrollBar()->value()) > viewport()->height()) {
@@ -116,7 +117,8 @@ QPoint ReaderView::unmirrored(QPoint point) const {
 }
 
 void ReaderView::paintEvent(QPaintEvent *event) {
-    if (mirror_ == Mirror::None)
+    // Editing shows the text unmirrored, so the caret and mouse work normally.
+    if (mirror_ == Mirror::None || !isReadOnly())
         return QTextEdit::paintEvent(event);
     // Draw the document through a flipped painter; the viewport background is
     // already filled with the reader palette.
@@ -205,6 +207,11 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     for (auto *widget : QList<QWidget *>{primary_, mode_, speedBox_, status_})
         controls->addWidget(widget);
     layout->addLayout(controls);
+    // Clicking a control must not move keyboard focus off the script: pedals and
+    // clickers send Space and arrows, which would otherwise activate or edit.
+    for (auto *control : findChildren<QAbstractButton *>())
+        control->setFocusPolicy(Qt::TabFocus);
+    mode_->setFocusPolicy(Qt::TabFocus);
     auto *grip = new QSizeGrip(this);
     grip->setObjectName("readerResize");
     grip->setToolTip(tr("Drag to resize the reader"));
@@ -226,9 +233,9 @@ ReaderWindow::ReaderWindow(QWidget *parent)
         text->style()->unpolish(text); // The style sheet depends on readOnly.
         text->style()->polish(text);
         edit_->setText(enabled ? tr("Done") : tr("Edit"));
-        if (enabled)
-            text->setFocus();
-        else
+        text->setFocus();
+        text->viewport()->update();
+        if (!enabled)
             highlight(position_, length_);
     });
 
@@ -379,6 +386,7 @@ void ReaderWindow::showOn(QScreen *screen) {
     show();
     raise();
     activateWindow();
+    text->setFocus();
 }
 
 void ReaderWindow::saveGeometry() {

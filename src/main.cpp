@@ -6,6 +6,9 @@
 #include <QDir>
 #include <QLibraryInfo>
 #include <QLocale>
+#include <QLockFile>
+#include <QMessageBox>
+#include <QStandardPaths>
 #include <QTimer>
 #include <QTranslator>
 
@@ -38,6 +41,16 @@ int main(int argc, char **argv) {
         {"screenshot", "Save sample screenshots to a directory, then exit.", "directory"},
     });
     parser.process(app);
+
+    // One editor at a time: two copies would overwrite each other's saved scripts.
+    const auto dataDirectory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dataDirectory);
+    QLockFile lock(dataDirectory + "/kalipso.lock");
+    if (!lock.tryLock(200)) {
+        QMessageBox::information(nullptr, QCoreApplication::translate("main", "Kalipso"),
+                                 QCoreApplication::translate("main", "Kalipso is already open."));
+        return 0;
+    }
 
     MainWindow window;
     if (parser.isSet("demo") || parser.isSet("screenshot"))

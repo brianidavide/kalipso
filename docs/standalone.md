@@ -53,7 +53,9 @@ Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow 
 
 ## Screen sharing
 
-On **Windows** (10 version 2004 or later) and **macOS**, **Settings → Hide the reader from screen sharing and recordings** asks the system to leave the reader out of screen captures. It is on by default. Apps that capture through the system's APIs respect it; always check what other participants see before relying on it.
+On **Windows** 10 version 2004 or later, **Settings → Hide the reader from screen sharing and recordings** asks Windows to leave the reader out of screen captures (Microsoft's `WDA_EXCLUDEFROMCAPTURE`). It is on by default. Check what other participants see before relying on it.
+
+On **macOS** an app cannot reliably hide its own window: Apple documents the old "do not share" window setting as unused, and screen-sharing apps built on ScreenCaptureKit capture the window anyway. Share a single window (for example your slides) instead of the whole screen.
 
 On **Linux**, applications cannot hide their own windows from capture; the compositor decides. On **KDE Plasma 6.6 or later**, focus the reader, press Alt+F3 and choose **More Actions → Hide from Screencast**. Plasma 6.7 or later can make this permanent with a window rule (System Settings → Window Management → Window Rules) matching the window class `io.github.brianidavide.kalipso` and the title `Kalipso — reading`.
 

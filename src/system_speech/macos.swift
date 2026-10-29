@@ -88,7 +88,6 @@ struct SystemSpeech {
             guard let display = content.displays.first(where: { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) }) else {
                 throw SpeechFailure(message: "The reader's display is unavailable.")
             }
-            // A reader hidden from capture is not listed; it is then absent from the image too.
             let windows = content.windows.filter { $0.owningApplication?.processID == getppid() && $0.title == "Kalipso — reading" }
             let filter = SCContentFilter(display: display, excludingWindows: windows)
             let config = SCStreamConfiguration()
