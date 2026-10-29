@@ -65,6 +65,7 @@ private:
     void steadyTick();
     void changeSpeed(int delta);
     void jumpSection(int direction);
+    bool voiceCommand(const QString &utterance);
     void startListening();
     void finishSession();
 
@@ -103,6 +104,7 @@ private:
     class ImpressFollower *impress_ = nullptr;
     QAction *impressAction_ = nullptr;
     QList<QAction *> formatActions_;
+    bool voiceCommands_ = false;
     ReadingMode mode_ = ReadingMode::Voice;
     QTimer steady_, countdown_;
     int countdownLeft_ = 0;

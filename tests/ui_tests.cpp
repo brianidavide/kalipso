@@ -527,6 +527,35 @@ for event in [{"state": "slide", "slide": 2, "notes": ""},
         QCOMPARE(text->toPlainText(), QString("# Say ***hello*** world now[smile]"));
     }
 
+    void voiceCommandsMoveOnlyWhenEnabledAndNotInTheScript() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("# One\nalpha beta\n# Two\nthen we go back home\n# Three\nend");
+        auto *speech = window.findChild<SpeechService *>();
+        auto *status = window.findChild<QLabel *>("audioStatus");
+        openSettings(window);
+        auto *enable = window.findChild<QCheckBox *>("voiceCommands");
+        QVERIFY(enable && !enable->isChecked()); // Off by default.
+        emit speech->transcript("go next", true);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 0 of 8"));
+        enable->setChecked(true);
+        emit speech->transcript("Go next.", true);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 2 of 8")); // Before "then"
+        QCOMPARE(status->text(), QString("Voice command: next section"));
+        // "then we go back home": when the script itself says "go back", it is read, not obeyed.
+        emit speech->transcript("then we", true);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 4 of 8"));
+        emit speech->transcript("go back", true);
+        QVERIFY2(positionLabel(window)->text().startsWith("Word 6 of 8"), qPrintable(positionLabel(window)->text()));
+        // Inside a longer sentence it is ordinary speech; on its own it is a command.
+        status->clear();
+        emit speech->transcript("so we go next week", true);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 6 of 8"));
+        QVERIFY(!status->text().startsWith("Voice command"));
+        emit speech->transcript("da capo", true);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 0 of 8"));
+        QSettings().remove("speech/voiceCommands");
+    }
+
     void readingStartsAfterFrontMatter() {
         MainWindow window(scripts_.path());
         const QString script = "---\ntitle: Launch\n---\n# Opening\nHello everyone";

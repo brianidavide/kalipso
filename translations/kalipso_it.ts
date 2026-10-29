@@ -782,6 +782,26 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Count filler words (um, uh) in the session summary</source>
         <translation>Conta le parole riempitive (ehm, uhm) nel resoconto della sessione</translation>
     </message>
+    <message>
+        <source>Voice command: %1</source>
+        <translation>Comando vocale: %1</translation>
+    </message>
+    <message>
+        <source>back to the start</source>
+        <translation>torna all'inizio</translation>
+    </message>
+    <message>
+        <source>next section</source>
+        <translation>sezione successiva</translation>
+    </message>
+    <message>
+        <source>previous section</source>
+        <translation>sezione precedente</translation>
+    </message>
+    <message>
+        <source>Voice commands: say “go next”, “go back” or “go start” (in Italian “vai avanti”, “torna indietro”, “da capo”) on their own</source>
+        <translation>Comandi vocali: di' da solo «vai avanti», «torna indietro» o «da capo» (in inglese «go next», «go back», «go start»)</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>

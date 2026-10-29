@@ -415,6 +415,10 @@ MainWindow::MainWindow(const QString &libraryDirectory)
             }
             return;
         }
+        if (final && voiceCommands_ && voiceCommand(text)) {
+            speech_.setScript(script_->toPlainText(), tracker_.position());
+            return;
+        }
         const bool wasLost = tracker_.lost();
         const int before = tracker_.position();
         if (tracker_.follow(text, final)) {
@@ -913,6 +917,38 @@ void MainWindow::followSlide(int number, const QString &notes) {
         tracker_.seekCharacter(at - 1);
     seekWord(tracker_.position());
     audioStatus_->setText(tr("Following Impress · slide %1").arg(number));
+}
+
+// Spoken commands, when enabled: a whole utterance that is exactly one of these
+// phrases, and not the words the script continues with. Two-word phrases make
+// accidental matches with ordinary speech unlikely.
+bool MainWindow::voiceCommand(const QString &utterance) {
+    enum Command { NextSection, PreviousSection, Start };
+    static const QList<QPair<QStringList, Command>> commands{
+        {{"go", "next"}, NextSection},    {{"go", "back"}, PreviousSection},        {{"go", "start"}, Start},
+        {{"vai", "avanti"}, NextSection}, {{"torna", "indietro"}, PreviousSection}, {{"da", "capo"}, Start}};
+    QStringList spoken;
+    for (const auto &word : ScriptTracker::tokenize(utterance))
+        spoken << word.normalized;
+    for (const auto &[phrase, command] : commands) {
+        if (spoken != phrase)
+            continue;
+        QStringList next; // The script's own next words win: then this is reading, not a command.
+        for (int i = tracker_.position() + 1; i < tracker_.count() && next.size() < phrase.size(); ++i)
+            next << tracker_.words()[i].normalized;
+        if (next == phrase)
+            return false;
+        if (command == Start)
+            seekWord(-1);
+        else
+            jumpSection(command == NextSection ? 1 : -1);
+        audioStatus_->setText(tr("Voice command: %1")
+                                  .arg(command == Start         ? tr("back to the start")
+                                       : command == NextSection ? tr("next section")
+                                                                : tr("previous section")));
+        return true;
+    }
+    return false;
 }
 
 void MainWindow::jumpSection(int direction) {
@@ -1422,6 +1458,16 @@ QWidget *MainWindow::makeSpeechSettings() {
     form->addRow(systemActions);
     form->addRow(systemStatus_);
     form->addRow(tr("Microphone"), microphone_);
+    auto *commands = new WrappingCheckBox(tr("Voice commands: say “go next”, “go back” or “go start” (in Italian "
+                                             "“vai avanti”, “torna indietro”, “da capo”) on their own"));
+    commands->box->setObjectName("voiceCommands");
+    commands->box->setChecked(settings.value("speech/voiceCommands", false).toBool());
+    voiceCommands_ = commands->box->isChecked();
+    connect(commands->box, &QCheckBox::toggled, this, [this](bool checked) {
+        voiceCommands_ = checked;
+        QSettings().setValue("speech/voiceCommands", checked);
+    });
+    form->addRow(commands);
     auto *fillers = new WrappingCheckBox(tr("Count filler words (um, uh) in the session summary"));
     fillers->box->setObjectName("countFillers");
     fillers->box->setChecked(settings.value("speech/countFillers", true).toBool());
