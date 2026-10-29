@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kalipso-desktop\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 14:41+0000\n"
+"POT-Creation-Date: 2026-10-29 15:34+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,41 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "Choose a speech engine to check its setup."
+msgstr ""
+
+msgid ""
+"Local speech is unavailable. Open Local speech setup to install the "
+"companion and a language model."
+msgstr ""
+
+msgid "Checking local speech components"
+msgstr ""
+
+msgid "Microphone stopped"
+msgstr ""
+
+msgid "Choose the window behind the reader. Desktop permission is required."
+msgstr ""
+
+msgid ""
+"Window colors unavailable. Install or update the Kalipso companion and the "
+"desktop sharing portal."
+msgstr ""
+
+msgid "Choose the window behind your reader in the desktop sharing dialog"
+msgstr ""
+
+msgid "Window sharing stopped · Choose a background window to resume"
+msgstr ""
+
 msgid "Add your script to begin."
+msgstr ""
+
+msgid "Kalipso"
+msgstr ""
+
+msgid "Start listening"
 msgstr ""
 
 msgid "Sections"
@@ -33,6 +67,9 @@ msgid "Done"
 msgstr ""
 
 msgid "Settings"
+msgstr ""
+
+msgid "Reading progress"
 msgstr ""
 
 msgid "Reading excerpt"
@@ -51,9 +88,6 @@ msgid "Start scrolling"
 msgstr ""
 
 msgid "Cancel"
-msgstr ""
-
-msgid "Start listening"
 msgstr ""
 
 msgid "Previous"
@@ -103,6 +137,9 @@ msgid ""
 "starting with # are sections."
 msgstr ""
 
+msgid "Reading mode"
+msgstr ""
+
 msgid "Manual"
 msgstr ""
 
@@ -110,6 +147,9 @@ msgid "Steady speed"
 msgstr ""
 
 msgid "Follow my voice"
+msgstr ""
+
+msgid "Speech engine"
 msgstr ""
 
 msgid "Reader colors"
@@ -168,34 +208,6 @@ msgid ""
 "Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change "
 "the steady speed. Screen sharing may include this widget; check what other "
 "participants see."
-msgstr ""
-
-msgid "Choose a speech engine to check its setup."
-msgstr ""
-
-msgid ""
-"Local speech is unavailable. Open Local speech setup to install the "
-"companion and a language model."
-msgstr ""
-
-msgid "Checking local speech components"
-msgstr ""
-
-msgid "Microphone stopped"
-msgstr ""
-
-msgid "Choose the window behind the reader. Desktop permission is required."
-msgstr ""
-
-msgid ""
-"Window colors unavailable. Install or update the Kalipso companion and the "
-"desktop sharing portal."
-msgstr ""
-
-msgid "Choose the window behind your reader in the desktop sharing dialog"
-msgstr ""
-
-msgid "Window sharing stopped · Choose a background window to resume"
 msgstr ""
 
 msgid ""

@@ -3,14 +3,58 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: kalipso-desktop\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-29 15:34+0000\n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Choose a speech engine to check its setup."
+msgstr "Scegli un motore vocale per verificarne la configurazione."
+
+msgid ""
+"Local speech is unavailable. Open Local speech setup to install the "
+"companion and a language model."
+msgstr ""
+"La voce locale non è disponibile. Apri Configura la voce locale per "
+"installare il companion e un modello linguistico."
+
+msgid "Checking local speech components"
+msgstr "Verifica dei componenti vocali locali"
+
+msgid "Microphone stopped"
+msgstr "Microfono fermato"
+
+msgid "Choose the window behind the reader. Desktop permission is required."
+msgstr "Scegli la finestra dietro il lettore. Serve il permesso del desktop."
+
+msgid ""
+"Window colors unavailable. Install or update the Kalipso companion and the "
+"desktop sharing portal."
+msgstr ""
+"Colori della finestra non disponibili. Installa o aggiorna il companion di "
+"Kalipso e il portale di condivisione del desktop."
+
+msgid "Choose the window behind your reader in the desktop sharing dialog"
+msgstr ""
+"Scegli la finestra dietro il lettore nella finestra di condivisione del "
+"desktop"
+
+msgid "Window sharing stopped · Choose a background window to resume"
+msgstr ""
+"Condivisione della finestra interrotta · Scegli una finestra di sfondo per "
+"riprendere"
 
 msgid "Add your script to begin."
 msgstr "Aggiungi il copione per iniziare."
+
+msgid "Kalipso"
+msgstr "Kalipso"
+
+msgid "Start listening"
+msgstr "Inizia ad ascoltare"
 
 msgid "Sections"
 msgstr "Sezioni"
@@ -26,6 +70,9 @@ msgstr "Fatto"
 
 msgid "Settings"
 msgstr "Impostazioni"
+
+msgid "Reading progress"
+msgstr "Avanzamento della lettura"
 
 msgid "Reading excerpt"
 msgstr "Estratto in lettura"
@@ -44,9 +91,6 @@ msgstr "Avvia lo scorrimento"
 
 msgid "Cancel"
 msgstr "Annulla"
-
-msgid "Start listening"
-msgstr "Inizia ad ascoltare"
 
 msgid "Previous"
 msgstr "Indietro"
@@ -90,8 +134,15 @@ msgstr "Voce non disponibile · Apri le Impostazioni"
 msgid "Script"
 msgstr "Copione"
 
-msgid "Saved automatically. [Bracketed cues] are shown but not read aloud. Lines starting with # are sections."
-msgstr "Salvato automaticamente. Le [indicazioni tra parentesi quadre] si vedono ma non si leggono ad alta voce. Le righe che iniziano con # sono sezioni."
+msgid ""
+"Saved automatically. [Bracketed cues] are shown but not read aloud. Lines "
+"starting with # are sections."
+msgstr ""
+"Salvato automaticamente. Le [indicazioni tra parentesi quadre] si vedono ma "
+"non si leggono ad alta voce. Le righe che iniziano con # sono sezioni."
+
+msgid "Reading mode"
+msgstr "Modalità di lettura"
 
 msgid "Manual"
 msgstr "Manuale"
@@ -101,6 +152,9 @@ msgstr "Velocità costante"
 
 msgid "Follow my voice"
 msgstr "Segui la mia voce"
+
+msgid "Speech engine"
+msgstr "Motore vocale"
 
 msgid "Reader colors"
 msgstr "Colori del lettore"
@@ -120,8 +174,16 @@ msgstr "Scegli la finestra di sfondo…"
 msgid "Stop window sharing"
 msgstr "Interrompi la condivisione della finestra"
 
-msgid "Window colors follow the window you select while this reader is visible. Images stay in memory and are never saved or sent. Requires the Kalipso companion, PipeWire and the desktop sharing portal. Every color mode keeps an opaque reading background."
-msgstr "I colori seguono la finestra che scegli finché questo lettore è visibile. Le immagini restano in memoria e non vengono mai salvate né inviate. Servono il companion di Kalipso, PipeWire e il portale di condivisione del desktop. Ogni modalità di colore mantiene uno sfondo di lettura opaco."
+msgid ""
+"Window colors follow the window you select while this reader is visible. "
+"Images stay in memory and are never saved or sent. Requires the Kalipso "
+"companion, PipeWire and the desktop sharing portal. Every color mode keeps "
+"an opaque reading background."
+msgstr ""
+"I colori seguono la finestra che scegli finché questo lettore è visibile. Le "
+"immagini restano in memoria e non vengono mai salvate né inviate. Servono il "
+"companion di Kalipso, PipeWire e il portale di condivisione del desktop. "
+"Ogni modalità di colore mantiene uno sfondo di lettura opaco."
 
 msgid "Mirror"
 msgstr "Specchio"
@@ -150,38 +212,30 @@ msgstr "Configura la voce locale ↗"
 msgid "Local speech setup, opens in your browser"
 msgstr "Configura la voce locale, si apre nel browser"
 
-msgid "Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed. Screen sharing may include this widget; check what other participants see."
-msgstr "Tasti: frecce o Pag↑/Pag↓ per avanzare, Spazio avvia o mette in pausa, + e − cambiano la velocità costante. La condivisione dello schermo può includere questo widget; verifica cosa vedono gli altri partecipanti."
+msgid ""
+"Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change "
+"the steady speed. Screen sharing may include this widget; check what other "
+"participants see."
+msgstr ""
+"Tasti: frecce o Pag↑/Pag↓ per avanzare, Spazio avvia o mette in pausa, + e − "
+"cambiano la velocità costante. La condivisione dello schermo può includere "
+"questo widget; verifica cosa vedono gli altri partecipanti."
 
-msgid "Choose a speech engine to check its setup."
-msgstr "Scegli un motore vocale per verificarne la configurazione."
-
-msgid "Local speech is unavailable. Open Local speech setup to install the companion and a language model."
-msgstr "La voce locale non è disponibile. Apri Configura la voce locale per installare il companion e un modello linguistico."
-
-msgid "Checking local speech components"
-msgstr "Verifica dei componenti vocali locali"
-
-msgid "Microphone stopped"
-msgstr "Microfono fermato"
-
-msgid "Choose the window behind the reader. Desktop permission is required."
-msgstr "Scegli la finestra dietro il lettore. Serve il permesso del desktop."
-
-msgid "Window colors unavailable. Install or update the Kalipso companion and the desktop sharing portal."
-msgstr "Colori della finestra non disponibili. Installa o aggiorna il companion di Kalipso e il portale di condivisione del desktop."
-
-msgid "Choose the window behind your reader in the desktop sharing dialog"
-msgstr "Scegli la finestra dietro il lettore nella finestra di condivisione del desktop"
-
-msgid "Window sharing stopped · Choose a background window to resume"
-msgstr "Condivisione della finestra interrotta · Scegli una finestra di sfondo per riprendere"
-
-msgid "A little preparation makes room for a better conversation. [smile]\n\nTake your time. Leave space for a pause. Your next words will be here when you are ready."
-msgstr "Un po' di preparazione fa spazio a una conversazione migliore. [sorridi]\n\nPrenditi il tuo tempo. Lascia spazio per una pausa. Le prossime parole saranno qui quando sei pronto."
+msgid ""
+"A little preparation makes room for a better conversation. [smile]\n"
+"\n"
+"Take your time. Leave space for a pause. Your next words will be here when "
+"you are ready."
+msgstr ""
+"Un po' di preparazione fa spazio a una conversazione migliore. [sorridi]\n"
+"\n"
+"Prenditi il tuo tempo. Lascia spazio per una pausa. Le prossime parole "
+"saranno qui quando sei pronto."
 
 msgid "Automatic samples colors around the reader. No images are saved."
-msgstr "Automatico campiona i colori attorno al lettore. Nessuna immagine viene salvata."
+msgstr ""
+"Automatico campiona i colori attorno al lettore. Nessuna immagine viene "
+"salvata."
 
 msgid "‹ Section"
 msgstr "‹ Sezione"
@@ -205,19 +259,28 @@ msgid "Automatic"
 msgstr "Automatico"
 
 msgid "Screen colors are unavailable. The opaque reader keeps its contrast."
-msgstr "I colori dello schermo non sono disponibili. Il lettore opaco mantiene il contrasto."
+msgstr ""
+"I colori dello schermo non sono disponibili. Il lettore opaco mantiene il "
+"contrasto."
 
-msgid "Local speech is not installed. Open Local speech setup to install a companion and language model."
-msgstr "La voce locale non è installata. Apri Configura la voce locale per installare un companion e un modello linguistico."
+msgid ""
+"Local speech is not installed. Open Local speech setup to install a "
+"companion and language model."
+msgstr ""
+"La voce locale non è installata. Apri Configura la voce locale per "
+"installare un companion e un modello linguistico."
 
+#, javascript-format
 msgid "%s · %s · Ready"
 msgstr "%s · %s · Pronto"
 
 msgid "configured language"
 msgstr "lingua configurata"
 
+#, javascript-format
 msgid "%d words/min"
 msgstr "%d parole/min"
 
+#, javascript-format
 msgid "Local speech unavailable. %s See docs/local-engine.md."
 msgstr "Voce locale non disponibile. %s Vedi docs/local-engine.md."
