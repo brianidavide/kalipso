@@ -52,7 +52,8 @@ The Plasma widget (`i18n()`) and GNOME extension (`_()`) share one gettext catal
 
 ```sh
 cd desktop
-xgettext --from-code=UTF-8 --language=JavaScript --keyword=i18n --keyword=_ --no-location \
+xgettext --from-code=UTF-8 --language=JavaScript --keyword=i18n --keyword=i18np:1,2 --keyword=_ \
+  --keyword=ngettext:1,2 --no-location \
   -o po/kalipso-desktop.pot plasma/contents/ui/*.qml gnome/*.js
 msgmerge --update po/it.po po/kalipso-desktop.pot
 ```

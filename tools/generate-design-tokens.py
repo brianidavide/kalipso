@@ -87,6 +87,7 @@ for theme, p in source['palette'].items():
 {scope} .tp-title {{ color: {p['muted']}; }}
 {scope} .tp-progress {{ background-color: {p['divider']}; height: 3px; }}
 {scope} .tp-progress-fill {{ background-color: {p['accent']}; height: 3px; }}
+{scope} .tp-countdown {{ font-size: {n['readerSize'] * 2}pt; font-weight: bold; color: {p['text']}; background-color: {p['surface']}; border: 1px solid {p['border']}; border-radius: 12px; padding: 8px 24px; }}
 """)
 (ROOT / 'desktop/gnome/stylesheet.css').write_text('/* Generated from design/tokens.json. */\n'+'\n'.join(rules))
 

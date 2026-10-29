@@ -48,9 +48,10 @@ gnome-extensions uninstall kalipso@brianidavide.github.io
 - `[Bracketed cues]` are shown in italics but never read by voice following. Lines starting with `#` are sections: use **Sections** (Plasma) or **‹ Section / Section ›** (GNOME) to jump between them.
 - **Settings** chooses how the reader advances:
   - **Manual**: **Next words** and **Previous** move four words; **Reset** returns to the start.
-  - **Steady speed**: scrolls word by word at the chosen words per minute.
+  - **Steady speed**: scrolls word by word at the chosen words per minute, after an optional 3- or 5-second countdown (**Countdown before steady scrolling**).
   - **Follow my voice**: needs the [local speech companion and a language model](../docs/local-engine.md). Choosing Moonshine or Vosk does not install them.
 - **Mirror** flips the text for beam-splitter teleprompter glass.
+- **Reader font** and **Line spacing**: the interface font, a serif, or a font designed for easier reading (Atkinson Hyperlegible, OpenDyslexic, Lexend) when it is installed; normal, relaxed or wide lines.
 - Keys (for foot pedals and clickers): arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed, Home returns to the start.
 
 The interface follows your desktop language (English or Italian). Hiding the reader stops the microphone. The reader can appear in screen sharing; check what other participants see.

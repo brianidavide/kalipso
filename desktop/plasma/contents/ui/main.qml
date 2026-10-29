@@ -21,6 +21,15 @@ PlasmoidItem {
     property int speed: config.speed           // Steady speed, words per minute
     property string mirror: config.mirror      // "none", "horizontal" or "vertical"
     property real readerSize: config.readerSize
+    property string readerFont: config.readerFont      // "" is the interface font
+    property int lineSpacing: config.lineSpacing       // Percent of the normal line height
+    property int countdownLeft: 0                      // Seconds before steady scrolling starts
+    // Font choices: a generic serif, plus fonts designed for easier reading when installed.
+    readonly property var fontChoices: {
+        const installed = Qt.fontFamilies()
+        return ["Serif"].concat(["Atkinson Hyperlegible", "Atkinson Hyperlegible Next", "OpenDyslexic", "Lexend"]
+            .filter(family => installed.indexOf(family) >= 0))
+    }
 
     property string windowTheme: "dark"
     property var windowPalette: new Contrast.PaletteChoice()
@@ -86,7 +95,7 @@ PlasmoidItem {
         if (mode === "manual")
             seek(tracker.position + 4)
         else if (mode === "steady")
-            steady.running ? steady.stop() : startSteady()
+            (steady.running || countdown.running) ? stop() : startSteady()
         else if (audio.active || audio.busy)
             audio.stop()
         else
@@ -95,9 +104,12 @@ PlasmoidItem {
     function startSteady() {
         if (atEnd)
             seek(-1)
-        steady.start()
+        countdownLeft = Math.max(0, config.countdown)
+        countdownLeft > 0 ? countdown.start() : steady.start()
     }
     function stop() {
+        countdown.stop()
+        countdownLeft = 0
         steady.stop()
         if (audio.active || audio.busy)
             audio.stop()
@@ -128,6 +140,18 @@ PlasmoidItem {
         id: savePosition
         interval: 1000
         onTriggered: root.config.position = root.tracker.position >= 0 ? root.tracker.words[root.tracker.position].start : -1
+    }
+    Timer {
+        id: countdown
+        interval: 1000
+        repeat: true
+        onTriggered: {
+            root.countdownLeft -= 1
+            if (root.countdownLeft <= 0) {
+                countdown.stop()
+                steady.start()
+            }
+        }
     }
     Timer {
         id: steady
@@ -391,11 +415,27 @@ PlasmoidItem {
                     textFormat: Text.RichText
                     color: root.c.overlayText
                     font.pointSize: root.readerSize
+                    font.family: root.readerFont || Qt.application.font.family
+                    lineHeightMode: Text.ProportionalHeight
+                    lineHeight: root.lineSpacing / 100
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                     Layout.minimumHeight: font.pixelSize * 4.5
                     topPadding: 12
                     bottomPadding: 12
+                    // Seconds left before steady scrolling starts, over the text.
+                    Label {
+                        objectName: "countdown"
+                        visible: root.countdownLeft > 0
+                        anchors.centerIn: parent
+                        text: root.countdownLeft
+                        color: root.c.overlayText
+                        font.pointSize: root.readerSize * 2
+                        font.bold: true
+                        padding: 16
+                        background: Rectangle { color: root.c.overlaySurface; border.color: root.c.overlayLine; radius: 12 }
+                        Accessible.ignored: true
+                    }
                     Accessible.name: i18n("Reading excerpt")
                     Accessible.description: i18n("Open Edit script to read or change the complete script.")
                     // Beam-splitter rigs show the reader through a mirror.
@@ -415,9 +455,9 @@ PlasmoidItem {
                         objectName: "readAction"
                         primary: true
                         iconName: root.mode === "manual" ? "go-next"
-                            : (steady.running || audio.active) ? "media-playback-pause" : "media-playback-start"
+                            : (steady.running || countdown.running || audio.active) ? "media-playback-pause" : "media-playback-start"
                         text: root.mode === "manual" ? i18n("Next words")
-                            : root.mode === "steady" ? (steady.running ? i18n("Pause") : i18n("Start scrolling"))
+                            : root.mode === "steady" ? ((steady.running || countdown.running) ? i18n("Pause") : i18n("Start scrolling"))
                             : audio.active ? i18n("Pause") : audio.busy ? i18n("Cancel") : i18n("Start listening")
                         enabled: root.wordCount > 0 && (root.mode !== "manual" || !root.atEnd)
                         onClicked: root.toggle()
@@ -443,9 +483,9 @@ PlasmoidItem {
                     visible: root.mode === "steady"
                     spacing: 8
                     Layout.fillWidth: true
-                    ReaderButton { quiet: true; iconName: "list-remove"; text: ""; Accessible.name: i18n("Slower"); onClicked: root.changeSpeed(-10) }
+                    ReaderButton { quiet: true; text: "−"; Accessible.name: i18n("Slower"); onClicked: root.changeSpeed(-10) }
                     Label { text: i18n("%1 words/min", root.speed); color: root.c.overlayText; height: root.n.controlHeight; verticalAlignment: Text.AlignVCenter }
-                    ReaderButton { quiet: true; iconName: "list-add"; text: ""; Accessible.name: i18n("Faster"); onClicked: root.changeSpeed(10) }
+                    ReaderButton { quiet: true; text: "+"; Accessible.name: i18n("Faster"); onClicked: root.changeSpeed(10) }
                 }
                 Label {
                     objectName: "readingState"
@@ -454,7 +494,8 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     Accessible.role: Accessible.StatusBar
                     text: root.mode === "manual" ? (root.atEnd ? i18n("End of script · Microphone off") : i18n("Manual · Microphone off"))
-                        : root.mode === "steady" ? (steady.running ? i18n("Scrolling · Microphone off")
+                        : root.mode === "steady" ? (countdown.running ? i18np("Starting in %1 second…", "Starting in %1 seconds…", root.countdownLeft)
+                            : steady.running ? i18n("Scrolling · Microphone off")
                             : root.atEnd ? i18n("End of script · Microphone off") : i18n("Paused · Microphone off"))
                         : audio.active ? (root.lost ? i18n("Off script · Kalipso catches up when you return to the text")
                             : i18n("Listening · On this device"))
@@ -580,6 +621,51 @@ PlasmoidItem {
                         spacing: 8
                         ReaderButton { text: i18n("Smaller"); onClicked: root.config.readerSize = Math.max(18, root.readerSize - 2) }
                         ReaderButton { text: i18n("Larger"); onClicked: root.config.readerSize = Math.min(64, root.readerSize + 2) }
+                    }
+                    GroupLabel { text: i18n("Reader font") }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        ChoiceButton { objectName: "interfaceFont"; label: i18n("Interface font"); selected: root.readerFont === ""; onClicked: root.config.readerFont = "" }
+                        Repeater {
+                            model: root.fontChoices
+                            ChoiceButton {
+                                required property string modelData
+                                label: modelData === "Serif" ? i18n("Serif") : modelData
+                                selected: root.readerFont === modelData
+                                onClicked: root.config.readerFont = modelData
+                            }
+                        }
+                    }
+                    GroupLabel { text: i18n("Line spacing") }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        Repeater {
+                            model: [[100, i18n("Normal")], [125, i18n("Relaxed")], [150, i18n("Wide")]]
+                            ChoiceButton {
+                                required property var modelData
+                                objectName: "lineSpacing" + modelData[0]
+                                label: modelData[1]
+                                selected: root.lineSpacing === modelData[0]
+                                onClicked: root.config.lineSpacing = modelData[0]
+                            }
+                        }
+                    }
+                    GroupLabel { text: i18n("Countdown before steady scrolling") }
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        Repeater {
+                            model: [0, 3, 5]
+                            ChoiceButton {
+                                required property int modelData
+                                objectName: "countdown" + modelData
+                                label: modelData === 0 ? i18n("Off") : i18np("%1 second", "%1 seconds", modelData)
+                                selected: root.config.countdown === modelData
+                                onClicked: root.config.countdown = modelData
+                            }
+                        }
                     }
                     ReaderButton {
                         text: i18n("Local speech setup ↗")

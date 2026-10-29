@@ -8,7 +8,7 @@ import Atk from 'gi://Atk';
 import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension, gettext as _, ngettext} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {PaletteChoice} from './contrast.mjs';
 import {Tracker, sections} from './tracker.mjs';
 import {LocalEngine} from './local-engine.js';
@@ -104,6 +104,11 @@ export default class Kalipso extends Extension {
         this._speed = 140;
         this._mirror = 'none';
         this._readerSize = N.readerSize;
+        this._fontFamily = '';     // '' is the interface font
+        this._lineSpacing = 100;   // Percent of the normal line height
+        this._countdown = 3;       // Seconds before steady scrolling starts; 0 is off
+        this._countdownLeft = 0;
+        this._countdownTimer = 0;
         this._pane = '';
         this._status = _('Choose a speech engine to check its setup.');
         this._speechState = 'idle';
@@ -175,8 +180,16 @@ export default class Kalipso extends Extension {
             this._speed = Math.max(40, Math.min(400, values.speed));
         if (['none', 'horizontal', 'vertical'].includes(values.mirror))
             this.setMirror(values.mirror);
+        if (typeof values.fontFamily === 'string')
+            this._fontFamily = values.fontFamily;
+        if ([100, 125, 150].includes(values.lineSpacing))
+            this._lineSpacing = values.lineSpacing;
+        if ([0, 3, 5].includes(values.countdown))
+            this._countdown = values.countdown;
         if (Number.isInteger(values.readerSize))
             this.resize(values.readerSize - this._readerSize);
+        else
+            this.resize(0);
         if (['auto', 'dark', 'light'].includes(values.appearance))
             this.appearance(values.appearance);
         this.render();
@@ -247,6 +260,10 @@ export default class Kalipso extends Extension {
         this.reader.set_pivot_point(0.5, 0.5);
         this.readerWrap = new St.Widget({layout_manager: new Clutter.BinLayout(), x_expand: true});
         this.readerWrap.add_child(this.reader);
+        // Seconds left before steady scrolling starts, over the text.
+        this.countdownLabel = new St.Label({style_class: 'tp-countdown', visible: false,
+            x_align: Clutter.ActorAlign.CENTER, y_align: Clutter.ActorAlign.CENTER});
+        this.readerWrap.add_child(this.countdownLabel);
         this.readerWrap.clip_to_allocation = true;
 
         this.transport = this._row();
@@ -340,6 +357,39 @@ export default class Kalipso extends Extension {
         sizeRow.add_child(this.button(_('Larger'), () => this.resize(2)));
         this.settingsPane.add_child(sizeRow);
 
+        this.settingsPane.add_child(this._group(_('Reader font')));
+        const fonts = this._row();
+        // A generic serif, plus fonts designed for easier reading when installed.
+        const installed = new Set(this.reader.get_pango_context().list_families().map(family => family.get_name()));
+        this.fontButtons = [['', _('Interface font')], ['Serif', _('Serif')],
+            ...['Atkinson Hyperlegible', 'Atkinson Hyperlegible Next', 'OpenDyslexic', 'Lexend']
+                .filter(family => installed.has(family)).map(family => [family, family])]
+            .map(([id, label]) => [id, label, this.button(label, () => this.setFont(id))]);
+        for (const [, , button] of this.fontButtons)
+            fonts.add_child(button);
+        this.settingsPane.add_child(fonts);
+
+        this.settingsPane.add_child(this._group(_('Line spacing')));
+        const spacing = this._row();
+        this.spacingButtons = [[100, _('Normal')], [125, _('Relaxed')], [150, _('Wide')]]
+            .map(([id, label]) => [id, label, this.button(label, () => this.setLineSpacing(id))]);
+        for (const [, , button] of this.spacingButtons)
+            spacing.add_child(button);
+        this.settingsPane.add_child(spacing);
+
+        this.settingsPane.add_child(this._group(_('Countdown before steady scrolling')));
+        const countdown = this._row();
+        this.countdownButtons = [0, 3, 5]
+            .map(id => [id, id ? ngettext('%1 second', '%1 seconds', id).replace('%1', id) : _('Off')])
+            .map(([id, label]) => [id, label, this.button(label, () => {
+                this._countdown = id;
+                this.state?.update({countdown: id});
+                this.render();
+            })]);
+        for (const [, , button] of this.countdownButtons)
+            countdown.add_child(button);
+        this.settingsPane.add_child(countdown);
+
         this.settingsPane.add_child(this._group(_('Reader colors')));
         const colors = this._row();
         this.appearanceButtons = [['auto', _('Automatic')], ['dark', _('Dark')], ['light', _('Light')]]
@@ -366,7 +416,7 @@ export default class Kalipso extends Extension {
                 this.render();
             }
         }));
-        this.privacy = this._note('Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed. The reader may appear in screen sharing; check what other participants see.');
+        this.privacy = this._note(_('Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed. The reader may appear in screen sharing; check what other participants see.'));
         this.settingsPane.add_child(this.privacy);
     }
 
@@ -497,8 +547,9 @@ export default class Kalipso extends Extension {
             this.transport.get_preferred_height(width)[1] + this.stateLabel.get_preferred_height(width)[1] +
             (this.speedRow.visible ? this.speedRow.get_preferred_height(width)[1] : 0);
         const available = monitor.height - Main.panel.height - 32 - controls - (this._pane ? 120 : 0);
-        const line = this.reader.get_layout().get_line_readonly(0);
-        const lineHeight = line ? line.get_pixel_extents()[1].height : 1;
+        // Distance between lines, including any extra line height.
+        const layout = this.reader.get_layout();
+        const lineHeight = Math.max(1, Math.round(layout.get_pixel_extents()[1].height / Math.max(1, layout.get_line_count())));
         const height = Math.min(Math.round(this._readerSize * scale * 4 / 3 * 4.5), Math.max(60, available));
         this.readerWrap.height = Math.max(lineHeight, Math.floor(height / lineHeight) * lineHeight);
         this.secondaryScroll.set_style(`max-height:${Math.max(80, monitor.height - Main.panel.height - 32 - controls - this.readerWrap.height)}px;`);
@@ -593,9 +644,28 @@ export default class Kalipso extends Extension {
 
     resize(delta) {
         this._readerSize = Math.max(18, Math.min(64, this._readerSize + delta));
-        this.reader.set_font_name(`Sans ${this._readerSize}`);
+        this.reader.set_font_name(`${this._fontFamily || 'Sans'} ${this._readerSize}`);
+        // Line height as a Pango attribute; Clutter merges it with the reader's markup.
+        const attributes = new Pango.AttrList();
+        if (this._lineSpacing !== 100)
+            attributes.insert(Pango.attr_line_height_new(this._lineSpacing / 100));
+        this.reader.set_attributes(attributes);
         this.state?.update({readerSize: this._readerSize});
         this.place();
+    }
+
+    setFont(family) {
+        this._fontFamily = family;
+        this.state?.update({fontFamily: family});
+        this.resize(0);
+        this.render();
+    }
+
+    setLineSpacing(percent) {
+        this._lineSpacing = percent;
+        this.state?.update({lineSpacing: percent});
+        this.resize(0);
+        this.render();
     }
 
     seek(position) {
@@ -617,7 +687,7 @@ export default class Kalipso extends Extension {
         this._speed = Math.max(40, Math.min(400, this._speed + delta));
         this.state?.update({speed: this._speed});
         if (this._steadyTimer)
-            this.startSteady();
+            this._runSteady(); // A new speed applies at once, without another countdown.
         this.render();
     }
 
@@ -625,7 +695,7 @@ export default class Kalipso extends Extension {
         if (this._mode === 'manual')
             this.seek(this.tracker.position + 4);
         else if (this._mode === 'steady')
-            this._steadyTimer ? this.stopSteady() : this.startSteady();
+            this._steadyTimer || this._countdownTimer ? this.stopSteady() : this.startSteady();
         else if (this._active || this.local.pending || this.local.owned)
             this.stop();
         else
@@ -637,6 +707,27 @@ export default class Kalipso extends Extension {
         this.stopSteady();
         if (this.tracker.position >= this.tracker.words.length - 1)
             this.tracker.seek(-1);
+        this._countdownLeft = this._countdown;
+        if (!this._countdownLeft) {
+            this._runSteady();
+            return;
+        }
+        this._countdownTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+            this._countdownLeft -= 1;
+            if (this._countdownLeft > 0) {
+                this.render();
+                return GLib.SOURCE_CONTINUE;
+            }
+            this._countdownTimer = 0;
+            this._runSteady();
+            this.render();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _runSteady() {
+        if (this._steadyTimer)
+            GLib.source_remove(this._steadyTimer);
         this._steadyTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, Math.max(150, Math.round(60000 / this._speed)), () => {
             if (this.tracker.position >= this.tracker.words.length - 1) {
                 this._steadyTimer = 0;
@@ -651,7 +742,9 @@ export default class Kalipso extends Extension {
     stopSteady() {
         if (this._steadyTimer)
             GLib.source_remove(this._steadyTimer);
-        this._steadyTimer = 0;
+        if (this._countdownTimer)
+            GLib.source_remove(this._countdownTimer);
+        this._steadyTimer = this._countdownTimer = this._countdownLeft = 0;
     }
 
     mode(mode) {
@@ -739,6 +832,8 @@ export default class Kalipso extends Extension {
         const end = this.tracker.words.length && this.tracker.position === this.tracker.words.length - 1;
         if (this._mode === 'manual')
             return end ? _('End of script · Microphone off') : _('Manual · Microphone off');
+        if (this._mode === 'steady' && this._countdownTimer)
+            return ngettext('Starting in %1 second…', 'Starting in %1 seconds…', this._countdownLeft).replace('%1', this._countdownLeft);
         if (this._mode === 'steady')
             return this._steadyTimer ? _('Scrolling · Microphone off') : end ? _('End of script · Microphone off') : _('Paused · Microphone off');
         if (pending)
@@ -763,7 +858,7 @@ export default class Kalipso extends Extension {
         const listening = this._active || this.local.owned, pending = this.local.pending;
         const hasWords = Boolean(this.tracker.words.length);
         this.primary.label = this._mode === 'manual' ? _('Next words')
-            : this._mode === 'steady' ? (this._steadyTimer ? _('Pause') : _('Start scrolling'))
+            : this._mode === 'steady' ? (this._steadyTimer || this._countdownTimer ? _('Pause') : _('Start scrolling'))
             : listening ? _('Pause') : pending ? _('Cancel') : _('Start listening');
         const setEnabled = (button, enabled) => {
             button.reactive = enabled;
@@ -794,6 +889,11 @@ export default class Kalipso extends Extension {
         mark(this.modeButtons, this._mode);
         mark(this.appearanceButtons, this._appearance);
         mark(this.mirrorButtons, this._mirror);
+        mark(this.fontButtons, this._fontFamily);
+        mark(this.spacingButtons, this._lineSpacing);
+        mark(this.countdownButtons, this._countdown);
+        this.countdownLabel.visible = this._countdownTimer !== 0;
+        this.countdownLabel.text = String(this._countdownLeft);
         for (const [id, button] of this.engineButtons) {
             button.checked = id === this._backend;
             setEnabled(button, !listening && !pending);

@@ -17,5 +17,8 @@ Take your time. Leave space for a pause. Your next words will be here when you a
     <entry name="mode" type="String"><default>manual</default></entry>
     <entry name="speed" type="Int"><default>140</default></entry>
     <entry name="mirror" type="String"><default>none</default></entry>
+    <entry name="countdown" type="Int"><default>3</default></entry>
+    <entry name="readerFont" type="String"><default></default></entry>
+    <entry name="lineSpacing" type="Int"><default>100</default></entry>
   </group>
 </kcfg>

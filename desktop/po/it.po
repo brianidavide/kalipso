@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kalipso-desktop\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 15:34+0000\n"
+"POT-Creation-Date: 2026-10-29 17:17+0000\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -113,6 +113,11 @@ msgstr "Fine del copione · Microfono spento"
 msgid "Manual · Microphone off"
 msgstr "Manuale · Microfono spento"
 
+msgid "Starting in %1 second…"
+msgid_plural "Starting in %1 seconds…"
+msgstr[0] "Inizio tra %1 secondo…"
+msgstr[1] "Inizio tra %1 secondi…"
+
 msgid "Scrolling · Microphone off"
 msgstr "Scorrimento · Microfono spento"
 
@@ -206,6 +211,35 @@ msgstr "Più piccolo"
 msgid "Larger"
 msgstr "Più grande"
 
+msgid "Reader font"
+msgstr "Carattere del lettore"
+
+msgid "Interface font"
+msgstr "Carattere dell'interfaccia"
+
+msgid "Serif"
+msgstr "Con grazie"
+
+msgid "Line spacing"
+msgstr "Interlinea"
+
+msgid "Normal"
+msgstr "Normale"
+
+msgid "Relaxed"
+msgstr "Ampia"
+
+msgid "Wide"
+msgstr "Molto ampia"
+
+msgid "Countdown before steady scrolling"
+msgstr "Conto alla rovescia prima dello scorrimento"
+
+msgid "%1 second"
+msgid_plural "%1 seconds"
+msgstr[0] "%1 secondo"
+msgstr[1] "%1 secondi"
+
 msgid "Local speech setup ↗"
 msgstr "Configura la voce locale ↗"
 
@@ -257,6 +291,16 @@ msgstr "COPIONE"
 
 msgid "Automatic"
 msgstr "Automatico"
+
+msgid ""
+"Keys: arrows or Page Up/Down step, Space starts or pauses, + and − change "
+"the steady speed. The reader may appear in screen sharing; check what other "
+"participants see."
+msgstr ""
+"Tasti: frecce o Pagina su/giù per avanzare, Spazio per avviare o mettere in "
+"pausa, + e − per cambiare la velocità costante. Il lettore può comparire "
+"nelle condivisioni dello schermo; verifica cosa vedono gli altri "
+"partecipanti."
 
 msgid "Screen colors are unavailable. The opaque reader keeps its contrast."
 msgstr ""
