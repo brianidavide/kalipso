@@ -47,3 +47,24 @@ if(appearance&&reader){
  const update=()=>{reader.dataset.theme=appearance.value;};
  appearance.addEventListener('change',update);update();
 }
+
+// The download button names the visitor's system and points at its card; nothing leaves the page.
+const platform=(navigator.userAgentData?.platform||navigator.platform||navigator.userAgent).toLowerCase();
+const os=platform.includes('mac')?'mac':platform.includes('win')?'windows':platform.includes('linux')||platform.includes('x11')?'linux':'';
+const label=document.querySelector('[data-os-label]');
+if(os&&label){
+ label.textContent={linux:'Get Kalipso for Linux',mac:'Get Kalipso for macOS',windows:'Get Kalipso for Windows'}[os];
+ const card=document.querySelector(`.platforms article[data-os="${os}"]`);
+ if(card){card.classList.add('yours');const tag=document.createElement('span');tag.className='yours-tag';tag.textContent='Your system';card.prepend(tag)}
+}
+
+// Copy buttons: the command is copied as shown; the status line says so for screen readers too.
+for(const button of document.querySelectorAll('[data-copy]')){
+ button.addEventListener('click',async()=>{
+  const text=document.getElementById(button.dataset.copy)?.innerText??'';
+  const status=document.querySelector('.copied');
+  try{await navigator.clipboard.writeText(text);button.querySelector('span').textContent='Copied';if(status)status.textContent='Command copied to the clipboard.'}
+  catch{if(status)status.textContent='Copying is not allowed here: select the command and copy it.'}
+  setTimeout(()=>{button.querySelector('span').textContent='Copy'},2000);
+ });
+}

@@ -64,7 +64,14 @@ qml = '// Generated; edit design/tokens.json.\nvar tokens = ' + json.dumps(sourc
 # Keep the browser demonstration on the same tracker and tokenizer.
 for filename in ('tracker.mjs', 'unicode-tokens.mjs', 'contrast.mjs'):
     (ROOT / 'site/assets' / filename).write_bytes((ROOT / 'desktop' / filename).read_bytes())
-(ROOT / 'site/assets/mark.svg').write_text(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="{source["color"]["brand"]}"/><path d="M9 9h14M9 16h10M9 23h6" fill="none" stroke="{source["color"]["overlayText"]}" stroke-width="3" stroke-linecap="round"/></svg>\n')
+# The mark: the reading line. The cue marker points at the bright current line;
+# the lines read and still to come stay dim.
+k = source['site']
+(ROOT / 'site/assets/mark.svg').write_text(
+    f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="{k["night"]}"/>'
+    f'<path d="M7.5 11.2 12.6 16l-5.1 4.8z" fill="{k["amberNight"]}"/>'
+    f'<path d="M16 16h9" stroke="{k["nightText"]}" stroke-width="3" stroke-linecap="round"/>'
+    f'<path d="M16 9.5h7M16 22.5h5" stroke="{k["nightControl"]}" stroke-width="2.4" stroke-linecap="round"/></svg>\n')
 (ROOT / 'packaging/io.github.brianidavide.kalipso.svg').write_bytes((ROOT / 'site/assets/mark.svg').read_bytes())
 
 c, n = source['color'], source['native']

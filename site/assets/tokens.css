@@ -105,6 +105,44 @@
   --accessibility-minimum-target: 24;
   --accessibility-palette-hold-ms: 2500;
   --accessibility-sample-interval-ms: 2000;
+  --site-paper: #FAF8F4;
+  --site-paper-deep: #F1EDE4;
+  --site-card: #FFFFFF;
+  --site-ink: #17181C;
+  --site-ink-raised: #2B2C33;
+  --site-muted: #5B5E67;
+  --site-line: #E4DED3;
+  --site-control: #8A847A;
+  --site-amber: #B04A07;
+  --site-amber-soft: #FBEBDD;
+  --site-night: #121317;
+  --site-night-raised: #1C1D22;
+  --site-night-text: #F2EEE6;
+  --site-night-muted: #A9ACB4;
+  --site-night-line: #2C2E35;
+  --site-night-control: #6B6F78;
+  --site-amber-night: #F5B24A;
+  --site-font-display: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --site-font-body: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --site-font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
+  --site-text-small: 0.875rem;
+  --site-text-body: 1.0625rem;
+  --site-text-lead: clamp(1.125rem, 0.9rem + 0.6vw, 1.3125rem);
+  --site-h3: 1.3125rem;
+  --site-h2: clamp(2rem, 1.2rem + 3vw, 3.25rem);
+  --site-h1: clamp(2.375rem, 1.5rem + 3vw, 3.75rem);
+  --site-prompt: clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem);
+  --site-radius-control: 10px;
+  --site-radius-card: 18px;
+  --site-enter: 180ms;
+  --site-exit: 120ms;
+  --site-press: 80ms;
+  --site-ease-out: cubic-bezier(.22,1,.36,1);
+  --site-ease-in: cubic-bezier(.5,0,.75,0);
+  --site-shadow: 0 1px 2px #17181c0f, 0 12px 32px #17181c17;
+  --site-measure: 64ch;
+  --site-page: 1180px;
+  --site-control-height: 44px;
 }
 
 .reader[data-theme="light"] {
