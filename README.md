@@ -71,7 +71,7 @@ Then follow [installing the widget or extension](desktop/README.md).
 
 ## Limitations
 
-- **Screen sharing:** on Windows and macOS the standalone app asks the system to keep the reader out of screen shares and recordings. On Linux this depends on the compositor (see the optional [KWin script](docs/standalone.md#screen-sharing)). Always check what other participants see.
+- **Screen sharing:** on Windows and macOS the standalone app asks the system to keep the reader out of screen shares and recordings. On Linux this depends on the compositor: KDE Plasma 6.6+ can hide it ([how](docs/standalone.md#screen-sharing)). Always check what other participants see.
 - **Desktop versions:** the GNOME extension declares Shell 48; the Plasma widget is tested with Plasma 6.3.
 - **Speech models:** the download catalog has Moonshine models for English, German, Spanish, Japanese and Chinese, and Vosk models for those plus Italian. Other compatible models can be configured by hand.
 - **Interface languages:** English and Italian.

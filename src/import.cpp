@@ -7,6 +7,7 @@
 #include <QStringDecoder>
 #include <QXmlStreamReader>
 #include <QtEndian>
+#include <algorithm>
 
 extern "C" {
 #include "../third_party/puff/puff.h"
