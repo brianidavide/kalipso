@@ -534,6 +534,11 @@ void MainWindow::openScript(const QString &id) {
         tracker_.seekCharacter(character);
     else
         tracker_.seek(-1);
+    if (const int speed = library_.speed(id); speed > 0) {
+        wordsPerMinute_ = std::clamp(speed, 40, 400);
+        prompter_->setSpeed(wordsPerMinute_);
+        steady_.setInterval(60000 / wordsPerMinute_);
+    }
     refreshLibrary();
     seekWord(tracker_.position());
 }
@@ -764,10 +769,20 @@ void MainWindow::steadyTick() {
 
 void MainWindow::changeSpeed(int delta) {
     wordsPerMinute_ = std::clamp(wordsPerMinute_ + delta, 40, 400);
+    // Each script remembers its own pace; the general setting is the default for new ones.
     QSettings().setValue("reading/speed", wordsPerMinute_);
+    if (persist_ && !currentId_.isEmpty())
+        library_.setSpeed(currentId_, wordsPerMinute_);
     prompter_->setSpeed(wordsPerMinute_);
     steady_.setInterval(60000 / wordsPerMinute_); // Also applies after a countdown.
     refreshReading();
+}
+
+void MainWindow::jumpSection(int direction) {
+    if (const int target = tracker_.sectionTarget(direction); target >= 0) {
+        tracker_.seekCharacter(target);
+        seekWord(tracker_.position());
+    }
 }
 
 QString MainWindow::statusText() const {
@@ -1352,6 +1367,10 @@ QWidget *MainWindow::makeRemoteSettings() {
             changeSpeed(-10);
         else if (name == QLatin1String("reset"))
             seekWord(-1);
+        else if (name == QLatin1String("section-next"))
+            jumpSection(1);
+        else if (name == QLatin1String("section-previous"))
+            jumpSection(-1);
     });
     connect(enable, &QCheckBox::toggled, this, [this, link, code, enable](bool on) {
         if (on && !remote_->start()) {

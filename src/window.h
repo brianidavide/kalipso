@@ -57,6 +57,7 @@ private:
     QString statusText() const;
     void steadyTick();
     void changeSpeed(int delta);
+    void jumpSection(int direction);
     void startListening();
     void finishSession();
 

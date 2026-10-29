@@ -39,6 +39,10 @@ public:
     void seek(int word);
     // Moves to the first word at or after a character offset.
     void seekCharacter(int character);
+    // Start of the section to jump to, or -1 without one. Forward: the next heading after
+    // the word about to be read. Backward: the section before the current one (at most the
+    // first). Measured from the next word because a jump leaves the position just before it.
+    int sectionTarget(int direction) const;
 
     int position() const { return position_; }
     int character() const;

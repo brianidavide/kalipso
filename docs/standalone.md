@@ -27,7 +27,7 @@ Choose the mode in the reader:
 | Mode | How the reader advances |
 | --- | --- |
 | **Manual** | Only when you step: **Previous**/**Next**, keys, foot pedal or phone. |
-| **Steady speed** | One word at a time at the chosen words per minute. **Slower**/**Faster** change it while scrolling. An optional 3- or 5-second countdown comes first. |
+| **Steady speed** | One word at a time at the chosen words per minute. **Slower**/**Faster** change it while scrolling; each script remembers its own speed. An optional 3- or 5-second countdown comes first. |
 | **Follow my voice** | Local speech recognition matches what you say to the script. If you go off script, the reader says so and catches up when you return — even after skipping ahead or going back. |
 
 After a voice session, the status line summarizes it: duration, words read, pace, long pauses and recognized filler words (many recognizers drop fillers, so this is a lower bound).
@@ -49,7 +49,7 @@ Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow 
 
 ### Phone remote
 
-**Settings → Remote control → Allow a phone on this network to control the reader** shows a link and a QR code. Open it on a phone on the same network to start, pause, step and change speed. The page never receives the script text. A new secret link is created every time you turn it on, and it stops when Kalipso closes. Windows and some Linux firewalls ask whether to allow Kalipso on the network the first time; the phone must be on the same network as the computer.
+**Settings → Remote control → Allow a phone on this network to control the reader** shows a link and a QR code. Open it on a phone on the same network to start, pause, step, jump to the previous or next section and change speed. The page never receives the script text. A new secret link is created every time you turn it on, and it stops when Kalipso closes. Windows and some Linux firewalls ask whether to allow Kalipso on the network the first time; the phone must be on the same network as the computer.
 
 ### Mirroring
 

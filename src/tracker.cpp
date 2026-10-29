@@ -201,6 +201,21 @@ void ScriptTracker::seekCharacter(int character) {
     seek(index);
 }
 
+int ScriptTracker::sectionTarget(int direction) const {
+    const auto list = sections(script_);
+    if (list.isEmpty())
+        return -1;
+    const int next = position_ + 1 < words_.size() ? words_[position_ + 1].start : int(script_.size());
+    if (direction > 0) {
+        for (const auto &section : list)
+            if (section.start > next)
+                return section.start;
+        return -1;
+    }
+    const auto before = std::count_if(list.begin(), list.end(), [next](const auto &s) { return s.start < next; });
+    return list[std::max<qsizetype>(0, before - 2)].start;
+}
+
 int ScriptTracker::character() const { return position_ < 0 ? 0 : words_[position_].start; }
 int ScriptTracker::length() const { return position_ < 0 ? 0 : words_[position_].length; }
 

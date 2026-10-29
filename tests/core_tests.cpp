@@ -97,6 +97,23 @@ private slots:
         QCOMPARE(sections[1].title, QString("Q&A"));
         QCOMPARE(sections[1].start, int(script.indexOf("## Q&A")));
         QVERIFY(ScriptTracker::headings("#hashtag is text").isEmpty());
+
+        // Section jumps advance one section at a time (a jump leaves the position just before
+        // the section's first word) and go back to the previous section.
+        ScriptTracker sectioned;
+        sectioned.setScript("# One\nalpha beta\n# Two\ngamma delta\n# Three\nepsilon");
+        const auto jump = [&sectioned](int direction) {
+            if (const int target = sectioned.sectionTarget(direction); target >= 0)
+                sectioned.seekCharacter(target);
+            return sectioned.position();
+        };
+        QCOMPARE(QList<int>({jump(1), jump(1), jump(1)}), QList<int>({1, 3, 3}));
+        QCOMPARE(QList<int>({jump(-1), jump(-1), jump(-1)}), QList<int>({1, -1, -1}));
+        sectioned.seek(2);
+        QCOMPARE(jump(-1), -1);
+        ScriptTracker plain;
+        plain.setScript("no headings here");
+        QCOMPARE(plain.sectionTarget(1), -1);
     }
     void voiceSkipsCuesAndRecognizerTags() {
         ScriptTracker tracker;
