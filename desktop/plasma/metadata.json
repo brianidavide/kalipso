@@ -2,9 +2,9 @@
   "KPlugin": {
     "Id": "io.github.brianidavide.kalipso",
     "Name": "Kalipso",
-    "Description": "A compact reader with live script editing and manual controls. Local voice following uses the separately installed companion and a Moonshine or Vosk language model. Development preview, not a store release.",
+    "Description": "A teleprompter for your desktop: edit the script, read near your camera, scroll at a steady speed or follow your voice with local speech recognition. Development preview.",
     "Icon": "media-record",
-    "Version": "0.0.1",
+    "Version": "0.1.0",
     "License": "AGPL-3.0-or-later",
     "Authors": [
       {

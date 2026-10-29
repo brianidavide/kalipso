@@ -65,10 +65,19 @@ jobs:
           tar -czf artifacts/kalipso-macos.tar.gz -C build kalipso.app
       - name: Windows package
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           cmake --install build --config Release --prefix artifacts/kalipso
           windeployqt --release artifacts/kalipso/bin/kalipso.exe
+          # App-local Microsoft C++ runtime, so the portable folder starts on a clean machine.
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT" -Directory | Sort-Object FullName | Select-Object -Last 1
+          Copy-Item "$($crt.FullName)\*.dll" artifacts/kalipso/bin/
           Copy-Item -Recurse artifacts/runtime-notices artifacts/kalipso/share/licenses/third-party
+          $app = Start-Process artifacts/kalipso/bin/kalipso.exe -ArgumentList '--demo', '--quit-after', '1500' -Wait -PassThru
+          if ($app.ExitCode -ne 0) { throw "The packaged app exited with code $($app.ExitCode)" }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kalipso-${{ matrix.os }}

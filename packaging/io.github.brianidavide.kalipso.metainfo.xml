@@ -4,17 +4,29 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>AGPL-3.0-or-later</project_license>
   <name>Kalipso</name>
-  <summary>A local voice-following teleprompter</summary>
+  <summary>Teleprompter that follows your voice, on your device</summary>
   <developer id="io.github.brianidavide"><name>Davide Briani and contributors</name></developer>
   <description>
-    <p>Prepare an editable script and display a compact reading window near your webcam. Optional local speech recognition follows your words.</p>
-    <p>Transcribe meeting audio locally and review a question before asking a compatible local or remote language model for a draft. Edit and approve the answer before appending it to your script.</p>
-    <p>This is a development preview. Speech requires a separately installed Vosk library and model. Capture exclusion requires KDE configuration and is subject to known compositor limitations.</p>
+    <p>Keep your script next to your camera and read naturally. Kalipso shows the next words in a compact reader and dims the words you have already read.</p>
+    <ul>
+      <li>Follow your voice with local speech recognition, scroll at a steady speed, or step with the keyboard, a foot pedal or your phone.</li>
+      <li>Scripts and reading positions are saved automatically on your device.</li>
+      <li>Bracketed cues are shown but never read aloud; headings become sections you can jump to.</li>
+      <li>Import speaker notes from PowerPoint and LibreOffice Impress presentations.</li>
+      <li>Mirror the text for beam-splitter teleprompter glass.</li>
+    </ul>
+    <p>Speech recognition runs on this device and needs a separately installed Moonshine or Vosk runtime and language model. This is a development preview.</p>
   </description>
   <launchable type="desktop-id">io.github.brianidavide.kalipso.desktop</launchable>
+  <provides><binary>kalipso</binary></provides>
+  <categories><category>Office</category><category>Presentation</category></categories>
   <url type="homepage">https://brianidavide.github.io/kalipso/</url>
   <url type="bugtracker">https://github.com/brianidavide/kalipso/issues</url>
   <url type="vcs-browser">https://github.com/brianidavide/kalipso</url>
   <content_rating type="oars-1.1"/>
-  <releases><release version="0.1.0" date="2026-10-26" type="development"><description><p>Development version with editable prompting and local speech recognition.</p></description></release></releases>
+  <releases>
+    <release version="0.1.0" date="2026-10-29" type="development">
+      <description><p>Development preview: script library, steady scrolling, mirroring, cues and sections, speaker-note import and local voice following.</p></description>
+    </release>
+  </releases>
 </component>

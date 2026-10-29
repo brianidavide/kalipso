@@ -4,6 +4,7 @@ on:
     branches: [main, feature/**]
     paths: ['site/**', 'design/**', 'tools/browser/**', 'tools/dependency-versions.json', '.github/actions/**', 'desktop/contrast.mjs', 'tests/contrast.test.mjs', 'tools/check-accessibility.mjs', 'tools/check-design.mjs', '.github/workflows/accessibility.yml']
   pull_request:
+  workflow_call: # The website deploy runs these checks first.
 permissions:
   contents: read
 jobs:
@@ -27,6 +28,7 @@ jobs:
         run: |
           node tests/contrast.test.mjs
           python3 -m http.server 8770 --directory site > /tmp/kalipso-site.log 2>&1 &
+          timeout 30 bash -c 'until curl -fs http://127.0.0.1:8770/ >/dev/null; do sleep 0.5; done'
           PLAYWRIGHT="$PWD/tools/browser/node_modules/playwright/index.mjs" AXE_CORE="$PWD/tools/browser/node_modules/axe-core/axe.min.js" node tools/check-accessibility.mjs
           PLAYWRIGHT="$PWD/tools/browser/node_modules/playwright/index.mjs" node tools/check-design.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
