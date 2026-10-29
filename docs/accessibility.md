@@ -2,7 +2,7 @@
 
 Kalipso targets **WCAG 2.2 Level AA**, including applicable Level A criteria, across the website, standalone application, Plasma widget and GNOME extension. For native software, the interpretation follows [WCAG2ICT](https://www.w3.org/TR/wcag2ict-22/). WCAG 3.0 is a draft, not this product's conformance target.
 
-This development preview does **not** yet make a complete AA conformance claim. Automated checks cannot establish all success criteria. In particular, end-to-end VoiceOver, NVDA and Orca testing, native display scaling, multi-monitor sampling, permission dialogs and all keyboard flows on supported desktop versions remain release gates. Passing color checks is not equivalent to passing the whole standard.
+This development preview does **not** claim full AA conformance yet: screen-reader, scaling and multi-monitor testing on real machines is still to be done.
 
 ## Colors and reading
 
@@ -22,7 +22,7 @@ Automatic color changes select a complete, verified palette, rather than applyin
 | GNOME extension | A surrounding pixel sampled through GNOME Shell every two seconds while automatic mode is visible. No image files or video stream are produced. |
 | Browser demonstration | The computed opaque background of its containing page. It cannot inspect other applications. |
 
-Automatic mode is separate from microphone capture. Sampling stops when the reader is hidden or automatic mode is disabled. No captured screen data is sent to speech engines or an LLM.
+Automatic mode is separate from microphone capture. Sampling stops when the reader is hidden or automatic mode is disabled. No captured screen data is sent anywhere.
 
 ### Window colors on KDE/Wayland
 
@@ -30,33 +30,22 @@ In Settings, choose **Choose background window…**, then select the application
 
 This follows the **selected window's overall colors**, not a geometrically exact patch beneath the reader. Moving the reader over a different application does not select that application automatically: stop sharing and choose the new background window. This distinction avoids relying on global window coordinates that Wayland clients do not reliably have. The reader must not be selected as its own background.
 
-The desktop streams that window continuously while sharing is active. Kalipso requests at most one frame per second, samples no more than 256 pixels every two seconds, and discards each buffer after use. Actual compositor costs depend on the desktop and source window; the low sampling rate is not a zero-cost capture guarantee. Frames stay in memory, are never saved or sent, and are independent of speech or LLM processing. Both frontends use the existing contrast palettes, luminance dead band and minimum palette hold time.
+The desktop streams that window continuously while sharing is active. Kalipso requests at most one frame per second, samples no more than 256 pixels every two seconds, and discards each buffer after use. Actual compositor costs depend on the desktop and source window; the low sampling rate is not a zero-cost capture guarantee. Frames stay in memory, are never saved or sent, and are independent of speech processing. Both frontends use the existing contrast palettes, luminance dead band and minimum palette hold time.
 
 Runtime requirements: PipeWire, `xdg-desktop-portal`, and a desktop backend with window ScreenCast support (on KDE, `xdg-desktop-portal-kde`). Plasma also requires the updated Kalipso companion. The build requires PipeWire development headers and pkg-config. Missing services, unsupported stream formats and permission failures keep the readable fallback and allow an explicit retry.
 
 ## Keyboard and text
 
-- Tab/Shift+Tab navigate controls; Enter/Space activate buttons. Escape closes an editor/settings pane or hides the standalone reader.
-- In the standalone app, Ctrl+Enter opens the reader; Ctrl+Left/Right moves the reading position. The editable script is available independently of the excerpt.
-- Pause stops voice following without deleting the script. Manual reading controls provide an alternative to speaking.
-- The browser demonstration has a skip link, associated field labels, status messages, reduced-motion behavior and forced-colors support.
+- Tab/Shift+Tab move between controls; Enter/Space activate buttons. Escape closes an editor or settings pane, or hides the reader.
+- In the standalone reader and the shell frontends, arrow keys and Page Up/Down step through the script, Space starts or pauses, + and − change the steady speed and Home returns to the start. Ctrl+Enter opens the standalone reader.
+- Manual and steady modes are full alternatives to speaking. Pause stops voice following without changing the script.
+- Mirroring affects only the script text; the controls stay readable.
+- The browser demonstration has a skip link, labelled fields, status messages, reduced-motion behaviour and forced-colors support.
 
-## Verification
+## Checks
 
-`portal_colors` exercises the portal lifecycle, cancellation, late replies, revocation, window-only selection, buffer bounds, and ownership between widget instances. When the PipeWire/GStreamer test dependencies are installed, `portal_colors_stream` passes real BGRx and RGBx video buffers through a simulated consent portal, checks their colors and sampling rate, and checks that stopping removes the capture node. It does not substitute for the real desktop permission dialog.
+`node tests/contrast.test.mjs` checks every palette pair, the exact contrast thresholds, opaque colours and rapid-alternation protection. The Qt UI tests check read-text and selection contrast, accessible names and status roles, wrapping controls, 200% interface text at 320 px without horizontal scrolling, and editing behaviour. `portal_colors` and `portal_colors_stream` exercise the window-colour portal lifecycle with simulated consent and real PipeWire frames.
 
-A manual Qt test is available as `KALIPSO_WAYLAND_CAPTURE_TEST=1 build/ui_tests realWaylandWindowSharingFollowsColorsAndStopsOnHide`. Run it on a Wayland desktop with working window ScreenCast support and select **Kalipso color test source** in the permission dialog. It checks black/white source changes, the resulting reader palettes, hiding and reopening without renewed capture. The development container's nested KDE 6.3 session uses QPainter and does not expose window ScreenCast; there, only fallback, controls, keyboard navigation and scaling could be exercised. Successful capture on a GPU-backed KDE desktop and supported native multi-monitor setups remains a release verification requirement.
+The browser checker runs axe-core A/AA rules in Chromium, Firefox and WebKit, plus text enlargement, spacing overrides, narrow viewports, keyboard editing and deliberate failures that prove the checks catch regressions. See [CONTRIBUTING.md](../CONTRIBUTING.md#checks) to run it.
 
-`node tests/contrast.test.mjs` checks palette combinations, exact contrast thresholds, opaque colors and rapid-alternation protection. Qt UI tests check read-text/selection contrast, accessible field names and status roles, wrapping controls, text scaling and editing behavior.
-
-The browser checker runs axe-core A/AA rules in Chromium, Firefox and WebKit, plus text enlargement, spacing overrides, narrow viewports, keyboard editing and deliberate failures to verify that the checks detect regressions:
-
-```sh
-PLAYWRIGHT=/path/to/playwright/index.mjs \
-AXE_CORE=/path/to/axe-core/axe.min.js \
-node tools/check-accessibility.mjs
-```
-
-Serve `site/` at `http://localhost:8770` first, or set `DESIGN_URL`. Browser tooling is a development dependency, not part of the application. Screenshots and reports go to ignored `artifacts/` directories.
-
-Release review must cover all applicable [WCAG 2.2 A/AA criteria](https://www.w3.org/TR/WCAG22/), including meaningful sequence, keyboard operation and no traps, focus order/visibility, text resizing/reflow, target size, error identification, names/roles/values and status announcements. Media, authentication and time-limit criteria must be reassessed if those features are introduced. User-provided script content and operating-system dialogs also require attention in complete workflow testing.
+Automated checks do not establish conformance on their own. Screen-reader testing (Orca, NVDA, VoiceOver), native display scaling, multiple monitors and operating-system permission dialogs still need people and real machines; please report what you find.

@@ -1,7 +1,78 @@
-# Standalone editor
+# Standalone app
 
-Run `kalipso` after building or installing the native application. Use `kalipso --demo --prompter` to open a sample script without microphone or network access.
+Run `kalipso` after [building or installing it](../README.md#install). `kalipso --demo --prompter` opens a sample script without touching your saved scripts or the microphone.
 
-The editor can open and save script files and show a separate reading window. Choose Moonshine or Vosk and configure its extracted model and compatible native library in Settings. On macOS/Windows, [system recognition](system-speech.md) is also available. Listening starts explicitly; Linux audio capture uses PipeWire. Settings retain speech engine and model paths. The reader shows listening status and a pause control. Hiding the reader stops listening; showing it again does not restart the microphone. Interface text size also scales reader controls, while script size is set independently.
+## Scripts
 
-An optional KWin script in `packaging/kwin/` positions the reading window and requests capture exclusion when the compositor exposes that property. This does not guarantee invisibility in screen sharing. Verify the remote participant's view.
+Scripts are saved automatically as you type, together with your reading position, and reopen where you left off. Use the script picker to switch between them, and **New script**, **Import…**, **Export…** and **Delete** to manage them. See [writing scripts](scripts.md) for cues, sections and the import formats.
+
+## The reader
+
+**Open reader** (Ctrl+Enter) shows a frameless reading window that stays on top.
+
+- **Move** it by dragging its title, **resize** it from the bottom-right corner. Its size and position are remembered for each monitor (on Wayland, the compositor decides the position).
+- The current word is highlighted and already-read words are dimmed. The current line stays at the height chosen in **Settings → Current line position** (top, upper third or centre).
+- **Edit** lets you change the text inside the reader; changes go straight to the script.
+- **Sections** jumps to a `#` heading. Clicking a word moves the reading position there.
+- **Hide** (or Escape) closes the reader and turns the microphone off. Showing it again never restarts the microphone.
+
+### Reading modes
+
+Choose the mode in the reader:
+
+| Mode | How the reader advances |
+| --- | --- |
+| **Manual** | Only when you step: **Previous**/**Next**, keys, foot pedal or phone. |
+| **Steady speed** | One word at a time at the chosen words per minute. **Slower**/**Faster** change it while scrolling. An optional 3- or 5-second countdown comes first. |
+| **Follow my voice** | Local speech recognition matches what you say to the script. If you go off script, the reader says so and catches up when you return — even after skipping ahead or going back. |
+
+After a voice session, the status line summarizes it: duration, words read, pace, long pauses and recognized filler words (many recognizers drop fillers, so this is a lower bound).
+
+### Keys, foot pedals and clickers
+
+With the reader focused:
+
+| Key | Action |
+| --- | --- |
+| → ↓ Page Down | Next word |
+| ← ↑ Page Up | Previous word |
+| Space, Play/Pause | Start or pause (scrolling or listening) |
+| + and − | Faster / slower steady speed |
+| Home | Back to the start |
+| Escape | Finish editing, or hide the reader |
+
+Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow keys, so they work without setup.
+
+### Phone remote
+
+**Settings → Remote control → Allow a phone on this network to control the reader** shows a link and a QR code. Open it on a phone on the same network to start, pause, step and change speed. The page never receives the script text. A new secret link is created every time you turn it on, and it stops when Kalipso closes.
+
+### Mirroring
+
+**Settings → Mirror text** flips the reader horizontally (beam-splitter teleprompter glass), vertically, or both. The controls stay readable.
+
+## Screen sharing
+
+On **Windows** (10 version 2004 or later) and **macOS**, **Settings → Hide the reader from screen sharing and recordings** asks the system to leave the reader out of screen captures. It is on by default. Apps that capture through the system's APIs respect it; always check what other participants see before relying on it.
+
+On **Linux**, applications cannot hide their own windows from capture. On KDE Plasma, the optional KWin script asks KWin to exclude the reader where KWin supports it, keeps it above other windows and places it near the camera (on Wayland, only the compositor can position windows):
+
+```sh
+python3 desktop/package.py
+kpackagetool6 --type KWin/Script --install artifacts/packages/kalipso-kwin.kwinscript
+```
+
+Then enable **Kalipso companion** in System Settings → Window Management → KWin Scripts.
+
+## Speech
+
+**Settings → Speech** chooses the engine:
+
+- **Moonshine** or **Vosk**: install a runtime and a language model with the [local speech installer](local-engine.md); installed models then appear under **Installed language model**. Models installed by hand can be chosen with **Other model installed by hand…**.
+- **System · on-device** (macOS and Windows): the operating system's recognizer. See [macOS and Windows builds](system-speech.md).
+
+Listening only starts when you press **Start listening**, and stops when you pause, hide the reader or close Kalipso.
+
+## Interface
+
+**Settings** also has light and dark appearances, reader colors (including automatic colors, see [accessibility](accessibility.md)), interface text size up to 200%, reader text size, and the interface language (system, English or Italiano; applies after a restart).
