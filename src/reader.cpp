@@ -648,8 +648,28 @@ void ReaderWindow::resizeEvent(QResizeEvent *event) {
     saveGeometry();
 }
 
+void ReaderWindow::trigger(ReaderAction action) {
+    switch (action) {
+    case ReaderAction::Toggle: emit toggleRequested(); break;
+    case ReaderAction::Next: emit step(1); break;
+    case ReaderAction::Previous: emit step(-1); break;
+    case ReaderAction::Faster: emit speedRequested(10); break;
+    case ReaderAction::Slower: emit speedRequested(-10); break;
+    case ReaderAction::Reset: emit resetRequested(); break;
+    case ReaderAction::PreviousSection: emit sectionRequested(-1); break;
+    case ReaderAction::NextSection: emit sectionRequested(1); break;
+    }
+}
+
 void ReaderWindow::keyPressEvent(QKeyEvent *event) {
     revealControls();
+    if (event->key() != Qt::Key_Escape) {
+        const auto custom = customKeys_.constFind(event->keyCombination().toCombined());
+        if (custom != customKeys_.cend()) {
+            trigger(*custom);
+            return;
+        }
+    }
     // Foot pedals and presentation remotes send these keys.
     switch (event->key()) {
     case Qt::Key_Escape:

@@ -68,6 +68,7 @@ private:
     QWidget *makeReadingSettings();
     QWidget *makeSpeechSettings();
     QWidget *makeRemoteSettings();
+    QWidget *makeKeySettings();
     void applyTheme();
     void refreshScreens();
     void refreshInstalledSpeech();
