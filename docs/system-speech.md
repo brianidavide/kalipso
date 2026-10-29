@@ -15,7 +15,7 @@ On Windows the reader asks to be left out of screen sharing and recordings (Sett
 
 ## Build
 
-Both ports require CMake 3.22+, a C++20 compiler and Qt Core, Widgets, Network, Multimedia, Test and (for translations) LinguistTools: Qt 6.10+ on macOS, Qt 6.8+ on Windows. The macOS app runs on macOS 14.4 or later with Qt 6.12 (the minimum of the Qt version you build with); system speech additionally needs macOS 26. Point CMake at Qt with `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.x/<platform>`. Python is optional for additional tests. Windows uses MSVC 2022 and the Windows SDK. macOS additionally requires Xcode 26+ with the macOS 26 SDK and Swift compiler.
+Both ports require CMake 3.22+, a C++20 compiler and Qt Core, Widgets, Network, Svg, Multimedia, Test and (for translations) LinguistTools: Qt 6.10+ on macOS, Qt 6.8+ on Windows. The macOS app runs on macOS 14.4 or later with Qt 6.12 (the minimum of the Qt version you build with); system speech additionally needs macOS 26. Point CMake at Qt with `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.x/<platform>`. Python is optional for additional tests. Windows uses MSVC 2022 and the Windows SDK. macOS additionally requires Xcode 26+ with the macOS 26 SDK and Swift compiler.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release

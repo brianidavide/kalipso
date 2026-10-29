@@ -131,7 +131,8 @@ var tokens = {
       "actionHover": "#2447D3",
       "actionText": "#FFFFFF",
       "selection": "#2447D3",
-      "selectionText": "#FFFFFF"
+      "selectionText": "#FFFFFF",
+      "divider": "#DDE0E7"
     },
     "dark": {
       "background": "#17191F",
@@ -146,7 +147,8 @@ var tokens = {
       "actionHover": "#2447D3",
       "actionText": "#FFFFFF",
       "selection": "#C8D4FF",
-      "selectionText": "#17191F"
+      "selectionText": "#17191F",
+      "divider": "#2E333D"
     }
   },
   "accessibility": {

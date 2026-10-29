@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 include(GNUInstallDirs)
 include(CTest)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Network)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets Network Svg)
 find_package(Qt6 QUIET COMPONENTS LinguistTools)
 set(KALIPSO_WARNINGS $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wpedantic>)
 
@@ -58,8 +58,11 @@ endif()
 add_library(kalipso_vendor STATIC third_party/puff/puff.c third_party/qrcodegen/qrcodegen.cpp)
 add_library(kalipso_app STATIC
   src/window.cpp src/reader.cpp src/backdrop.cpp src/library.cpp src/import.cpp src/remote.cpp
-  src/script_highlighter.cpp src/platform/capture_exclusion.cpp)
-target_link_libraries(kalipso_app PUBLIC kalipso_speech Qt6::Widgets Qt6::Network PRIVATE kalipso_vendor)
+  src/script_highlighter.cpp src/icons.cpp src/platform/capture_exclusion.cpp)
+target_link_libraries(kalipso_app PUBLIC kalipso_speech Qt6::Widgets Qt6::Network Qt6::Svg PRIVATE kalipso_vendor)
+file(GLOB KALIPSO_ICONS CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/*.svg ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/generated/*.svg)
+qt_add_resources(kalipso_app "icons" PREFIX "/icons" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/icons FILES ${KALIPSO_ICONS})
 target_compile_definitions(kalipso_app PUBLIC KALIPSO_VERSION="${PROJECT_VERSION}")
 target_compile_options(kalipso_app PRIVATE ${KALIPSO_WARNINGS})
 if(TARGET kalipso_colors)

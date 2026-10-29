@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "reader.h"
+#include "icons.h"
 #include "platform/capture_exclusion.h"
 #include "script_highlighter.h"
 #include <QAbstractButton>
 #include <QAbstractTextDocumentLayout>
+#include <QActionGroup>
 #include <QApplication>
 #include <QComboBox>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QProgressBar>
 #include <QPropertyAnimation>
 #include <QScreen>
 #include <QScrollBar>
@@ -28,24 +31,34 @@ bool horizontal(Mirror mirror) { return mirror == Mirror::Horizontal || mirror =
 bool vertical(Mirror mirror) { return mirror == Mirror::Vertical || mirror == Mirror::Both; }
 bool wayland() { return QGuiApplication::platformName().startsWith(QLatin1String("wayland")); }
 
-// The reader has no title bar: dragging its name moves the window. Works on
-// Wayland too, where applications cannot position their own windows.
-class DragHandle : public QLabel {
+} // namespace
+
+// The reader has no title bar: dragging the grip and title moves the window.
+// Works on Wayland too, where applications cannot position their own windows.
+class DragHandle : public QWidget {
 public:
-    explicit DragHandle(const QString &text) : QLabel(text) {
+    DragHandle() : grip(new QLabel), title(new QLabel) {
+        auto *layout = new QHBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(Design::Metric::space1);
+        layout->addWidget(grip);
+        layout->addWidget(title, 1);
+        title->setProperty("role", "muted");
         setCursor(Qt::SizeAllCursor);
         setToolTip(QObject::tr("Drag to move the reader"));
-        setWordWrap(true);
+    }
+    QLabel *grip, *title;
+    QSize sizeHint() const override {
+        return {std::min(320, layout()->sizeHint().width()), layout()->sizeHint().height()};
     }
 
 protected:
     void mousePressEvent(QMouseEvent *event) override {
         if (event->button() == Qt::LeftButton && window()->windowHandle())
             window()->windowHandle()->startSystemMove();
-        QLabel::mousePressEvent(event);
+        QWidget::mousePressEvent(event);
     }
 };
-} // namespace
 
 ReaderView::ReaderView(QWidget *parent)
     : QTextEdit(parent), highlighter_(new ScriptHighlighter(document())),
@@ -81,8 +94,9 @@ void ReaderView::resizeEvent(QResizeEvent *event) {
     const QSignalBlocker block(this);
     auto format = document()->rootFrame()->frameFormat();
     const double bottom = viewport()->height() * (1.0 - readingLine_);
-    if (std::abs(format.bottomMargin() - bottom) > 1) {
+    if (std::abs(format.bottomMargin() - bottom) > 1 || format.leftMargin() != kMarkerSpace) {
         format.setBottomMargin(bottom);
+        format.setLeftMargin(kMarkerSpace); // Room for the current-line marker.
         document()->rootFrame()->setFrameFormat(format);
     }
     scrollToCharacter(anchor_, false);
@@ -116,10 +130,34 @@ QPoint ReaderView::unmirrored(QPoint point) const {
     return point;
 }
 
+// A small triangle in the left margin points at the current line.
+void ReaderView::paintMarker(QPainter &painter, int lineCenter) const {
+    if (!isReadOnly() || !markerColor_.isValid() || document()->isEmpty())
+        return;
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(markerColor_);
+    const int half = std::max(5, fontMetrics().height() / 6);
+    painter.drawPolygon(
+        QPolygon({QPoint(2, lineCenter - half), QPoint(2 + half + 2, lineCenter), QPoint(2, lineCenter + half)}));
+    painter.restore();
+}
+
+int ReaderView::currentLineCenter() const {
+    QTextCursor cursor(document());
+    cursor.setPosition(std::clamp(anchor_, 0, std::max(0, document()->characterCount() - 1)));
+    return cursorRect(cursor).center().y();
+}
+
 void ReaderView::paintEvent(QPaintEvent *event) {
     // Editing shows the text unmirrored, so the caret and mouse work normally.
-    if (mirror_ == Mirror::None || !isReadOnly())
-        return QTextEdit::paintEvent(event);
+    if (mirror_ == Mirror::None || !isReadOnly()) {
+        QTextEdit::paintEvent(event);
+        QPainter painter(viewport());
+        paintMarker(painter, currentLineCenter());
+        return;
+    }
     // Draw the document through a flipped painter; the viewport background is
     // already filled with the reader palette.
     QPainter painter(viewport());
@@ -136,6 +174,8 @@ void ReaderView::paintEvent(QPaintEvent *event) {
     for (const auto &selection : extraSelections())
         context.selections.append({selection.cursor, selection.format});
     document()->documentLayout()->draw(&painter, context);
+    painter.translate(dx, dy); // Marker in viewport coordinates, mirrored with the text.
+    paintMarker(painter, currentLineCenter());
 }
 
 void ReaderView::mouseReleaseEvent(QMouseEvent *event) {
@@ -150,53 +190,114 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     setWindowTitle(QStringLiteral("Kalipso — reading"));
     setAccessibleName(tr("Kalipso reader"));
     setObjectName("readingWindow");
-    resize(680, 260);
+    resize(680, 360);
     setMinimumSize(320, 180);
 
+    using namespace Design::Metric;
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 10, 16, 12);
-    auto *bar = new FlowLayout;
-    auto *title = new DragHandle(tr("Kalipso"));
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    // Top bar: what you are reading, and quiet window actions.
+    auto *topBar = new QWidget;
+    topBar->setObjectName("readerBar");
+    auto *bar = new FlowLayout(topBar);
+    bar->setContentsMargins(space3, space1, space2, space1);
+    bar->setSpacing(space1);
+    handle_ = new DragHandle;
+    handle_->title->setText(tr("Kalipso"));
     sections_ = new QToolButton;
     sections_->setText(tr("Sections"));
     sections_->setObjectName("readerSections");
     sections_->setAccessibleName(tr("Jump to section"));
+    sections_->setProperty("quiet", true);
     sections_->setPopupMode(QToolButton::InstantPopup);
+    sections_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     sections_->setMenu(new QMenu(sections_));
     sections_->hide();
-    auto *previous = new AccessibleButton(tr("Previous"));
-    auto *next = new AccessibleButton(tr("Next"));
     edit_ = new AccessibleButton(tr("Edit"));
+    edit_->setAccessibleName(tr("Edit"));
+    edit_->setToolTip(tr("Edit the script in the reader"));
     edit_->setCheckable(true);
+    edit_->setProperty("quiet", true);
     auto *hide = new AccessibleButton(tr("Hide"));
-    for (auto *widget : QList<QWidget *>{title, sections_, previous, next, edit_, hide})
-        bar->addWidget(widget);
-    layout->addLayout(bar);
+    hide->setObjectName("readerHide");
+    hide->setAccessibleName(tr("Hide"));
+    hide->setProperty("quiet", true);
+    hide->setToolTip(tr("Hide the reader (Esc). The microphone turns off."));
+    bar->addWidget(handle_);
+    bar->addTrailing(sections_);
+    bar->addTrailing(edit_);
+    bar->addTrailing(hide);
+    layout->addWidget(topBar);
+
+    progress_ = new QProgressBar;
+    progress_->setObjectName("readerProgress");
+    progress_->setAccessibleName(tr("Reading progress"));
+    progress_->setTextVisible(false);
+    progress_->setRange(0, 1);
+    layout->addWidget(progress_);
 
     text = new ReaderView;
     text->setPlaceholderText(tr("Add your script in the editor to begin."));
     text->installEventFilter(this);
-    layout->addWidget(text, 1);
+    auto *page = new QVBoxLayout;
+    page->setContentsMargins(space4, space2, space5, space2);
+    page->addWidget(text);
+    layout->addLayout(page, 1);
     countdown_ = new QLabel(text);
     countdown_->setObjectName("readerCountdown");
     countdown_->setAlignment(Qt::AlignCenter);
     countdown_->setAttribute(Qt::WA_TransparentForMouseEvents);
     countdown_->hide();
 
-    auto *controls = new FlowLayout;
+    // Bottom bar: step, start or pause, and how the reader advances.
+    auto *controlBar = new QWidget;
+    controlBar->setObjectName("readerControls");
+    auto *controls = new FlowLayout(controlBar);
+    controls->setContentsMargins(space3, space2, space3, space2);
+    controls->setSpacing(space2);
+    auto *previous = new AccessibleButton(QString());
+    previous->setAccessibleName(tr("Previous word"));
+    previous->setToolTip(tr("Previous word (← or Page Up)"));
+    previous->setProperty("quiet", true);
+    auto *next = new AccessibleButton(QString());
+    next->setAccessibleName(tr("Next word"));
+    next->setToolTip(tr("Next word (→ or Page Down)"));
+    next->setProperty("quiet", true);
     primary_ = new AccessibleButton(tr("Start listening"));
     primary_->setObjectName("readerListeningButton");
-    mode_ = new QComboBox;
-    mode_->setObjectName("readerMode");
-    mode_->setAccessibleName(tr("Reading mode"));
-    mode_->addItem(tr("Manual"), int(ReadingMode::Manual));
-    mode_->addItem(tr("Steady speed"), int(ReadingMode::Steady));
-    mode_->addItem(tr("Follow my voice"), int(ReadingMode::Voice));
+    primary_->setProperty("primary", true);
+    primary_->setToolTip(tr("Start or pause (Space)"));
+    // The reading mode: one compact drop-down that fits a narrow reader.
+    modes_ = new QToolButton;
+    modes_->setObjectName("readerMode");
+    modes_->setPopupMode(QToolButton::InstantPopup);
+    modes_->setProperty("quiet", true);
+    auto *modeMenu = new QMenu(modes_);
+    auto *modeGroup = new QActionGroup(modes_);
+    for (const auto &[label, mode] :
+         {std::pair{tr("Manual"), ReadingMode::Manual}, std::pair{tr("Steady speed"), ReadingMode::Steady},
+          std::pair{tr("Follow my voice"), ReadingMode::Voice}}) {
+        auto *action = modeMenu->addAction(label);
+        action->setCheckable(true);
+        action->setData(int(mode));
+        modeGroup->addAction(action);
+        connect(action, &QAction::triggered, this, [this, mode] { emit modeRequested(mode); });
+    }
+    modes_->setMenu(modeMenu);
     speedBox_ = new QWidget;
     auto *speedLayout = new QHBoxLayout(speedBox_);
     speedLayout->setContentsMargins(0, 0, 0, 0);
-    auto *slower = new AccessibleButton(tr("Slower"));
-    auto *faster = new AccessibleButton(tr("Faster"));
+    speedLayout->setSpacing(space1);
+    auto *slower = new AccessibleButton(QStringLiteral("−"));
+    slower->setAccessibleName(tr("Slower"));
+    slower->setToolTip(tr("Slower (−)"));
+    slower->setProperty("quiet", true);
+    auto *faster = new AccessibleButton(QStringLiteral("+"));
+    faster->setAccessibleName(tr("Faster"));
+    faster->setToolTip(tr("Faster (+)"));
+    faster->setProperty("quiet", true);
     speed_ = new QLabel;
     speed_->setObjectName("readerSpeed");
     speedLayout->addWidget(slower);
@@ -204,14 +305,17 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     speedLayout->addWidget(faster);
     status_ = new StatusLabel(tr("Microphone off"));
     status_->setObjectName("readerListeningStatus");
-    for (auto *widget : QList<QWidget *>{primary_, mode_, speedBox_, status_})
+    status_->setProperty("role", "muted");
+    for (auto *widget : QList<QWidget *>{previous, primary_, next, modes_, speedBox_})
         controls->addWidget(widget);
-    layout->addLayout(controls);
+    controls->addTrailing(status_);
+    layout->addWidget(controlBar);
+    icons_ = {{previous, "previous"}, {next, "next"}, {sections_, "sections"}, {edit_, "edit"}, {hide, "close"}};
+
     // Clicking a control must not move keyboard focus off the script: pedals and
     // clickers send Space and arrows, which would otherwise activate or edit.
     for (auto *control : findChildren<QAbstractButton *>())
         control->setFocusPolicy(Qt::TabFocus);
-    mode_->setFocusPolicy(Qt::TabFocus);
     auto *grip = new QSizeGrip(this);
     grip->setObjectName("readerResize");
     grip->setToolTip(tr("Drag to resize the reader"));
@@ -222,8 +326,6 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     connect(primary_, &QPushButton::clicked, this, &ReaderWindow::toggleRequested);
     connect(slower, &QPushButton::clicked, this, [this] { emit speedRequested(-10); });
     connect(faster, &QPushButton::clicked, this, [this] { emit speedRequested(10); });
-    connect(mode_, &QComboBox::activated, this,
-            [this] { emit modeRequested(ReadingMode(mode_->currentData().toInt())); });
     connect(text, &ReaderView::characterClicked, this, &ReaderWindow::jumpRequested);
     connect(edit_, &QPushButton::toggled, this, [this](bool enabled) {
         editing_ = enabled;
@@ -232,7 +334,9 @@ ReaderWindow::ReaderWindow(QWidget *parent)
         text->setVerticalScrollBarPolicy(enabled ? Qt::ScrollBarAsNeeded : Qt::ScrollBarAlwaysOff);
         text->style()->unpolish(text); // The style sheet depends on readOnly.
         text->style()->polish(text);
-        edit_->setText(enabled ? tr("Done") : tr("Edit"));
+        edit_->setText(enabled ? tr("Done") : compact_ ? QString() : tr("Edit"));
+        edit_->setAccessibleName(enabled ? tr("Done") : tr("Edit"));
+        edit_->setIcon(enabled ? QIcon() : Icons::icon("edit", QColor(colors_.text), QColor(colors_.muted)));
         text->setFocus();
         text->viewport()->update();
         if (!enabled)
@@ -263,8 +367,14 @@ void ReaderWindow::applyPalette(const Design::Palette &palette) {
     text->setPalette(Accessibility::palette(palette));
     text->setTextColor(QColor(palette.text));
     text->highlighter()->setColors(QColor(palette.muted), QColor(palette.accent));
-    countdown_->setStyleSheet(
-        QString("color:%1; background:%2; border-radius:12px;").arg(palette.text, palette.surface));
+    text->setMarkerColor(QColor(palette.accent));
+    countdown_->setStyleSheet(QString("color:%1; background:%2; border: 1px solid %3; border-radius:16px;")
+                                  .arg(palette.text, palette.surface, palette.border));
+    for (const auto &[button, name] : icons_)
+        if (!(button == edit_ && editing_))
+            button->setIcon(Icons::icon(name, QColor(palette.text), QColor(palette.muted)));
+    handle_->grip->setPixmap(Icons::icon("grip", QColor(palette.muted)).pixmap(18, 18));
+    updatePrimary();
     highlight(position_, length_);
 }
 
@@ -287,7 +397,12 @@ void ReaderWindow::setTextSize(int points) {
 
 void ReaderWindow::setMode(ReadingMode mode) {
     readingMode_ = mode;
-    mode_->setCurrentIndex(mode_->findData(int(mode)));
+    for (auto *action : modes_->menu()->actions())
+        if (action->data().toInt() == int(mode)) {
+            action->setChecked(true);
+            modes_->setText(action->text());
+            modes_->setAccessibleName(tr("Reading mode: %1").arg(action->text()));
+        }
     speedBox_->setVisible(mode == ReadingMode::Steady);
     updatePrimary();
 }
@@ -306,6 +421,17 @@ void ReaderWindow::updatePrimary() {
         primary_->setText(running_ ? tr("Pause scrolling") : tr("Start scrolling"));
     else
         primary_->setText(running_ ? tr("Pause listening") : tr("Start listening"));
+    primary_->setIcon(Icons::icon(running_ ? "pause" : "play", QColor(colors_.actionText)));
+}
+
+void ReaderWindow::setTitle(const QString &title) {
+    handle_->title->setText(title.isEmpty() ? tr("Kalipso") : title);
+    handle_->title->setToolTip(title);
+}
+
+void ReaderWindow::setProgress(int read, int total) {
+    progress_->setRange(0, std::max(1, total));
+    progress_->setValue(std::clamp(read, 0, std::max(1, total)));
 }
 
 void ReaderWindow::setSpeed(int wordsPerMinute) {
@@ -356,9 +482,11 @@ void ReaderWindow::highlight(int position, int length) {
     current.cursor = QTextCursor(text->document());
     current.cursor.setPosition(std::clamp(position, 0, limit));
     current.cursor.setPosition(std::clamp(position + length, 0, limit), QTextCursor::KeepAnchor);
-    current.format.setBackground(QColor(colors_.selection));
-    current.format.setForeground(QColor(colors_.selectionText));
+    // The current word: accent text on a soft tint, underlined; calmer than a solid block.
+    current.format.setBackground(QColor(colors_.hover));
+    current.format.setForeground(QColor(colors_.accent));
     current.format.setFontUnderline(true);
+    current.format.setUnderlineColor(QColor(colors_.accent));
     text->setExtraSelections({read, current});
     if (!editing_)
         text->scrollToCharacter(position, isVisible());
@@ -378,7 +506,7 @@ void ReaderWindow::showOn(QScreen *screen) {
             const int extra =
                 std::max(0, qRound((primary_->font().pointSizeF() - QApplication::font().pointSizeF()) * 12));
             resize(std::min(680, std::max(320, available.width() - 32)),
-                   std::min(available.height() - 32, 260 + extra));
+                   std::min(available.height() - 32, 360 + extra));
             move(available.center().x() - width() / 2, available.top() + 16);
         }
         placing_ = false;
@@ -413,6 +541,16 @@ void ReaderWindow::moveEvent(QMoveEvent *event) {
 
 void ReaderWindow::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
+    // A narrow reader keeps the window actions as icons so the text keeps its room.
+    const bool compact = width() < 480;
+    if (compact != compact_) {
+        compact_ = compact;
+        sections_->setToolButtonStyle(compact ? Qt::ToolButtonIconOnly : Qt::ToolButtonTextBesideIcon);
+        if (!editing_)
+            edit_->setText(compact ? QString() : tr("Edit"));
+        auto *hide = findChild<QPushButton *>("readerHide");
+        hide->setText(compact ? QString() : tr("Hide"));
+    }
     if (auto *grip = findChild<QSizeGrip *>("readerResize")) {
         grip->adjustSize();
         grip->move(width() - grip->width() - 2, height() - grip->height() - 2);
