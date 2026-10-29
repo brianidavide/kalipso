@@ -28,9 +28,10 @@ QString SessionStats::report(const Summary &summary, const QString &script, cons
     lines << QCoreApplication::translate("SessionStats", "- Pauses over 3 s: %n", nullptr, summary.longPauses);
     if (summary.longPauses)
         lines.last() += QCoreApplication::translate("SessionStats", " (longest %1)").arg(clock(summary.longestPauseMs));
-    lines << QCoreApplication::translate(
-        "SessionStats", "- Filler words recognized: %n (many recognizers drop them, so this is a lower bound)", nullptr,
-        summary.fillers);
+    if (summary.fillersCounted)
+        lines << QCoreApplication::translate(
+            "SessionStats", "- Filler words recognized: %n (many recognizers drop them, so this is a lower bound)",
+            nullptr, summary.fillers);
 
     // Time per section.
     const auto sections = ScriptTracker::sections(script);

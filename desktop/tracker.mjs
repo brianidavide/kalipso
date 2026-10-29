@@ -29,16 +29,41 @@ export function headings(text) {
     return ranges;
 }
 
+// YAML front matter: a first line "---" up to the next "---" or "..." line. Metadata,
+// shown dimmed but never read aloud or matched to speech.
+export function frontMatter(text) {
+    if (!/^---[ \t]*(\n|$)/.test(text)) return null;
+    const close = /\n(---|\.\.\.)[ \t]*(\n|$)/g;
+    close.lastIndex = 3;
+    const match = close.exec(text);
+    return match ? {start: 0, length: match.index + 1 + match[1].length} : null;
+}
+
+// The script's title: front matter "title:", else its first non-empty line without "#".
+export function title(text) {
+    const meta = frontMatter(text);
+    if (meta) {
+        const found = /^title:[ \t]*(.+)$/m.exec(text.slice(0, meta.length));
+        if (found) return found[1].trim().replace(/^(["'])(.*)\1$/, '$2');
+    }
+    return text.slice(meta ? meta.length : 0).split('\n').map(line => line.replace(/^\s*#+\s*/, '').trim()).find(line => line) ?? '';
+}
+
 export function sections(text) {
-    return headings(text)
+    const meta = frontMatter(text)?.length ?? 0;
+    return headings(text).filter(range => range.start >= meta) // A "#" comment in front matter is not a section.
         .map(range => ({title: text.substr(range.start, range.length).trim().replace(/^#+/, '').replace(/#+$/, '').trim(),
             start: range.start}))
         .filter(section => section.title);
 }
 
 function silentRanges(text) {
-    if (!text.includes('[') && !text.includes('#')) return [];
-    return [...cues(text), ...headings(text)].sort((a, b) => a.start - b.start);
+    if (!text.includes('[') && !text.includes('#') && !text.startsWith('---')) return [];
+    const meta = frontMatter(text);
+    // Cues and headings inside the front matter are part of it.
+    const inside = range => meta && range.start < meta.length;
+    return [...(meta ? [meta] : []), ...cues(text).filter(r => !inside(r)), ...headings(text).filter(r => !inside(r))]
+        .sort((a, b) => a.start - b.start);
 }
 
 // Speakable words in order, excluding cues and headings.
@@ -220,6 +245,10 @@ export class Tracker {
         for (const range of silentRanges(this.text)) {
             const start = Math.max(range.start, from), end = Math.min(range.start + range.length, to);
             if (start >= end) continue;
+            if (range.start === 0 && frontMatter(this.text)?.length === range.length) {
+                at = end; // Metadata is not part of the reading excerpt.
+                continue;
+            }
             const tag = this.text[range.start] === '[' ? 'i' : 'b';
             out += plain(this.text.slice(at, start)) + `<${tag}>${plain(this.text.slice(start, end))}</${tag}>`;
             at = end;

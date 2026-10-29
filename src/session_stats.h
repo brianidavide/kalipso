@@ -26,16 +26,19 @@ public:
         int longPauses = 0;
         qint64 longestPauseMs = 0;
         int fillers = 0;
+        bool fillersCounted = true; // Off in Settings: the summary and report leave fillers out.
         QVector<Pause> pauses;
         QVector<Reached> reached;
     };
     static constexpr qint64 kLongPauseMs = 3000;
 
     bool active() const { return active_; }
+    void setCountFillers(bool count) { countFillers_ = count; }
 
     void start(int position, qint64 now) {
         active_ = true;
         summary_ = {};
+        summary_.fillersCounted = countFillers_;
         startPosition_ = furthest_ = position;
         startedAt_ = lastAdvance_ = now;
     }
@@ -66,7 +69,7 @@ public:
     // Counts hesitation sounds. Many recognizers omit them, so this is a lower bound.
     void transcript(const QString &finalText) {
         static const QSet<QString> fillers{"um", "umm", "uh", "uhm", "er", "erm", "ehm", "eh", "ah", "hmm", "mm"};
-        if (!active_)
+        if (!active_ || !countFillers_)
             return;
         for (const auto &word : ScriptTracker::tokenize(finalText))
             summary_.fillers += fillers.contains(word.normalized);
@@ -86,7 +89,7 @@ public:
     static QString report(const Summary &summary, const QString &script, const QString &title, const QDateTime &when);
 
 private:
-    bool active_ = false;
+    bool active_ = false, countFillers_ = true;
     int startPosition_ = -1, furthest_ = -1;
     qint64 startedAt_ = 0, lastAdvance_ = 0;
     Summary summary_;

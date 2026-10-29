@@ -27,9 +27,26 @@ Revenue grew by twelve percent.
 
 Jumping to a section places the reading position just before its first word.
 
-## Emphasis
+## Emphasis and lists
 
-`**bold**` and `*italic*` (Markdown) are shown in bold and italics in the standalone app, with the asterisks dimmed. Voice following ignores the asterisks.
+`**bold**`, `*italic*` and `***both***` (Markdown) are shown in bold and italics in the standalone app, with the asterisks dimmed. List markers (`-`, `*`, `+`, `1.`) are dimmed too. Voice following ignores all of them.
+
+In the standalone app, **More → Format** (or Ctrl+B, Ctrl+I, Ctrl+Shift+H for a section heading and Ctrl+Shift+C for a `[cue]`) adds the markers around the selection.
+
+## Front matter
+
+A script may start with YAML front matter between two `---` lines, as many Markdown tools write it:
+
+```
+---
+title: Product launch
+speaker: Ada
+---
+# Opening
+Thank you for joining today.
+```
+
+It is shown dimmed but never read aloud, matched by voice following or turned into sections. Its `title:` names the script in the library, the reader and the shell widgets.
 
 ## Importing
 

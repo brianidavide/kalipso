@@ -10,7 +10,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import {Extension, gettext as _, ngettext} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {PaletteChoice} from './contrast.mjs';
-import {Tracker, sections} from './tracker.mjs';
+import {Tracker, sections, title} from './tracker.mjs';
 import {LocalEngine} from './local-engine.js';
 import {tokens as T} from './tokens.js';
 
@@ -850,8 +850,7 @@ export default class Kalipso extends Extension {
         this.counter.set_text(`${this.tracker.position + 1} / ${this.tracker.words.length}`);
         const words = this.tracker.words.length;
         this.progressFill.width = Math.round(this.mainContent.width * (words ? (this.tracker.position + 1) / words : 0));
-        const firstLine = this.tracker.text.split('\n').map(line => line.replace(/^\s*#+\s*/, '').trim()).find(line => line);
-        this.title.set_text(firstLine || 'Kalipso');
+        this.title.set_text(title(this.tracker.text) || 'Kalipso');
         const listening = this._active || this.local.owned, pending = this.local.pending;
         const hasWords = Boolean(this.tracker.words.length);
         this.primary.label = this._mode === 'manual' ? _('Next words')

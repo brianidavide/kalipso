@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "library.h"
+#include "tracker.h"
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
@@ -27,15 +28,10 @@ ScriptLibrary::ScriptLibrary(QString directory) : directory_(std::move(directory
 }
 
 QString ScriptLibrary::titleFor(const QString &text) {
-    for (auto line : text.split(u'\n')) {
-        line = line.trimmed();
-        while (line.startsWith(u'#'))
-            line.remove(0, 1);
-        line = line.trimmed();
-        if (!line.isEmpty())
-            return line.size() > 60 ? line.left(59) + QChar(0x2026) : line;
-    }
-    return QObject::tr("Untitled script");
+    const auto line = ScriptTracker::title(text);
+    if (line.isEmpty())
+        return QObject::tr("Untitled script");
+    return line.size() > 60 ? line.left(59) + QChar(0x2026) : line;
 }
 
 QString ScriptLibrary::path(const QString &id) const { return directory_ + "/" + id + ".txt"; }

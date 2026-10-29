@@ -27,6 +27,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QRegularExpression>
 #include <QResizeEvent>
 #include <QSaveFile>
 #include <QScreen>
@@ -41,6 +42,7 @@
 #include <QVBoxLayout>
 #include <QWheelEvent>
 #include <algorithm>
+#include <functional>
 
 namespace {
 // Scrolling a settings page must not silently change a language or model.
@@ -261,6 +263,7 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     layout->addWidget(appBar);
 
     script_ = new ScriptEditor;
+    script_->addActions(formatActions_); // Formatting shortcuts work without opening the menu.
     script_->setObjectName("scriptEditor");
     script_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     script_->setPlaceholderText(tr("Paste or write the script you want to read…\n\n"
@@ -489,6 +492,23 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     impressAction_->setObjectName("presentWithImpress");
     impressAction_->setToolTip(tr("Open a presentation in LibreOffice Impress and follow its slideshow: the reader "
                                   "jumps to the notes of the slide being shown."));
+    // Markdown formatting, with the usual shortcuts while the editor has focus.
+    auto *format = menu->addMenu(tr("Format"));
+    const QList<std::tuple<QString, QString, QKeySequence, std::function<void()>>> formats{
+        {"formatBold", tr("Bold"), QKeySequence::Bold, [this] { wrapSelection("**", "**"); }},
+        {"formatItalic", tr("Italic"), QKeySequence::Italic, [this] { wrapSelection("*", "*"); }},
+        {"formatHeading", tr("Section heading"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_H),
+         [this] { toggleHeading(); }},
+        {"formatCue", tr("Direction cue [ ]"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C),
+         [this] { wrapSelection("[", "]"); }}};
+    for (const auto &[name, label, shortcut, apply] : formats) {
+        auto *action = format->addAction(label);
+        action->setObjectName(name);
+        action->setShortcut(shortcut);
+        action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        formatActions_.append(action); // Added to the editor once it exists, for the shortcuts.
+        connect(action, &QAction::triggered, this, apply);
+    }
     auto *exportAction = menu->addAction(tr("Export…"));
     reportAction_ = menu->addAction(tr("Save session report…"));
     reportAction_->setObjectName("saveSessionReport");
@@ -639,6 +659,45 @@ bool MainWindow::importFile(const QString &path) {
                                                nullptr, result.sections)
                                           : tr("Script imported."));
     return true;
+}
+
+// Wraps the selection (or an empty pair at the caret) in Markdown markers. Spaces at the
+// edges stay outside, since "** bold**" is not bold in Markdown.
+void MainWindow::wrapSelection(const QString &before, const QString &after) {
+    auto cursor = script_->textCursor();
+    const auto selected = cursor.selectedText();
+    const auto core = selected.trimmed();
+    cursor.beginEditBlock();
+    if (core.isEmpty()) {
+        cursor.insertText(selected + before + after);
+        cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, int(after.size()));
+    } else {
+        const auto lead = selected.indexOf(core);
+        const auto trail = selected.mid(lead + core.size());
+        cursor.insertText(selected.left(lead) + before + core + after + trail);
+        cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, int(after.size() + trail.size()));
+        cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, int(core.size()));
+    }
+    cursor.endEditBlock();
+    script_->setTextCursor(cursor);
+    script_->setFocus();
+}
+
+// Makes the current line a "# " section heading, or a plain line again.
+void MainWindow::toggleHeading() {
+    auto cursor = script_->textCursor();
+    cursor.beginEditBlock();
+    cursor.movePosition(QTextCursor::StartOfBlock);
+    const auto line = cursor.block().text();
+    static const QRegularExpression marker(QStringLiteral("^ {0,3}#{1,6} ?"));
+    if (const auto found = marker.match(line); found.hasMatch()) {
+        cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, int(found.capturedLength()));
+        cursor.removeSelectedText();
+    } else {
+        cursor.insertText("# ");
+    }
+    cursor.endEditBlock();
+    script_->setFocus();
 }
 
 void MainWindow::exportScript() {
@@ -1357,6 +1416,15 @@ QWidget *MainWindow::makeSpeechSettings() {
     form->addRow(systemActions);
     form->addRow(systemStatus_);
     form->addRow(tr("Microphone"), microphone_);
+    auto *fillers = new WrappingCheckBox(tr("Count filler words (um, uh) in the session summary"));
+    fillers->box->setObjectName("countFillers");
+    fillers->box->setChecked(settings.value("speech/countFillers", true).toBool());
+    session_.setCountFillers(fillers->box->isChecked());
+    connect(fillers->box, &QCheckBox::toggled, this, [this](bool checked) {
+        session_.setCountFillers(checked);
+        QSettings().setValue("speech/countFillers", checked);
+    });
+    form->addRow(fillers);
     form->addRow(note(tr("Recognition stays on this device. Moonshine and Vosk need a native runtime and a language "
                          "model: install them with tools/install-local-engine.py and they appear above. System "
                          "speech uses the default microphone. Kalipso never switches to a cloud service.")));
