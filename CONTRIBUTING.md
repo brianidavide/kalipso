@@ -25,7 +25,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-CTest runs the Qt tests (offscreen), the JavaScript tracker in Node and — when `qmltestrunner` and `gjs` are installed — in the real QML and GJS engines used by Plasma and GNOME. On Debian, `gjs qml6-module-qttest qt6-declarative-dev-tools` provide those. To run the UI tests on a real X11 server as CI does:
+CTest runs the Qt tests (offscreen), the JavaScript tracker in Node and — when `qmltestrunner` and `gjs` are installed — in the real QML and GJS engines used by Plasma and GNOME. On Debian and Ubuntu, `gjs qml6-module-qttest qml6-module-qtqml-workerscript qt6-declarative-dev-tools` provide those. To run the UI tests on a real X11 server as CI does:
 
 ```sh
 xvfb-run -a env QT_QPA_PLATFORM=xcb build/ui_tests

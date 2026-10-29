@@ -28,7 +28,7 @@ jobs:
       - name: Install QML and GJS engines
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gjs qml6-module-qttest qml6-module-qtquick qt6-declarative-dev-tools
+          sudo apt-get install -y --no-install-recommends gjs qml6-module-qttest qml6-module-qtquick qml6-module-qtqml-workerscript qt6-declarative-dev-tools
       - name: Run the tracker in the Plasma (QML) and GNOME (GJS) engines
         run: python3 tests/script_runtimes.py /usr/lib/qt6/bin/qmltestrunner "$(command -v gjs)"
       - name: Check laboratory scripts
