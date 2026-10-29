@@ -13,8 +13,11 @@
 
 .reader,.local-section{--color-focus:var(--color-overlay-focus)}
 nav a{display:inline-flex;align-items:center;min-block-size:24px}
-.reader-appearance{margin-block-start:var(--space-4);display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
-.reader-appearance label{margin:0}.reader-appearance select{inline-size:auto;max-inline-size:100%}
+.reader-appearance{margin-block-start:var(--space-4);display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3) var(--space-5)}
+.reader-appearance .choice{display:inline-flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);max-inline-size:100%}
+.reader-appearance label{margin:0}
+/* Mirrored for beam-splitter glass; the controls stay readable. */
+.reading-text[data-mirror=horizontal]{transform:scaleX(-1)}.reading-text[data-mirror=vertical]{transform:scaleY(-1)}.reader-appearance select{inline-size:auto;max-inline-size:100%}
 .reader .button{transition:none}
 /* As in the app: one filled action; the others are quiet until hovered. */
 .reader .button.quiet{background:transparent;border-color:transparent;color:var(--color-overlay-text)}.reader .button.quiet:hover{background:var(--color-overlay-line)}

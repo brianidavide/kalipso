@@ -40,6 +40,10 @@ for(const engine of ['chromium','firefox','webkit']){
  await page.goto(base);for(const summary of await page.locator('details summary').all()){await summary.click();assert.equal(await summary.evaluate(e=>e.parentElement.open),true)}
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#edit-toggle').click();assert.equal(await page.locator('#edit-panel').evaluate(e=>getComputedStyle(e).animationDuration),'0s');
  await page.locator('#script').fill('A long script. '.repeat(300));await page.locator('#next-word').click();assert.equal(await overflow(),false);
+ // Mirror: flips only the text, survives a reload through the address, and can be preset with a link.
+ await page.goto(base);await page.locator('#reader-mirror').selectOption('horizontal');assert.match(await page.locator('#reading-text').evaluate(e=>getComputedStyle(e).transform),/^matrix\(-1, 0, 0, 1/);assert.equal(await page.locator('#next-word').evaluate(e=>getComputedStyle(e).transform),'none');
+ await page.reload();assert.equal(await page.locator('#reader-mirror').inputValue(),'horizontal');await page.goto(base+'/?mirror=vertical');assert.match(await page.locator('#reading-text').evaluate(e=>getComputedStyle(e).transform),/^matrix\(1, 0, 0, -1/);
+ await page.locator('#reader-mirror').selectOption('none');assert.equal(new URL(page.url()).searchParams.has('mirror'),false);
  await page.goto(base);await page.keyboard.press('Tab');assert.equal(await page.locator('.skip').evaluate(e=>e===document.activeElement),true);
  // Negative control: deliberately broken layout must be detected.
  await page.addStyleTag({content:'body{width:220vw!important}'});assert.equal(await overflow(),true);await page.reload();assert.equal(await overflow(),false);
@@ -53,6 +57,6 @@ for(const engine of ['chromium','firefox','webkit']){
   await page.setViewportSize({width:390,height:844});for(const id of ['try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.screenshot({path:`${out}/mobile-${id}.png`})}
  }
  assert.deepEqual(errors,[],engine+' page errors');assert.deepEqual(external,[],engine+' external requests');
- report.push({engine,viewportCases:cases,interactionChecks:19,negativeControls:3,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
+ report.push({engine,viewportCases:cases,interactionChecks:20,negativeControls:3,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));
 }
 await writeFile(`${out}/results.json`,JSON.stringify(report,null,2)+'\n');
