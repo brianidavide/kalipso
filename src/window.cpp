@@ -747,7 +747,7 @@ void MainWindow::steadyTick() {
         return;
     }
     tracker_.seek(tracker_.position() + 1);
-    refreshReading();
+    refreshRunning(); // Also refreshes the time left.
 }
 
 void MainWindow::changeSpeed(int delta) {
@@ -763,11 +763,18 @@ void MainWindow::refreshRunning() {
     QString status;
     switch (mode_) {
     case ReadingMode::Manual: status = tr("Manual · microphone off"); break;
-    case ReadingMode::Steady:
+    case ReadingMode::Steady: {
+        // Time left at the current speed, rounded up to whole minutes.
+        const int wordsLeft = std::max(0, tracker_.count() - tracker_.position() - 1);
+        const int minutes = (wordsLeft + wordsPerMinute_ - 1) / wordsPerMinute_;
+        const auto left = wordsLeft == 0 ? tr("end of script")
+                          : minutes <= 1 ? tr("under a minute left")
+                                         : tr("%n min left", nullptr, minutes);
         status = countdown_.isActive() ? tr("Starting…")
-                 : active              ? tr("Scrolling · microphone off")
-                                       : tr("Paused · microphone off");
+                 : active              ? tr("Scrolling · %1").arg(left)
+                                       : tr("Paused · %1").arg(left);
         break;
+    }
     case ReadingMode::Voice:
         status = !active                   ? tr("Microphone off")
                  : tracker_.lost()         ? tr("Off script · Kalipso catches up when you return to the text")
@@ -1006,6 +1013,16 @@ QWidget *MainWindow::makeReadingSettings() {
         audioStatus_->setText(tr("The interface language changes the next time Kalipso starts."));
     });
     form->addRow(tr("Interface language"), language);
+
+    auto *fadeRow = new WrappingCheckBox(tr("Hide the reader's controls while reading"));
+    fadeRow->box->setObjectName("autoHideControls");
+    fadeRow->box->setChecked(settings.value("reading/autoHideControls", true).toBool());
+    prompter_->setAutoHideControls(fadeRow->box->isChecked());
+    connect(fadeRow->box, &QCheckBox::toggled, this, [this](bool checked) {
+        prompter_->setAutoHideControls(checked);
+        QSettings().setValue("reading/autoHideControls", checked);
+    });
+    group->form->addRow(fadeRow);
 
     auto *hiddenRow = new WrappingCheckBox(tr("Hide the reader from screen sharing and recordings"));
     auto *hidden = hiddenRow->box;

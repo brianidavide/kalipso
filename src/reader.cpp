@@ -8,6 +8,7 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QComboBox>
+#include <QGraphicsOpacityEffect>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
@@ -201,6 +202,7 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     // Top bar: what you are reading, and quiet window actions.
     auto *topBar = new QWidget;
     topBar->setObjectName("readerBar");
+    bars_.append(topBar);
     auto *bar = new FlowLayout(topBar);
     bar->setContentsMargins(space3, space1, space2, space1);
     bar->setSpacing(space1);
@@ -254,6 +256,7 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     // Bottom bar: step, start or pause, and how the reader advances.
     auto *controlBar = new QWidget;
     controlBar->setObjectName("readerControls");
+    bars_.append(controlBar);
     auto *controls = new FlowLayout(controlBar);
     controls->setContentsMargins(space3, space2, space3, space2);
     controls->setSpacing(space2);
@@ -316,6 +319,20 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     // clickers send Space and arrows, which would otherwise activate or edit.
     for (auto *control : findChildren<QAbstractButton *>())
         control->setFocusPolicy(Qt::TabFocus);
+    // While reading, the bars fade out (keeping their space, so the text does
+    // not move) and come back with the mouse, a key, or a pause.
+    idle_.setSingleShot(true);
+    idle_.setInterval(2500);
+    connect(&idle_, &QTimer::timeout, this, [this] { setControlsVisible(false); });
+    for (auto *bar : bars_) {
+        auto *effect = new QGraphicsOpacityEffect(bar);
+        effect->setOpacity(1.0);
+        bar->setGraphicsEffect(effect);
+        bar->setMouseTracking(true);
+        bar->installEventFilter(this);
+    }
+    text->viewport()->setMouseTracking(true);
+    text->viewport()->installEventFilter(this);
     auto *grip = new QSizeGrip(this);
     grip->setObjectName("readerResize");
     grip->setToolTip(tr("Drag to resize the reader"));
@@ -408,9 +425,31 @@ void ReaderWindow::setMode(ReadingMode mode) {
 }
 
 void ReaderWindow::setRunning(bool running, const QString &status) {
+    const bool changed = running != running_;
     running_ = running;
     updatePrimary();
     setStatus(status);
+    if (changed) // Status updates while reading must not bring the controls back.
+        revealControls();
+}
+
+void ReaderWindow::setAutoHideControls(bool hide) {
+    autoHide_ = hide;
+    revealControls();
+}
+
+void ReaderWindow::revealControls() {
+    setControlsVisible(true);
+    if (running_ && autoHide_ && !editing_)
+        idle_.start();
+    else
+        idle_.stop();
+}
+
+void ReaderWindow::setControlsVisible(bool visible) {
+    controlsVisible_ = visible;
+    for (auto *bar : bars_)
+        static_cast<QGraphicsOpacityEffect *>(bar->graphicsEffect())->setOpacity(visible ? 1.0 : 0.0);
 }
 
 void ReaderWindow::setStatus(const QString &status) { status_->setText(status); }
@@ -562,6 +601,7 @@ void ReaderWindow::resizeEvent(QResizeEvent *event) {
 }
 
 void ReaderWindow::keyPressEvent(QKeyEvent *event) {
+    revealControls();
     // Foot pedals and presentation remotes send these keys.
     switch (event->key()) {
     case Qt::Key_Escape:
@@ -588,6 +628,9 @@ void ReaderWindow::keyPressEvent(QKeyEvent *event) {
 }
 
 bool ReaderWindow::eventFilter(QObject *object, QEvent *event) {
+    if (event->type() == QEvent::MouseMove || event->type() == QEvent::Enter ||
+        event->type() == QEvent::MouseButtonPress)
+        revealControls();
     // While reading, the text view forwards control keys instead of scrolling.
     if (object == text && event->type() == QEvent::KeyPress && !editing_) {
         keyPressEvent(static_cast<QKeyEvent *>(event));

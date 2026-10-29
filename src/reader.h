@@ -6,6 +6,7 @@
 #include <QElapsedTimer>
 #include <QPointer>
 #include <QTextEdit>
+#include <QTimer>
 
 class QComboBox;
 class QProgressBar;
@@ -79,6 +80,9 @@ public:
     // Shows a large number over the text; 0 hides it.
     void showCountdown(int seconds);
     void setTitle(const QString &title);
+    // Fade the bars out while reading; they return with the mouse or a key.
+    void setAutoHideControls(bool hide);
+    bool controlsVisible() const { return controlsVisible_; }
     void setProgress(int read, int total);
 
     QString colorSource() const { return backdrop_->source(); }
@@ -108,6 +112,8 @@ private:
     void applyPalette(const Design::Palette &palette);
     void saveGeometry();
     void updatePrimary();
+    void revealControls();
+    void setControlsVisible(bool visible);
 
     StatusLabel *status_;
     QPushButton *primary_;
@@ -128,6 +134,10 @@ private:
     bool running_ = false;
     bool editing_ = false;
     bool compact_ = false;
+    bool autoHide_ = true;
+    bool controlsVisible_ = true;
+    QTimer idle_;
+    QList<QWidget *> bars_;
     bool captureExcluded_ = false;
     bool placing_ = false;
     int position_ = 0, length_ = 0;
