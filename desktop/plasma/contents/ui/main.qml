@@ -4,6 +4,7 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
+import org.kde.kirigami as Kirigami
 import "tracker.mjs" as Tracking
 import "Tokens.js" as Design
 import "contrast.mjs" as Contrast
@@ -36,6 +37,7 @@ PlasmoidItem {
     property int wordCount: 0
     property bool lost: false
     property var sectionList: []
+    property string scriptTitle: ""
     property string pane: ""
     readonly property bool atEnd: wordCount > 0 && readCount === wordCount
 
@@ -52,6 +54,8 @@ PlasmoidItem {
             ? tracker.readingMarkup(c.overlayMuted, c.overlayText)
                 .replace(/<span foreground=/g, "<font color=").replace(/<\/span>/g, "</font>")
             : i18n("Add your script to begin.")
+        const firstLine = tracker.text.split("\n").map(line => line.replace(/^\s*#+\s*/, "").trim()).find(line => line)
+        scriptTitle = firstLine || i18n("Kalipso")
         readCount = tracker.position + 1
         wordCount = tracker.words.length
         lost = tracker.lost
@@ -153,16 +157,23 @@ PlasmoidItem {
         }
     }
 
+    // Buttons follow the same rules as the standalone app: one filled primary
+    // action, outlined buttons, quiet buttons for window actions, and chosen
+    // options marked by a thicker accent border and bold label.
     component ReaderButton: Button {
         id: control
         property bool primary: false
+        property bool quiet: false
+        property bool chosen: false
+        property string iconName: ""
         Accessible.name: text
         activeFocusOnTab: true
         onActiveFocusChanged: if (activeFocus) Qt.callLater(function() { root.revealRequested(control) })
         font.pointSize: Qt.application.font.pointSize
+        font.bold: primary || chosen
         implicitHeight: Math.max(root.n.controlHeight, contentItem.implicitHeight + 16)
         implicitWidth: Math.max(contentItem.implicitWidth + 24,
-            primary ? Math.max(root.n.primaryWidth, metrics.advanceWidth(i18n("Start listening")) + 24) : 0)
+            primary ? Math.max(root.n.primaryWidth, metrics.advanceWidth(i18n("Start listening")) + 48) : 0)
         FontMetrics { id: metrics; font: control.font }
         width: Math.min(implicitWidth, parent ? parent.width : implicitWidth)
         padding: 8; leftPadding: 12; rightPadding: 12
@@ -170,27 +181,60 @@ PlasmoidItem {
         background: Rectangle {
             radius: root.n.buttonRadius
             color: control.primary ? (control.down ? root.c.actionHover : root.c.action)
-                : (control.hovered || control.down ? root.c.overlayLine : root.c.overlaySurface)
-            border.width: 2
-            border.color: control.activeFocus ? root.c.focus : root.c.overlayBorder
+                : control.hovered || control.down || control.chosen ? root.c.overlayLine
+                : control.quiet ? "transparent" : root.c.overlaySurface
+            border.width: control.activeFocus || control.chosen ? 2 : control.quiet ? 0 : 1
+            border.color: control.activeFocus ? root.c.focus : control.chosen ? root.c.reading : root.c.overlayBorder
         }
-        contentItem: Text {
-            text: control.text
-            color: control.primary ? root.p.actionText : root.c.overlayText
-            font: control.font
-            wrapMode: Text.Wrap
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
+        // Icon and label centred together; the label wraps when the button is narrow.
+        contentItem: Item {
+            implicitWidth: row.implicitWidth
+            implicitHeight: row.implicitHeight
+            RowLayout {
+                id: row
+                anchors.centerIn: parent
+                width: Math.min(implicitWidth, parent.width)
+                spacing: 6
+                Kirigami.Icon {
+                    visible: control.iconName !== ""
+                    source: control.iconName
+                    isMask: true
+                    color: control.primary ? root.p.actionText : root.c.overlayText
+                    Layout.preferredWidth: 18
+                    Layout.preferredHeight: 18
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Text {
+                    visible: control.text !== ""
+                    text: control.text
+                    color: control.primary ? root.p.actionText : root.c.overlayText
+                    font: control.font
+                    wrapMode: Text.Wrap
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    Layout.fillWidth: true
+                }
+            }
         }
     }
-    // A choice among options, marked with ✓ for sighted users and "checked" for assistive technology.
+    // One of several options. The chosen one has an accent border and bold label;
+    // assistive technology hears it as checked.
     component ChoiceButton: ReaderButton {
         property bool selected: false
-        text: (selected ? "✓ " : "") + label
         property string label
+        chosen: selected
+        text: label
         Accessible.name: label
         Accessible.checkable: true
         Accessible.checked: selected
+    }
+    // A small heading above a group of settings.
+    component GroupLabel: Label {
+        color: root.c.overlayMuted
+        font.pointSize: Qt.application.font.pointSize * 0.9
+        font.bold: true
+        topPadding: 4
+        Layout.fillWidth: true
     }
     component ReaderScrollBar: ScrollBar {
         orientation: Qt.Vertical
@@ -283,13 +327,17 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     spacing: 8
                     Label {
-                        text: "Kalipso"
-                        color: root.c.overlayText
-                        font.bold: true
-                        font.pointSize: Qt.application.font.pointSize * 1.15
+                        text: root.scriptTitle
+                        color: root.c.overlayMuted
+                        elide: Text.ElideRight
+                        width: Math.min(implicitWidth, 220)
+                        height: root.n.controlHeight
+                        verticalAlignment: Text.AlignVCenter
                     }
                     ReaderButton {
                         objectName: "sectionsButton"
+                        quiet: true
+                        iconName: "view-list-details"
                         text: i18n("Sections")
                         visible: root.sectionList.length > 0
                         onClicked: sectionMenu.popup(this, 0, height)
@@ -310,16 +358,33 @@ PlasmoidItem {
                     ReaderButton {
                         id: editToggle
                         objectName: "editToggle"
+                        quiet: true
+                        iconName: root.pane === "edit" ? "dialog-ok" : "document-edit"
                         text: root.pane === "edit" ? i18n("Done editing") : i18n("Edit script")
                         onClicked: root.showPane("edit")
                     }
                     ReaderButton {
                         objectName: "settingsToggle"
+                        quiet: true
+                        iconName: root.pane === "settings" ? "dialog-ok" : "configure"
                         text: root.pane === "settings" ? i18n("Done") : i18n("Settings")
                         onClicked: root.showPane("settings")
                     }
                 }
 
+                Rectangle {
+                    objectName: "readingProgress"
+                    Layout.fillWidth: true
+                    implicitHeight: 3
+                    color: root.c.overlayLine
+                    Accessible.role: Accessible.ProgressBar
+                    Accessible.name: i18n("Reading progress")
+                    Rectangle {
+                        width: parent.width * (root.wordCount ? root.readCount / root.wordCount : 0)
+                        height: parent.height
+                        color: root.c.reading
+                    }
+                }
                 Label {
                     objectName: "reader"
                     text: root.markup
@@ -349,15 +414,19 @@ PlasmoidItem {
                     ReaderButton {
                         objectName: "readAction"
                         primary: true
+                        iconName: root.mode === "manual" ? "go-next"
+                            : (steady.running || audio.active) ? "media-playback-pause" : "media-playback-start"
                         text: root.mode === "manual" ? i18n("Next words")
                             : root.mode === "steady" ? (steady.running ? i18n("Pause") : i18n("Start scrolling"))
                             : audio.active ? i18n("Pause") : audio.busy ? i18n("Cancel") : i18n("Start listening")
                         enabled: root.wordCount > 0 && (root.mode !== "manual" || !root.atEnd)
                         onClicked: root.toggle()
                     }
-                    ReaderButton { text: i18n("Previous"); enabled: root.readCount > 0; onClicked: root.seek(root.tracker.position - 4) }
+                    ReaderButton { quiet: true; iconName: "go-previous"; text: i18n("Previous"); enabled: root.readCount > 0; onClicked: root.seek(root.tracker.position - 4) }
                     ReaderButton {
                         objectName: "resetPosition"
+                        quiet: true
+                        iconName: "go-first"
                         text: i18n("Reset")
                         enabled: root.readCount > 0
                         onClicked: root.seek(-1)
@@ -365,16 +434,18 @@ PlasmoidItem {
                     Label {
                         text: root.readCount + " / " + root.wordCount
                         color: root.c.overlayMuted
-                        horizontalAlignment: Text.AlignRight
+                        height: root.n.controlHeight
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: 8
                     }
                 }
                 Flow {
                     visible: root.mode === "steady"
                     spacing: 8
                     Layout.fillWidth: true
-                    ReaderButton { text: i18n("Slower"); onClicked: root.changeSpeed(-10) }
-                    Label { text: i18n("%1 words/min", root.speed); color: root.c.overlayText }
-                    ReaderButton { text: i18n("Faster"); onClicked: root.changeSpeed(10) }
+                    ReaderButton { quiet: true; iconName: "list-remove"; text: ""; Accessible.name: i18n("Slower"); onClicked: root.changeSpeed(-10) }
+                    Label { text: i18n("%1 words/min", root.speed); color: root.c.overlayText; height: root.n.controlHeight; verticalAlignment: Text.AlignVCenter }
+                    ReaderButton { quiet: true; iconName: "list-add"; text: ""; Accessible.name: i18n("Faster"); onClicked: root.changeSpeed(10) }
                 }
                 Label {
                     objectName: "readingState"
@@ -442,6 +513,7 @@ PlasmoidItem {
                     visible: root.pane === "settings"
                     Layout.fillWidth: true
                     spacing: root.n.gap
+                    GroupLabel { text: i18n("Reading mode") }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
@@ -449,6 +521,7 @@ PlasmoidItem {
                         ChoiceButton { objectName: "steadyMode"; label: i18n("Steady speed"); selected: root.mode === "steady"; onClicked: root.setMode("steady") }
                         ChoiceButton { objectName: "voiceMode"; label: i18n("Follow my voice"); selected: root.mode === "voice"; onClicked: root.setMode("voice") }
                     }
+                    GroupLabel { text: i18n("Speech engine") }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
@@ -462,10 +535,10 @@ PlasmoidItem {
                         }
                     }
                     Note { objectName: "speechDetails"; text: audio.status }
+                    GroupLabel { text: i18n("Reader colors") }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        Label { text: i18n("Reader colors"); color: root.c.overlayText }
                         ChoiceButton { objectName: "autoAppearance"; label: i18n("Desktop theme"); selected: root.appearance === "auto"; onClicked: root.chooseAppearance("auto") }
                         ChoiceButton { objectName: "darkAppearance"; label: i18n("Dark"); selected: root.appearance === "dark"; onClicked: root.chooseAppearance("dark") }
                         ChoiceButton { objectName: "lightAppearance"; label: i18n("Light"); selected: root.appearance === "light"; onClicked: root.chooseAppearance("light") }
@@ -493,18 +566,18 @@ PlasmoidItem {
                         Accessible.name: text
                     }
                     Note { text: i18n("Window colors follow the window you select while this reader is visible. Images stay in memory and are never saved or sent. Requires the Kalipso companion, PipeWire and the desktop sharing portal. Every color mode keeps an opaque reading background.") }
+                    GroupLabel { text: i18n("Mirror") }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        Label { text: i18n("Mirror"); color: root.c.overlayText }
                         ChoiceButton { label: i18n("Off"); selected: root.mirror === "none"; onClicked: root.config.mirror = "none" }
                         ChoiceButton { objectName: "mirrorHorizontal"; label: i18n("Horizontal"); selected: root.mirror === "horizontal"; onClicked: root.config.mirror = "horizontal" }
                         ChoiceButton { label: i18n("Vertical"); selected: root.mirror === "vertical"; onClicked: root.config.mirror = "vertical" }
                     }
+                    GroupLabel { text: i18n("Reading size") }
                     Flow {
                         Layout.fillWidth: true
                         spacing: 8
-                        Label { text: i18n("Reading size"); color: root.c.overlayText }
                         ReaderButton { text: i18n("Smaller"); onClicked: root.config.readerSize = Math.max(18, root.readerSize - 2) }
                         ReaderButton { text: i18n("Larger"); onClicked: root.config.readerSize = Math.min(64, root.readerSize + 2) }
                     }

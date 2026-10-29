@@ -77,8 +77,16 @@ for theme, p in source['palette'].items():
 {scope} StEntry:focus {{ box-shadow: inset 0 0 0 2px {p['focus']}; }}
 {scope} StScrollBar {{ min-width: 24px; background-color: {p['background']}; }}
 {scope} StScrollBar StButton#vhandle, {scope} StScrollBar StButton#hhandle {{ background-color: {p['border']}; min-width:24px; min-height:24px; }}
-{scope} .tp-primary {{ min-width: {n['primaryWidth']-28}px; background-color: {p['action']}; color: {p['actionText']}; }}
+{scope} .tp-primary {{ min-width: {n['primaryWidth']-28}px; background-color: {p['action']}; color: {p['actionText']}; border-color: {p['action']}; font-weight: bold; }}
 {scope} .tp-primary:hover, {scope} .tp-primary:active {{ background-color: {p['actionHover']}; }}
+{scope} .tp-quiet {{ background-color: transparent; border-color: transparent; }}
+{scope} .tp-quiet:hover, {scope} .tp-quiet:active {{ background-color: {p['hover']}; }}
+{scope} .tp-quiet:focus {{ border-color: {p['focus']}; }}
+{scope} .tp-button:checked {{ background-color: {p['hover']}; border-color: {p['accent']}; font-weight: bold; }}
+{scope} .tp-group-label {{ font-size: {n['labelSize']}pt; font-weight: bold; color: {p['muted']}; padding-top: 4px; }}
+{scope} .tp-title {{ color: {p['muted']}; }}
+{scope} .tp-progress {{ background-color: {p['divider']}; height: 3px; }}
+{scope} .tp-progress-fill {{ background-color: {p['accent']}; height: 3px; }}
 """)
 (ROOT / 'desktop/gnome/stylesheet.css').write_text('/* Generated from design/tokens.json. */\n'+'\n'.join(rules))
 

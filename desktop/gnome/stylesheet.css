@@ -5,8 +5,16 @@
 .tp-light StEntry:focus { box-shadow: inset 0 0 0 2px #17191F; }
 .tp-light StScrollBar { min-width: 24px; background-color: #F7F8FA; }
 .tp-light StScrollBar StButton#vhandle, .tp-light StScrollBar StButton#hhandle { background-color: #747C8B; min-width:24px; min-height:24px; }
-.tp-light .tp-primary { min-width: 132px; background-color: #345CF5; color: #FFFFFF; }
+.tp-light .tp-primary { min-width: 132px; background-color: #345CF5; color: #FFFFFF; border-color: #345CF5; font-weight: bold; }
 .tp-light .tp-primary:hover, .tp-light .tp-primary:active { background-color: #2447D3; }
+.tp-light .tp-quiet { background-color: transparent; border-color: transparent; }
+.tp-light .tp-quiet:hover, .tp-light .tp-quiet:active { background-color: #EAF0FF; }
+.tp-light .tp-quiet:focus { border-color: #17191F; }
+.tp-light .tp-button:checked { background-color: #EAF0FF; border-color: #2447D3; font-weight: bold; }
+.tp-light .tp-group-label { font-size: 12pt; font-weight: bold; color: #626875; padding-top: 4px; }
+.tp-light .tp-title { color: #626875; }
+.tp-light .tp-progress { background-color: #DDE0E7; height: 3px; }
+.tp-light .tp-progress-fill { background-color: #2447D3; height: 3px; }
 
 .tp-dark .tp-button { font-size: 12pt; font-weight: 500; border-radius: 8px; padding: 8px 12px; min-height: 24px; background-color: #242933; color: #F7F8FC; border: 2px solid #8F98A9; }
 .tp-dark .tp-button:hover, .tp-dark .tp-button:active { background-color: #363C48; }
@@ -14,5 +22,13 @@
 .tp-dark StEntry:focus { box-shadow: inset 0 0 0 2px #F7F8FC; }
 .tp-dark StScrollBar { min-width: 24px; background-color: #17191F; }
 .tp-dark StScrollBar StButton#vhandle, .tp-dark StScrollBar StButton#hhandle { background-color: #8F98A9; min-width:24px; min-height:24px; }
-.tp-dark .tp-primary { min-width: 132px; background-color: #345CF5; color: #FFFFFF; }
+.tp-dark .tp-primary { min-width: 132px; background-color: #345CF5; color: #FFFFFF; border-color: #345CF5; font-weight: bold; }
 .tp-dark .tp-primary:hover, .tp-dark .tp-primary:active { background-color: #2447D3; }
+.tp-dark .tp-quiet { background-color: transparent; border-color: transparent; }
+.tp-dark .tp-quiet:hover, .tp-dark .tp-quiet:active { background-color: #363C48; }
+.tp-dark .tp-quiet:focus { border-color: #F7F8FC; }
+.tp-dark .tp-button:checked { background-color: #363C48; border-color: #C8D4FF; font-weight: bold; }
+.tp-dark .tp-group-label { font-size: 12pt; font-weight: bold; color: #A7AFBF; padding-top: 4px; }
+.tp-dark .tp-title { color: #A7AFBF; }
+.tp-dark .tp-progress { background-color: #2E333D; height: 3px; }
+.tp-dark .tp-progress-fill { background-color: #C8D4FF; height: 3px; }
