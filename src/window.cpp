@@ -83,6 +83,7 @@ public:
         layout->setSpacing(Design::Metric::space3);
         auto *heading = new QLabel(title);
         heading->setProperty("role", "title");
+        heading->setWordWrap(true); // Large and bold: on one line it can be wider than a narrow window.
         auto font = heading->font();
         font.setPointSizeF(font.pointSizeF() * 1.25);
         heading->setFont(font);
