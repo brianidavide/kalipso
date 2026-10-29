@@ -13,6 +13,7 @@ A local-first teleprompter for your desktop. Keep your script next to your camer
 - **Your scripts are kept:** saved automatically on your device with your reading position.
 - **Script cues:** `[look at camera]` is shown but never read by voice following; `# Heading` lines become sections you can jump to. See [writing scripts](docs/scripts.md).
 - **Import:** speaker notes from PowerPoint (`.pptx`) and LibreOffice Impress (`.odp`), one section per slide; Word (`.docx`) and Writer (`.odt`) documents with their headings, lists and emphasis.
+- **Presenting with LibreOffice Impress:** the reader follows the running slideshow and moves to each slide's notes (Linux; Windows and macOS not yet verified).
 - **Teleprompter rigs:** mirror the text horizontally or vertically for beam-splitter glass.
 - **Readable everywhere:** light, dark or automatic colors with WCAG AA contrast, large text and full keyboard control. See [accessibility](docs/accessibility.md).
 - **Private by design:** recognition runs locally (Moonshine, Vosk, or the operating system's on-device recognizer on macOS and Windows). Nothing is uploaded.

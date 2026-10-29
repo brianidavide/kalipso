@@ -49,6 +49,12 @@ With the reader focused:
 
 Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow keys, so they work without setup.
 
+### Presenting with LibreOffice Impress
+
+**More → Present with Impress…** imports the speaker notes of an `.odp` or `.pptx` presentation as a new script, opens the presentation in LibreOffice Impress, and follows the slideshow: when Impress shows a slide, the reader moves to the start of that slide's notes. It matches the notes' first line, not the slide number, so edits to the script and slides without notes are fine. The status line says what is happening ("Following Impress · slide 3", "slide 2 has no notes", "The slideshow ended").
+
+Kalipso talks to LibreOffice only through a local named pipe that it asks LibreOffice to open for this presentation; nothing goes over the network, and the presentation is never changed. **Stop following Impress** (same menu) ends it; LibreOffice stays open. On Linux this needs LibreOffice's Python bridge (`python3-uno` on Debian and Ubuntu). It is tested on Linux with LibreOffice 25.2; Windows and macOS use the Python bundled with LibreOffice but have not been verified yet.
+
 ### Phone remote
 
 **Settings → Remote control → Allow a phone on this network to control the reader** shows a link and a QR code. Open it on a phone on the same network to start, pause, step, jump to the previous or next section and change speed. The page never receives the script text. A new secret link is created every time you turn it on, and it stops when Kalipso closes. Windows and some Linux firewalls ask whether to allow Kalipso on the network the first time; the phone must be on the same network as the computer.

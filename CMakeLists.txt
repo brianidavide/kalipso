@@ -58,11 +58,14 @@ endif()
 add_library(kalipso_vendor STATIC third_party/puff/puff.c third_party/qrcodegen/qrcodegen.cpp)
 add_library(kalipso_app STATIC
   src/window.cpp src/reader.cpp src/backdrop.cpp src/library.cpp src/import.cpp src/remote.cpp
-  src/script_highlighter.cpp src/session_stats.cpp src/icons.cpp src/platform/capture_exclusion.cpp)
+  src/script_highlighter.cpp src/session_stats.cpp src/impress.cpp src/icons.cpp
+  src/platform/capture_exclusion.cpp)
 target_link_libraries(kalipso_app PUBLIC kalipso_speech Qt6::Widgets Qt6::Network Qt6::Svg PRIVATE kalipso_vendor)
 file(GLOB KALIPSO_ICONS CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/*.svg ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/generated/*.svg)
 qt_add_resources(kalipso_app "icons" PREFIX "/icons" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/icons FILES ${KALIPSO_ICONS})
+qt_add_resources(kalipso_app "impress" PREFIX "/impress" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/impress
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/impress/impress_follow.py)
 target_compile_definitions(kalipso_app PUBLIC KALIPSO_VERSION="${PROJECT_VERSION}")
 target_compile_options(kalipso_app PRIVATE ${KALIPSO_WARNINGS})
 if(TARGET kalipso_colors)
@@ -180,6 +183,9 @@ if(BUILD_TESTING)
 
   if(Python3_Interpreter_FOUND)
     add_test(NAME speech_assets COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/speech_assets_test.py)
+    # Real LibreOffice Impress slideshow; skipped (77) without LibreOffice, uno or a display.
+    add_test(NAME impress_follow COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/impress_follow_test.py)
+    set_tests_properties(impress_follow PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
     if(APPLE)
       add_test(NAME system_helper_probe COMMAND ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_helper_smoke.py "${CMAKE_CURRENT_BINARY_DIR}/kalipso-system-speech")
