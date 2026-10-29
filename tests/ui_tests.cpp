@@ -527,6 +527,17 @@ for event in [{"state": "slide", "slide": 2, "notes": ""},
         QCOMPARE(text->toPlainText(), QString("# Say ***hello*** world now[smile]"));
     }
 
+    void readingStartsAfterFrontMatter() {
+        MainWindow window(scripts_.path());
+        const QString script = "---\ntitle: Launch\n---\n# Opening\nHello everyone";
+        editor(window)->setPlainText(script);
+        QCOMPARE(window.prompter()->anchor(), int(script.indexOf("# Opening"))); // Not at the metadata.
+        QTRY_COMPARE_WITH_TIMEOUT(window.findChild<QComboBox *>("scriptPicker")->currentText(), QString("Launch"),
+                                  5000); // After autosave.
+        QTest::keyClick(window.prompter()->text, Qt::Key_Right);
+        QCOMPARE(window.prompter()->anchor(), int(script.indexOf("Hello")));
+    }
+
     void highlighterShowsMarkdownMetadataListsAndEmphasis() {
         QTextDocument document;
         document.documentLayout(); // As in an editor: without a layout, no change signals reach the highlighter.
