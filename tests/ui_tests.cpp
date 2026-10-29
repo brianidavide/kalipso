@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "window.h"
+#include <QAbstractButton>
 #include <QAccessible>
 #include <QCheckBox>
 #include <QComboBox>
@@ -235,6 +236,14 @@ private slots:
         QVERIFY(positionLabel(window)->text().startsWith("Word 1 of 4"));
         QTest::keyClick(view, Qt::Key_Home);
         QVERIFY(positionLabel(window)->text().startsWith("Word 0 of 4"));
+    }
+
+    void readerControlsKeepKeyboardFocusOnTheScript() {
+        // Clicking a control must not let a pedal's Space or arrows activate it or type.
+        ReaderWindow reader;
+        for (auto *button : reader.findChildren<QAbstractButton *>())
+            QCOMPARE(button->focusPolicy(), Qt::TabFocus);
+        QCOMPARE(reader.findChild<QComboBox *>("readerMode")->focusPolicy(), Qt::TabFocus);
     }
 
     void sectionsJumpAndCuesStayOutOfTheWordCount() {

@@ -13,14 +13,15 @@
 namespace {
 // Sends one raw HTTP request from another thread while this thread keeps
 // serving, and returns the status code and body.
-QPair<int, QByteArray> http(quint16 port, const QByteArray &method, const QString &path) {
+QPair<int, QByteArray> http(quint16 port, const QByteArray &method, const QString &path,
+                            const QByteArray &headers = {}) {
     QByteArray reply;
     std::atomic<bool> done = false;
     std::thread client([&] {
         QTcpSocket socket;
         socket.connectToHost(QHostAddress::LocalHost, port);
         if (socket.waitForConnected(2000)) {
-            socket.write(method + " " + path.toLatin1() + " HTTP/1.1\r\nHost: localhost\r\n\r\n");
+            socket.write(method + " " + path.toLatin1() + " HTTP/1.1\r\nHost: localhost\r\n" + headers + "\r\n");
             socket.waitForBytesWritten(2000);
             while (socket.waitForReadyRead(2000))
                 reply += socket.readAll();
@@ -33,6 +34,74 @@ QPair<int, QByteArray> http(quint16 port, const QByteArray &method, const QStrin
         QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
     client.join();
     return {reply.mid(9, 3).toInt(), reply.mid(reply.indexOf("\r\n\r\n") + 4)};
+}
+// An uncompressed ZIP archive, enough to feed crafted files to the importer.
+QByteArray storedZip(const QList<QPair<QString, QByteArray>> &files) {
+    QByteArray data, central;
+    const auto u16 = [](QByteArray &out, quint16 value) { out.append(char(value & 0xff)).append(char(value >> 8)); };
+    const auto u32 = [&u16](QByteArray &out, quint32 value) {
+        u16(out, quint16(value & 0xffff));
+        u16(out, quint16(value >> 16));
+    };
+    for (const auto &[name, content] : files) {
+        const auto offset = quint32(data.size());
+        const auto path = name.toUtf8();
+        const auto size = quint32(content.size());
+        u32(data, 0x04034b50);
+        for (int i = 0; i < 5; ++i)
+            u16(data, 0); // version, flags, method (stored), time, date
+        u32(data, 0);     // CRC, not checked by the importer
+        u32(data, size);
+        u32(data, size);
+        u16(data, quint16(path.size()));
+        u16(data, 0);
+        data += path + content;
+        u32(central, 0x02014b50);
+        for (int i = 0; i < 6; ++i)
+            u16(central, 0); // versions, flags, method, time, date
+        u32(central, 0);
+        u32(central, size);
+        u32(central, size);
+        u16(central, quint16(path.size()));
+        for (int i = 0; i < 4; ++i)
+            u16(central, 0); // extra, comment, disk, internal attributes
+        u32(central, 0);
+        u32(central, offset);
+        central += path;
+    }
+    QByteArray end;
+    u32(end, 0x06054b50);
+    u16(end, 0);
+    u16(end, 0);
+    u16(end, quint16(files.size()));
+    u16(end, quint16(files.size()));
+    u32(end, quint32(central.size()));
+    u32(end, quint32(data.size()));
+    u16(end, 0);
+    return data + central + end;
+}
+
+QByteArray relationships(const QString &id, const QString &type, const QString &target) {
+    return QString(
+               R"(<Relationships><Relationship Id="%1" Type="http://x/relationships/%2" Target="%3"/></Relationships>)")
+        .arg(id, type, target)
+        .toUtf8();
+}
+
+// A one-slide presentation whose slide is listed `references` times.
+QByteArray presentation(const QString &slideTarget, const QString &notesTarget, int references = 1) {
+    QString ids;
+    for (int i = 0; i < references; ++i)
+        ids += R"(<p:sldId id="256" r:id="rId1"/>)";
+    const auto xml =
+        QString(R"(<p:presentation xmlns:p="p" xmlns:r="r"><p:sldIdLst>%1</p:sldIdLst></p:presentation>)").arg(ids);
+    const QByteArray notes =
+        R"(<p:notes xmlns:p="p" xmlns:a="a"><p:cSld><p:spTree><p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>Hello notes</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:notes>)";
+    return storedZip({{"ppt/presentation.xml", xml.toUtf8()},
+                      {"ppt/_rels/presentation.xml.rels", relationships("rId1", "slide", slideTarget)},
+                      {"ppt/slides/slide1.xml", "<p:sld xmlns:p=\"p\"/>"},
+                      {"ppt/slides/_rels/slide1.xml.rels", relationships("rId2", "notesSlide", notesTarget)},
+                      {"ppt/notesSlides/notesSlide1.xml", notes}});
 }
 } // namespace
 
@@ -110,6 +179,29 @@ private slots:
         QVERIFY(!result.text.contains("Slide 2")); // A slide without notes adds no section.
     }
 
+    void importsCraftedPresentationsSafely() {
+        // Normal relative targets.
+        auto result = ScriptImport::fromPptx(presentation("slides/slide1.xml", "../notesSlides/notesSlide1.xml"));
+        QCOMPARE(result.sections, 1);
+        QVERIFY(result.text.contains("Hello notes"));
+        // Absolute targets are relative to the package root.
+        result = ScriptImport::fromPptx(presentation("/ppt/slides/slide1.xml", "/ppt/notesSlides/notesSlide1.xml"));
+        QCOMPARE(result.sections, 1);
+        // Targets above the root are ignored instead of crashing.
+        result = ScriptImport::fromPptx(presentation("../../../../slides/slide1.xml", "../../../../../x.xml"));
+        QCOMPARE(result.sections, 0);
+        QVERIFY(!result.error.isEmpty());
+        // A slide listed many times is imported once.
+        result = ScriptImport::fromPptx(presentation("slides/slide1.xml", "../notesSlides/notesSlide1.xml", 40));
+        QCOMPARE(result.sections, 1);
+        // A huge space count in a tiny .odp stays small.
+        const QByteArray content =
+            R"(<office:document-content xmlns:office="o" xmlns:draw="d" xmlns:presentation="p" xmlns:text="t"><office:body><office:presentation><draw:page><presentation:notes><draw:frame><draw:text-box><text:p>A<text:s text:c="1000000000"/>B</text:p></draw:text-box></draw:frame></presentation:notes></draw:page></office:presentation></office:body></office:document-content>)";
+        result = ScriptImport::fromOdp(storedZip({{"content.xml", content}}));
+        QCOMPARE(result.sections, 1);
+        QVERIFY(result.text.size() < 1000);
+    }
+
     void rejectsDamagedPresentations() {
         QVERIFY(!ScriptImport::fromPptx("not a zip").error.isEmpty());
         QVERIFY(!ScriptImport::fromOdp(QByteArray(100, 'x')).error.isEmpty());
@@ -130,6 +222,12 @@ private slots:
         QCOMPARE(http(remote.port(), "GET", base + "command/next").first, 405);
         QCOMPARE(http(remote.port(), "POST", base + "command/rm").first, 404);
         QCOMPARE(commands.size(), 0);
+        // Another web page on the network cannot send commands through the browser.
+        QCOMPARE(http(remote.port(), "POST", base + "command/next", "Origin: http://evil.example\r\n").first, 403);
+        QCOMPARE(commands.size(), 0);
+        QCOMPARE(http(remote.port(), "POST", base + "command/next", "Origin: http://localhost\r\n").first, 204);
+        QTRY_COMPARE(commands.size(), 1);
+        commands.clear();
         QCOMPARE(http(remote.port(), "POST", base + "command/next").first, 204);
         QTRY_COMPARE(commands.size(), 1);
         QCOMPARE(commands.first().first().toString(), QString("next"));

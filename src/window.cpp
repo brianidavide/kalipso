@@ -320,8 +320,14 @@ MainWindow::MainWindow(const QString &libraryDirectory)
             return;
         }
         const bool wasLost = tracker_.lost();
+        const int before = tracker_.position();
         if (tracker_.follow(text, final)) {
-            session_.advance(tracker_.position(), QDateTime::currentMSecsSinceEpoch());
+            // A recovery jump is not reading pace; restart the measurement from there.
+            const auto now = QDateTime::currentMSecsSinceEpoch();
+            if (tracker_.position() - before > 10)
+                session_.rebase(tracker_.position(), now);
+            else
+                session_.advance(tracker_.position(), now);
             refreshReading();
         }
         if (final) {
@@ -396,7 +402,10 @@ void MainWindow::refreshLibrary() {
 void MainWindow::openScript(const QString &id) {
     if (id == currentId_ && !id.isEmpty())
         return;
-    saveScript();
+    if (!saveScript()) {
+        refreshLibrary(); // Keep the picker on the script that could not be saved.
+        return;
+    }
     if (running())
         pauseRunning();
     // Read the saved position first: loading the text refreshes the reading state.
@@ -416,21 +425,22 @@ void MainWindow::openScript(const QString &id) {
     seekWord(tracker_.position());
 }
 
-void MainWindow::saveScript() {
+bool MainWindow::saveScript() {
     autosave_.stop();
     if (!persist_ || currentId_.isEmpty())
-        return;
+        return true;
     const auto text = script_->toPlainText();
     if (text != library_.load(currentId_)) {
         if (!library_.save(currentId_, text)) {
             audioStatus_->setText(tr("Cannot save the script. Check the available disk space."));
-            return;
+            return false;
         }
         const int index = scripts_->findData(currentId_);
         if (index >= 0)
             scripts_->setItemText(index, ScriptLibrary::titleFor(text));
     }
     library_.flush();
+    return true;
 }
 
 void MainWindow::newScript() {
@@ -540,6 +550,8 @@ void MainWindow::showPrompter() {
 
 void MainWindow::seekWord(int word) {
     tracker_.seek(word);
+    if (session_.active())
+        session_.rebase(tracker_.position(), QDateTime::currentMSecsSinceEpoch());
     speech_.setScript(script_->toPlainText(), tracker_.position());
     waitForNewUtterance_ = speech_.active();
     refreshReading();
@@ -633,8 +645,7 @@ void MainWindow::changeSpeed(int delta) {
     wordsPerMinute_ = std::clamp(wordsPerMinute_ + delta, 40, 400);
     QSettings().setValue("reading/speed", wordsPerMinute_);
     prompter_->setSpeed(wordsPerMinute_);
-    if (steady_.isActive())
-        steady_.setInterval(60000 / wordsPerMinute_);
+    steady_.setInterval(60000 / wordsPerMinute_); // Also applies after a countdown.
     refreshReading();
 }
 
@@ -897,8 +908,9 @@ QWidget *MainWindow::makeReadingSettings() {
                              "Check the view from another participant before relying on it.")));
     } else {
         hiddenRow->deleteLater();
-        form->addRow(note(tr("Screen sharing may include the reader. On KDE Plasma, the optional Kalipso KWin "
-                             "script asks KWin to leave it out. Check the view from another participant.")));
+        form->addRow(note(tr("Screen sharing may include the reader. Share a single window instead of the whole "
+                             "screen, or on KDE Plasma 6.6 or later use Hide from Screencast in the reader's window "
+                             "menu (Alt+F3). Check the view from another participant.")));
     }
     return group;
 }
@@ -1144,9 +1156,11 @@ QWidget *MainWindow::makeRemoteSettings() {
     code->hide();
     remote_ = new RemoteControl(this);
     connect(remote_, &RemoteControl::command, this, [this](const QString &name) {
-        if (name == QLatin1String("toggle"))
-            toggleRunning();
-        else if (name == QLatin1String("next"))
+        if (name == QLatin1String("toggle")) {
+            // The microphone only ever runs with the reader visible.
+            if (running() || prompter_->isVisible())
+                toggleRunning();
+        } else if (name == QLatin1String("next"))
             seekWord(tracker_.position() + 1);
         else if (name == QLatin1String("previous"))
             seekWord(tracker_.position() - 1);
@@ -1231,7 +1245,13 @@ void MainWindow::saveSettings() {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-    saveScript();
+    if (!saveScript() &&
+        QMessageBox::warning(this, tr("Close without saving?"),
+                             tr("Your latest changes could not be saved. Close Kalipso anyway and lose them?"),
+                             QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Discard) {
+        event->ignore();
+        return;
+    }
     pauseRunning();
     prompter_->hide();
     saveSettings();

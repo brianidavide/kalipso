@@ -23,9 +23,9 @@ public:
 
     void start(int position, qint64 now) {
         active_ = true;
+        summary_ = {};
         startPosition_ = furthest_ = position;
         startedAt_ = lastAdvance_ = now;
-        summary_ = {};
     }
 
     void advance(int position, qint64 now) {
@@ -37,6 +37,15 @@ public:
             summary_.longestPauseMs = std::max(summary_.longestPauseMs, gap);
         }
         furthest_ = position;
+        lastAdvance_ = now;
+    }
+
+    // Continues measuring from a position reached by a jump, not by reading.
+    void rebase(int position, qint64 now) {
+        if (!active_)
+            return;
+        summary_.words += std::max(0, furthest_ - startPosition_);
+        startPosition_ = furthest_ = position;
         lastAdvance_ = now;
     }
 
@@ -52,7 +61,7 @@ public:
     Summary finish(qint64 now) {
         active_ = false;
         summary_.durationMs = std::max<qint64>(0, now - startedAt_);
-        summary_.words = std::max(0, furthest_ - startPosition_);
+        summary_.words += std::max(0, furthest_ - startPosition_);
         const double minutes = summary_.durationMs / 60000.0;
         summary_.wordsPerMinute = minutes > 0.05 ? summary_.words / minutes : 0;
         return summary_;

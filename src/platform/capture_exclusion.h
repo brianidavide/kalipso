@@ -3,8 +3,8 @@
 class QWidget;
 
 // Asks the window system to leave a window out of screen captures and shares.
-// Supported on Windows 10 2004+ and macOS. Capture tools that bypass the
-// system's capture APIs can still record the window.
+// Supported on Windows 10 version 2004 and later only. Capture tools that
+// bypass the system's capture APIs can still record the window.
 namespace CaptureExclusion {
 bool supported();
 // Returns true when the request was accepted by the window system.

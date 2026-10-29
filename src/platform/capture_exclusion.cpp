@@ -8,13 +8,15 @@
 #endif
 #endif
 
-#ifndef Q_OS_MACOS
 namespace CaptureExclusion {
 bool supported() {
 #ifdef Q_OS_WIN
     return true;
 #else
-    return false; // X11 has no exclusion; on KDE Wayland use the KWin script.
+    // macOS: Apple documents NSWindowSharingNone as a legacy value that must not
+    // be used to hide content, and ScreenCaptureKit-based apps capture it anyway.
+    // X11 has no exclusion; on KDE Plasma 6.6+ KWin offers "Hide from Screencast".
+    return false;
 #endif
 }
 
@@ -32,4 +34,3 @@ bool apply(QWidget *window, bool exclude) {
 #endif
 }
 } // namespace CaptureExclusion
-#endif

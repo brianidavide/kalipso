@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QSet>
 #include <QStringDecoder>
 #include <QXmlStreamReader>
 #include <QtEndian>
@@ -16,6 +17,8 @@ extern "C" {
 namespace {
 constexpr qint64 kMaxFile = 200 * 1024 * 1024;
 constexpr quint32 kMaxEntry = 64 * 1024 * 1024;
+constexpr qint64 kMaxInflated = 256 * 1024 * 1024; // Per archive, against decompression bombs.
+constexpr qsizetype kMaxText = 2 * 1024 * 1024;    // Same limit as text files.
 
 // Reads stored and deflated members of a ZIP archive (no ZIP64, no encryption).
 class ZipArchive {
@@ -39,8 +42,9 @@ public:
         if (entry.method == 0)
             return entry.compressed == entry.size ? QByteArray(reinterpret_cast<const char *>(source), entry.size)
                                                   : QByteArray();
-        if (entry.method != 8 || entry.size > kMaxEntry)
+        if (entry.method != 8 || entry.size > kMaxEntry || inflated_ + entry.size > kMaxInflated)
             return {};
+        inflated_ += entry.size;
         QByteArray output(qsizetype(entry.size), Qt::Uninitialized);
         unsigned long outputSize = entry.size, sourceSize = entry.compressed;
         const int status = puff(reinterpret_cast<unsigned char *>(output.data()), &outputSize, source, &sourceSize);
@@ -85,6 +89,7 @@ private:
 
     const QByteArray &data_;
     QHash<QString, Entry> entries_;
+    mutable qint64 inflated_ = 0;
     bool valid_ = false;
 };
 
@@ -96,14 +101,21 @@ QString attribute(const QXmlStreamReader &xml, QStringView name, bool namespaced
 }
 
 // Resolves "../notesSlides/notesSlide1.xml" relative to "ppt/slides/slide1.xml".
+// Targets starting with "/" are relative to the package root. Returns an empty
+// path for targets that climb above the root.
 QString resolve(const QString &from, const QString &target) {
+    if (target.startsWith(u'/'))
+        return target.mid(1);
     auto parts = from.split(u'/');
     parts.removeLast();
     for (const auto &part : target.split(u'/')) {
-        if (part == QLatin1String(".."))
+        if (part == QLatin1String("..")) {
+            if (parts.isEmpty())
+                return {};
             parts.removeLast();
-        else if (part != QLatin1String("."))
+        } else if (part != QLatin1String(".")) {
             parts.append(part);
+        }
     }
     return parts.join(u'/');
 }
@@ -199,7 +211,7 @@ QString odfParagraph(QXmlStreamReader &xml) {
         if (xml.isStartElement()) {
             ++depth;
             if (xml.name() == QLatin1String("s"))
-                text += QString(std::max(1, attribute(xml, u"c", true).toInt()), u' ');
+                text += QString(std::clamp(attribute(xml, u"c", true).toInt(), 1, 100), u' ');
             else if (xml.name() == QLatin1String("tab"))
                 text += u'\t';
             else if (xml.name() == QLatin1String("line-break"))
@@ -209,6 +221,8 @@ QString odfParagraph(QXmlStreamReader &xml) {
         } else if (xml.isCharacters()) {
             text += xml.text();
         }
+        if (text.size() > kMaxText)
+            break;
     }
     return text;
 }
@@ -260,9 +274,11 @@ Result fromPptx(const QByteArray &archive) {
             order.append(slides.value(attribute(xml, u"id", true)));
     }
     Result result;
-    for (int i = 0; i < order.size(); ++i) {
-        if (order[i].isEmpty())
+    QSet<QString> seen;
+    for (int i = 0; i < order.size() && result.text.size() <= kMaxText; ++i) {
+        if (order[i].isEmpty() || seen.contains(order[i]))
             continue;
+        seen.insert(order[i]);
         const auto notesPart = relationships(zip, order[i], "/notesSlide");
         if (notesPart.isEmpty())
             continue;
@@ -273,6 +289,8 @@ Result fromPptx(const QByteArray &archive) {
         result.text += (result.text.isEmpty() ? QString() : QStringLiteral("\n")) + section(i + 1, title, notes);
         ++result.sections;
     }
+    if (result.text.size() > kMaxText)
+        return {{}, QCoreApplication::translate("ScriptImport", "These speaker notes are too long to import."), 0};
     if (!result.sections)
         result.error = QCoreApplication::translate("ScriptImport", "This presentation has no speaker notes.");
     return result;
@@ -299,7 +317,8 @@ Result fromOdp(const QByteArray &archive) {
             ++result.sections;
         }
     };
-    while (!xml.atEnd()) {
+    qsizetype collected = 0;
+    while (!xml.atEnd() && collected <= kMaxText) {
         xml.readNext();
         const auto name = xml.name();
         if (xml.isStartElement()) {
@@ -313,6 +332,7 @@ Result fromOdp(const QByteArray &archive) {
                 inTitle = attribute(xml, u"class", true) == QLatin1String("title");
             } else if (name == QLatin1String("p") || name == QLatin1String("h")) {
                 const auto paragraph = odfParagraph(xml);
+                collected += paragraph.size();
                 if (inNotes)
                     notes.append(paragraph);
                 else if (inTitle)
@@ -327,8 +347,12 @@ Result fromOdp(const QByteArray &archive) {
                 finishPage();
         }
     }
+    if (collected > kMaxText)
+        return {{}, QCoreApplication::translate("ScriptImport", "These speaker notes are too long to import."), 0};
     if (xml.hasError())
         return {{}, QCoreApplication::translate("ScriptImport", "This presentation could not be read."), 0};
+    if (result.text.size() > kMaxText)
+        return {{}, QCoreApplication::translate("ScriptImport", "These speaker notes are too long to import."), 0};
     if (!result.sections)
         result.error = QCoreApplication::translate("ScriptImport", "This presentation has no speaker notes.");
     return result;

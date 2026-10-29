@@ -27,6 +27,7 @@ signals:
 
 private:
     void serve(class QTcpSocket *socket);
+    int connections_ = 0; // Declared first: sockets owned by server_ update it when destroyed.
     QTcpServer server_;
     QString token_;
     QJsonObject state_;

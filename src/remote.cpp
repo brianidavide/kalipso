@@ -11,6 +11,7 @@
 
 namespace {
 constexpr qsizetype kMaxRequest = 8192;
+constexpr int kMaxConnections = 16;
 const QStringList kCommands{"toggle", "next", "previous", "faster", "slower", "reset"};
 
 // The remote page. Inline script is avoided so a strict CSP can apply.
@@ -53,6 +54,7 @@ refresh();setInterval(refresh,1500);
 QByteArray response(int status, const QByteArray &type, const QByteArray &body) {
     const QByteArray reason = status == 200   ? "OK"
                               : status == 204 ? "No Content"
+                              : status == 403 ? "Forbidden"
                               : status == 405 ? "Method Not Allowed"
                                               : "Not Found";
     return "HTTP/1.1 " + QByteArray::number(status) + " " + reason + "\r\n" + "Content-Type: " + type +
@@ -66,10 +68,18 @@ QByteArray response(int status, const QByteArray &type, const QByteArray &body) 
 } // namespace
 
 RemoteControl::RemoteControl(QObject *parent) : QObject(parent) {
-    server_.setMaxPendingConnections(16);
+    server_.setMaxPendingConnections(kMaxConnections);
     connect(&server_, &QTcpServer::newConnection, this, [this] {
-        while (auto *socket = server_.nextPendingConnection())
+        while (auto *socket = server_.nextPendingConnection()) {
+            if (connections_ >= kMaxConnections) {
+                socket->abort();
+                socket->deleteLater();
+                continue;
+            }
+            ++connections_;
+            connect(socket, &QObject::destroyed, this, [this] { --connections_; });
             serve(socket);
+        }
     });
 }
 
@@ -79,7 +89,8 @@ bool RemoteControl::start(quint16 port) {
         return QString::number(QRandomGenerator::system()->generate64(), 16).rightJustified(16, u'0');
     };
     token_ = random() + random();
-    return server_.listen(QHostAddress::Any, port);
+    // IPv4 only: global IPv6 addresses could expose the remote beyond the local network.
+    return server_.listen(QHostAddress::AnyIPv4, port);
 }
 
 void RemoteControl::stop() {
@@ -111,10 +122,23 @@ void RemoteControl::serve(QTcpSocket *socket) {
                 socket->abort();
             return;
         }
-        const auto line = buffer->left(buffer->indexOf("\r\n")).split(' ');
+        const auto lines = buffer->left(end).split('\n');
+        const auto line = lines.first().trimmed().split(' ');
+        QByteArray host, origin;
+        for (const auto &header : lines.mid(1)) {
+            const int colon = int(header.indexOf(':'));
+            const auto name = header.left(colon).trimmed().toLower();
+            if (name == "host")
+                host = header.mid(colon + 1).trimmed();
+            else if (name == "origin")
+                origin = header.mid(colon + 1).trimmed();
+        }
         socket->disconnect(this);
         QByteArray reply = response(404, "text/plain", "Not found");
-        if (line.size() == 3 && !token_.isEmpty()) {
+        // Browsers send Origin with every POST: refuse commands from other web pages.
+        if (!origin.isEmpty() && origin != "http://" + host) {
+            reply = response(403, "text/plain", "Forbidden");
+        } else if (line.size() == 3 && !token_.isEmpty()) {
             const auto method = line[0];
             const auto path = QString::fromLatin1(line[1]);
             const auto prefix = "/" + token_ + "/";
