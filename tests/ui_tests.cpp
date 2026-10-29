@@ -16,9 +16,9 @@
 #include <QStandardPaths>
 #include <QTabWidget>
 #include <QTemporaryDir>
+#include <QTextBlock>
 #include <QToolButton>
 #include <QWheelEvent>
-#include <QTextBlock>
 #include <QtTest>
 
 namespace {
@@ -413,6 +413,7 @@ private slots:
         QTest::qWait(30);
         QVERIFY(settingsScroll->horizontalScrollBar()->maximum() > 0); // Detects the nested-overflow regression.
         settingsScroll->widget()->setMinimumWidth(minimum);
+        QTRY_COMPARE(settingsScroll->horizontalScrollBar()->maximum(), 0); // And back, before any screenshot.
         if (const auto directory = qEnvironmentVariable("KALIPSO_A11Y_SHOTS"); !directory.isEmpty()) {
             QDir().mkpath(directory);
             window.grab().save(directory + "/qt-editor-320-200.png");
