@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
+#include <QHostAddress>
 #include <QImage>
 #include <QJsonObject>
 #include <QObject>
@@ -12,10 +13,18 @@ class RemoteControl : public QObject {
     Q_OBJECT
 public:
     explicit RemoteControl(QObject *parent = nullptr);
-    bool start(quint16 port = 0);
+    struct Network {
+        QString name; // Interface, e.g. "wlp2s0".
+        QHostAddress address;
+        bool likelyVirtual; // Containers, VMs, VPNs: listed last, never the default.
+    };
+    // Local IPv4 networks a phone could reach, physical ones first.
+    static QList<Network> networks();
+    // Listens only on this address. A port of 0, or one already taken, picks a free port.
+    bool start(const QHostAddress &address = QHostAddress::AnyIPv4, quint16 port = 0);
     void stop();
     bool active() const { return server_.isListening(); }
-    QString url() const; // First LAN address, or loopback.
+    QString url() const; // The listening address (or the first network) with the secret path.
     QString token() const { return token_; }
     quint16 port() const { return server_.serverPort(); }
     void setState(const QJsonObject &state) { state_ = state; }

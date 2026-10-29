@@ -95,6 +95,26 @@ private slots:
             QCOMPARE(nonLatin(), QString(language) == "en-US" ? 0 : 1);
         }
     }
+    void fallingBehindSkipsAudioUnlessItKeepsHappening() {
+        CatchUpPolicy policy;
+        QCOMPARE(policy.overloaded(0), CatchUpPolicy::Skip);
+        QCOMPARE(policy.overloaded(70000), CatchUpPolicy::Skip); // The first spike has left the window.
+        QCOMPARE(policy.overloaded(90000), CatchUpPolicy::Skip);
+        QCOMPARE(policy.overloaded(100000), CatchUpPolicy::Stop); // Three within a minute: too slow.
+        policy.reset();
+        QCOMPARE(policy.overloaded(100500), CatchUpPolicy::Skip);
+        // Skipped chunks are counted as consumed without reaching the recognizer.
+        auto epoch = std::make_shared<std::atomic<quint64>>(0);
+        auto skip = std::make_shared<std::atomic<quint64>>(5);
+        SpeechWorker worker(epoch, skip);
+        QSignalSpy consumed(&worker, &SpeechWorker::consumed);
+        worker.consume(QByteArray(6400, 0), 0, 4);
+        QCOMPARE(consumed.size(), 1);
+        QCOMPARE(consumed.first().at(2).toBool(), true);
+        worker.consume(QByteArray(6400, 0), 0, 5);
+        QCOMPARE(consumed.last().at(2).toBool(), false);
+    }
+
     void cancelledAudioProducesNoTranscript() {
         auto epoch = std::make_shared<std::atomic<quint64>>(2);
         SpeechWorker worker(epoch);

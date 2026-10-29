@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "speech.h"
 #include "system_speech/grammar.h"
+#include <QDateTime>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -99,7 +100,11 @@ bool SpeechWorker::loadVosk(const SpeechRequest &request, quint64 generation) {
     return true;
 }
 
-void SpeechWorker::consume(const QByteArray &pcm, quint64 generation) {
+void SpeechWorker::consume(const QByteArray &pcm, quint64 generation, quint64 sequence) {
+    if (sequence < skipBefore_->load()) {
+        emit consumed(int(pcm.size()), generation, true);
+        return;
+    }
     const bool live = generation == generation_ && current(generation);
     if (live && backend_ == QLatin1String("moonshine")) {
         QList<MoonshineRecognizer::Event> events;
@@ -119,10 +124,10 @@ void SpeechWorker::consume(const QByteArray &pcm, quint64 generation) {
             emit transcript(data.value(result ? "text" : "partial").toString(), result != 0, generation);
         }
     }
-    emit consumed(int(pcm.size()), generation);
+    emit consumed(int(pcm.size()), generation, false);
 }
 
-SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new SpeechWorker(epoch_)) {
+SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new SpeechWorker(epoch_, skipBefore_)) {
     connect(&system_, &SystemSpeechClient::ready, this, [this] {
         if (active_ && systemMode_)
             captureReady();
@@ -152,9 +157,9 @@ SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new Spe
         if (active_ && generation == generation_)
             emit transcript(text, final);
     });
-    connect(worker_, &SpeechWorker::consumed, this, [this](int bytes, quint64 generation) {
-        if (generation == generation_)
-            queued_ -= bytes;
+    connect(worker_, &SpeechWorker::consumed, this, [this](int bytes, quint64 generation, bool skipped) {
+        if (generation == generation_ && !skipped) // Skipped audio left the count when it was skipped.
+            queued_ = std::max(0, queued_ - bytes);
     });
     thread_.start(QThread::LowPriority);
 }
@@ -168,6 +173,7 @@ SpeechService::~SpeechService() {
 }
 
 void SpeechService::start(const SpeechRequest &request) {
+    catchUp_.reset();
     stop();
     if (request.backend == QLatin1String("system")) {
         if (!SystemSpeechClient::platformSupported()) {
@@ -177,7 +183,7 @@ void SpeechService::start(const SpeechRequest &request) {
         systemMode_ = true;
         active_ = true;
         emit status(tr("Starting on-device system speech…"));
-        system_.start(request.language, scriptPhrases(script_, scriptPosition_));
+        system_.start(request.language, scriptPhrases(script_, scriptPosition_, commands_));
         return;
     }
     if (request.backend != QLatin1String("moonshine") && request.backend != QLatin1String("vosk")) {
@@ -226,6 +232,16 @@ void SpeechService::start(const SpeechRequest &request) {
     QMetaObject::invokeMethod(worker_, [worker = worker_, request, generation] { worker->load(request, generation); });
 }
 
+void SpeechService::setCommandPhrases(const QStringList &phrases) {
+    if (commands_ == phrases)
+        return;
+    commands_ = phrases;
+#ifdef Q_OS_WIN
+    if (active_ && systemMode_)
+        system_.updateScript(scriptPhrases(script_, scriptPosition_, commands_));
+#endif
+}
+
 void SpeechService::setScript(const QString &script, int position) {
     if (script_ == script && scriptPosition_ == position)
         return;
@@ -233,7 +249,7 @@ void SpeechService::setScript(const QString &script, int position) {
     scriptPosition_ = position;
 #ifdef Q_OS_WIN
     if (active_ && systemMode_)
-        system_.updateScript(scriptPhrases(script_, scriptPosition_));
+        system_.updateScript(scriptPhrases(script_, scriptPosition_, commands_));
 #endif
 }
 
@@ -283,15 +299,24 @@ void SpeechService::queueAudio(const QByteArray &pcm) {
         return;
     buffer_.append(pcm);
     if (buffer_.size() + queued_ > kMaxBacklogBytes) {
-        fail(tr("Recognition cannot keep up. Listening stopped; try a smaller model."));
+        if (catchUp_.overloaded(QDateTime::currentMSecsSinceEpoch()) == CatchUpPolicy::Stop) {
+            fail(tr("Recognition cannot keep up on this computer. Listening stopped; try a smaller model."));
+            return;
+        }
+        // Skip what is waiting and follow from the next words; the reading position stays.
+        skipBefore_->store(sequence_);
+        queued_ = 0;
+        buffer_.clear();
+        emit status(tr("Catching up: a moment of audio was skipped. Following continues."));
         return;
     }
     while (buffer_.size() >= kChunkBytes) {
         const auto data = buffer_.first(kChunkBytes);
         buffer_.remove(0, kChunkBytes);
         queued_ += kChunkBytes;
-        QMetaObject::invokeMethod(
-            worker_, [worker = worker_, data, generation = generation_] { worker->consume(data, generation); });
+        QMetaObject::invokeMethod(worker_, [worker = worker_, data, generation = generation_, sequence = sequence_++] {
+            worker->consume(data, generation, sequence);
+        });
     }
 }
 
