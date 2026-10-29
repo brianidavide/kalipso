@@ -122,7 +122,7 @@
   --site-night-line: #2C2E35;
   --site-night-control: #6B6F78;
   --site-amber-night: #F5B24A;
-  --site-font-display: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --site-font-display: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
   --site-font-body: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
   --site-font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
   --site-text-small: 0.875rem;
