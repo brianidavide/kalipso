@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Saved per widget instance, so the script and reading position survive restarts. -->
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="script" type="String">
+      <default>A little preparation makes room for a better conversation. [smile]
+
+Take your time. Leave space for a pause. Your next words will be here when you are ready.</default>
+    </entry>
+    <entry name="position" type="Int"><default>-1</default></entry>
+    <entry name="readerSize" type="Int"><default>26</default></entry>
+    <entry name="appearance" type="String"><default>auto</default></entry>
+    <entry name="mode" type="String"><default>manual</default></entry>
+    <entry name="speed" type="Int"><default>140</default></entry>
+    <entry name="mirror" type="String"><default>none</default></entry>
+  </group>
+</kcfg>

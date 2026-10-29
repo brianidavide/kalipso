@@ -1,23 +1,24 @@
-# Install Kalipso for your desktop
+# Install the Plasma widget or GNOME extension
 
-Build the source archives from the repository root:
+From a clone of the repository, build both archives:
 
 ```sh
-python3 tools/generate-design-tokens.py
+git clone https://github.com/brianidavide/kalipso.git
+cd kalipso
 python3 desktop/package.py
 ```
 
-## KDE Plasma
+The archives are written to `artifacts/packages/`.
 
-Use “Install Widget From Local File” in the widget chooser, or:
+## KDE Plasma 6
+
+Use **Install Widget From Local File** in the widget chooser, or:
 
 ```sh
 kpackagetool6 --type Plasma/Applet --install artifacts/packages/kalipso-plasma.plasmoid
 ```
 
-For an existing Kalipso installation, use `--upgrade` instead of `--install`. Add **Kalipso** and position the widget near your webcam. The desktop host controls its placement.
-
-To uninstall:
+Use `--upgrade` instead of `--install` to update an existing installation. Add **Kalipso** to the desktop or a panel and place it near your webcam. To uninstall:
 
 ```sh
 kpackagetool6 --type Plasma/Applet --remove io.github.brianidavide.kalipso
@@ -29,29 +30,27 @@ kpackagetool6 --type Plasma/Applet --remove io.github.brianidavide.kalipso
 gnome-extensions install --force artifacts/packages/kalipso-gnome.zip
 ```
 
-Log out and back in, then enable the extension:
+Log out and back in, then enable it:
 
 ```sh
 gnome-extensions enable kalipso@brianidavide.github.io
 ```
 
-The panel play icon shows or hides the reader. Hiding or disabling it stops its microphone session. Other Shell versions are not yet declared in the metadata.
-
-To uninstall:
+The play icon in the top bar shows or hides the reader. The extension declares GNOME Shell 48, the version it is tested with; GNOME refuses to enable it on other versions. To uninstall:
 
 ```sh
-gnome-extensions disable kalipso@brianidavide.github.io
 gnome-extensions uninstall kalipso@brianidavide.github.io
 ```
 
-## Reading and editing
+## Using the reader
 
-Start in **Manual**, open **Edit script**, and paste your text. Changes appear immediately. **Next words** and **Previous** move through the script; **Reset** returns to the beginning. Keep a separate copy: the script lasts for the current session.
+- **Edit script** to paste or write your text. It is saved automatically, with your reading position, and comes back after a restart.
+- `[Bracketed cues]` are shown in italics but never read by voice following. Lines starting with `#` are sections: use **Sections** (Plasma) or **‹ Section / Section ›** (GNOME) to jump between them.
+- **Settings** chooses how the reader advances:
+  - **Manual**: **Next words** and **Previous** move four words; **Reset** returns to the start.
+  - **Steady speed**: scrolls word by word at the chosen words per minute.
+  - **Follow my voice**: needs the [local speech companion and a language model](../docs/local-engine.md). Choosing Moonshine or Vosk does not install them.
+- **Mirror** flips the text for beam-splitter teleprompter glass.
+- Keys (for foot pedals and clickers): arrows or Page Up/Down step, Space starts or pauses, + and − change the steady speed, Home returns to the start.
 
-For voice following, install the [local speech companion and a language model](../docs/local-engine.md), choose **Settings → Follow my voice**, select **Moonshine** or **Vosk**, and press **Start listening**. Pause releases capture and keeps your place. Stop before changing engines. Choosing an engine in Settings does not install it.
-
-These are development packages, not store releases. Check screen sharing from another participant: the reader may be visible.
-
-## Earlier development installations
-
-Disable and remove earlier development widgets/extensions before enabling Kalipso; the new application has its own package identifiers. The companion imports an existing speech configuration on first use when its new configuration is empty. Existing model paths are preserved. Removing a frontend does not remove the companion or models.
+Hiding the reader stops the microphone. The reader can appear in screen sharing; check what other participants see.

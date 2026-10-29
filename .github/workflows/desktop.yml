@@ -21,12 +21,19 @@ jobs:
           node-version: ${{ steps.versions.outputs.node }}
       - name: Check shared tracker
         run: |
+          python3 tools/sync-shared.py --check
           node desktop/tracker.test.mjs
           node tests/contrast.test.mjs
+      - name: Install QML and GJS engines
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gjs qml6-module-qttest qml6-module-qtquick qt6-declarative-dev-tools
+      - name: Run the tracker in the Plasma (QML) and GNOME (GJS) engines
+        run: python3 tests/script_runtimes.py /usr/lib/qt6/bin/qmltestrunner "$(command -v gjs)"
       - name: Check laboratory scripts
         run: |
-          python3 -m py_compile desktop/*.py tests/desktop/*.py
-          bash -n tests/desktop/audio-session.sh tests/desktop/desktop.sh
+          python3 -m py_compile desktop/*.py tests/*.py tests/fixtures/*.py
+          bash -n desktop/install-gnome.sh tests/desktop/audio-session.sh tests/desktop/desktop.sh
       - name: Package desktop frontends
         run: python3 desktop/package.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

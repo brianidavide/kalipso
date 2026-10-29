@@ -157,6 +157,23 @@ if(BUILD_TESTING)
     set_tests_properties(ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
   endif()
 
+  # Frontend JavaScript: Node for logic, and the real QML (Plasma) and GJS (GNOME) engines.
+  find_program(NODE_EXECUTABLE node)
+  if(NODE_EXECUTABLE)
+    add_test(NAME tracker_js COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/desktop/tracker.test.mjs)
+    add_test(NAME contrast_js COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/contrast.test.mjs)
+  endif()
+  find_program(QMLTESTRUNNER qmltestrunner
+    HINTS "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}" "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_LIBEXECS}" /usr/lib/qt6/bin)
+  find_program(GJS_EXECUTABLE gjs)
+  if(Python3_Interpreter_FOUND AND QMLTESTRUNNER AND GJS_EXECUTABLE)
+    add_test(NAME frontend_runtimes COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/script_runtimes.py
+      ${QMLTESTRUNNER} ${GJS_EXECUTABLE})
+  endif()
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME shared_modules COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/sync-shared.py --check)
+  endif()
+
   add_executable(speech_probe benchmarks/speech_probe.cpp)
   target_link_libraries(speech_probe PRIVATE kalipso_speech)
 
