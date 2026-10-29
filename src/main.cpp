@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
     parser.addOptions({
         {"demo", "Show a sample script without changing your saved scripts."},
         {"prompter", "Show the reading window at startup."},
+        {"steady", "Start steady scrolling in the reader at startup (demonstrations, measurements)."},
         {"quit-after", "Exit after the given milliseconds (smoke tests).", "milliseconds"},
         {"screenshot", "Save sample screenshots to a directory, then exit.", "directory"},
     });
@@ -42,8 +43,10 @@ int main(int argc, char **argv) {
     if (parser.isSet("demo") || parser.isSet("screenshot"))
         window.setDemoScript();
     window.show();
-    if (parser.isSet("prompter"))
+    if (parser.isSet("prompter") || parser.isSet("steady"))
         window.showPrompter();
+    if (parser.isSet("steady"))
+        window.startSteadyScrolling();
     if (parser.isSet("quit-after")) {
         bool ok = false;
         const int delay = parser.value("quit-after").toInt(&ok);

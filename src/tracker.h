@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
+#include <QHash>
 #include <QString>
 #include <QVector>
 
@@ -53,6 +54,7 @@ private:
 
     QString script_, lastHypothesis_;
     QVector<Word> words_;
+    QHash<QString, QVector<int>> occurrences_; // Word -> indexes, for whole-script recovery.
     int position_ = -1;
     int misses_ = 0;
 };

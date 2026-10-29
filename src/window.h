@@ -24,6 +24,8 @@ public:
 
     void showPrompter();
     void setDemoScript();
+    // Starts steady scrolling immediately, without changing the saved mode.
+    void startSteadyScrolling();
     ReaderWindow *prompter() const { return prompter_; }
     QString currentScript() const { return currentId_; }
 

@@ -63,6 +63,7 @@ export class Tracker {
         this.position = -1;
         this.last = '';
         this.misses = 0;
+        this.occurrences = new Map();
         this.setText(text);
     }
 
@@ -83,6 +84,11 @@ export class Tracker {
         const started = this.position >= 0;
         this.text = text;
         this.words = this.tokenize(text);
+        this.occurrences = new Map(); // Word -> indexes, for whole-script recovery.
+        this.words.forEach((word, index) => {
+            if (!this.occurrences.has(word.word)) this.occurrences.set(word.word, []);
+            this.occurrences.get(word.word).push(index);
+        });
         this.position = -1;
         this.last = '';
         this.misses = 0;
@@ -139,10 +145,19 @@ export class Tracker {
     }
 
     // Recovers after long skips or backtracking; only an unambiguous strong match.
+    // A valid match contains one of the (m - minimumExact + 1) rarest spoken
+    // words, so only alignments starting just before their occurrences are checked.
     globalMatch(spoken) {
         const m = spoken.length, minimumExact = Math.max(4, m - Math.floor(m / 4));
+        const rare = spoken.map(word => this.occurrences.get(word.word)).filter(Boolean)
+            .sort((a, b) => a.length - b.length);
+        if (rare.length < minimumExact) return -1;
+        const starts = new Set();
+        for (const positions of rare.slice(0, m - minimumExact + 1))
+            for (const position of positions)
+                for (let start = Math.max(0, position - m - 1); start <= position; start++) starts.add(start);
         let bestEdits = Infinity, ends = [];
-        for (let start = 0; start < this.words.length; start++)
+        for (const start of [...starts].sort((a, b) => a - b))
             this.align(spoken, start, this.words.length, (n, edits) => {
                 if (n < m - 1 || edits > Math.floor(m / 4) || edits > bestEdits ||
                     this.exactMatches(spoken, start, n) < minimumExact) return;
