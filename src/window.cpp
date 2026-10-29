@@ -787,7 +787,13 @@ void MainWindow::seekWord(int word) {
 void MainWindow::refreshReading() {
     // The status depends on the position (time left), so it is refreshed here too.
     prompter_->setRunning(running(), statusText());
-    prompter_->highlight(tracker_.character(), tracker_.length());
+    // Before the first word, the reading line shows where the script starts: after any front
+    // matter, which is metadata and never read.
+    int anchor = tracker_.character();
+    if (tracker_.position() < 0)
+        if (const int meta = ScriptTracker::frontMatter(scriptText_).length; meta > 0)
+            anchor = std::min(int(scriptText_.size()), meta + 1);
+    prompter_->highlight(anchor, tracker_.length());
     prompter_->setProgress(tracker_.position() + 1, tracker_.count());
     if (persist_ && !currentId_.isEmpty())
         library_.setPosition(currentId_, tracker_.position() >= 0 ? tracker_.character() : -1);

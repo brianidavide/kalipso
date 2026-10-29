@@ -74,6 +74,8 @@ public:
 
     void showOn(QScreen *screen);
     void highlight(int position, int length);
+    // Character at the reading line (the current word, or where reading starts).
+    int anchor() const { return position_; }
     void setTextSize(int points);
     // Empty: the interface font. Any installed family, e.g. one designed for dyslexia.
     void setTextFont(const QString &family);
