@@ -346,6 +346,28 @@ private slots:
         QCOMPARE(summary.longPauses, 1);
         QCOMPARE(summary.longestPauseMs, 7000);
         QCOMPARE(summary.fillers, 2);
+        QCOMPARE(summary.pauses.size(), 1);
+        QCOMPARE(summary.pauses.first().position, 9); // The pause came after word 10.
+    }
+
+    void sessionReportShowsSectionsAndPauses() {
+        QStringList intro, main;
+        for (int i = 0; i < 10; ++i) {
+            intro << QString("intro%1").arg(i);
+            main << QString("main%1").arg(i);
+        }
+        const auto script = "# Intro\n" + intro.join(' ') + "\n# Main | part\n" + main.join(' ');
+        SessionStats stats;
+        stats.start(-1, 0);
+        stats.advance(9, 2000);  // Intro read in 2 s.
+        stats.advance(19, 9000); // Main after a 7 s pause.
+        const auto report = SessionStats::report(stats.finish(9000), script, "Launch", QDateTime::currentDateTime());
+        QVERIFY2(report.startsWith("# Session report: Launch\n"), qPrintable(report));
+        QVERIFY(report.contains("- Words read: 20"));
+        QVERIFY(report.contains("- Pauses over 3 s: 1 (longest 0:07)"));
+        QVERIFY2(report.contains("| Intro | 0:02 | 10 | 300 |"), qPrintable(report));
+        QVERIFY2(report.contains("| Main / part | 0:07 | 10 | 86 |"), qPrintable(report)); // "|" kept out of cells.
+        QVERIFY2(report.contains("- 0:07 after “…intro4 intro5 intro6 intro7 intro8 intro9”"), qPrintable(report));
     }
 };
 

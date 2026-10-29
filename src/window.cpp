@@ -478,6 +478,9 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     import->setToolTip(tr("Text, Markdown, Word (.docx) and OpenDocument (.odt) documents, or speaker notes from "
                           "PowerPoint (.pptx) and Impress (.odp)"));
     auto *exportAction = menu->addAction(tr("Export…"));
+    reportAction_ = menu->addAction(tr("Save session report…"));
+    reportAction_->setObjectName("saveSessionReport");
+    reportAction_->setEnabled(false); // Available after a voice session.
     menu->addSeparator();
     auto *remove = menu->addAction(tr("Delete script…"));
     more->setMenu(menu);
@@ -489,6 +492,26 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     connect(import, &QAction::triggered, this, &MainWindow::importScript);
     connect(exportAction, &QAction::triggered, this, &MainWindow::exportScript);
     connect(remove, &QAction::triggered, this, &MainWindow::deleteScript);
+    connect(reportAction_, &QAction::triggered, this, [this] {
+        const auto path = QFileDialog::getSaveFileName(
+            this, tr("Save session report"), tr("%1 - session.md").arg(ScriptLibrary::titleFor(lastSessionScript_)),
+            tr("Markdown (*.md);;Text (*.txt)"));
+        if (!path.isEmpty())
+            saveSessionReport(path);
+    });
+}
+
+bool MainWindow::saveSessionReport(const QString &path) {
+    const auto report = SessionStats::report(lastSession_, lastSessionScript_,
+                                             ScriptLibrary::titleFor(lastSessionScript_), lastSessionAt_);
+    QSaveFile file(path);
+    const auto data = report.toUtf8();
+    if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) {
+        QMessageBox::warning(this, tr("Cannot save the report"), tr("Check the destination and available disk space."));
+        return false;
+    }
+    audioStatus_->setText(tr("Session report saved to %1.").arg(QDir::toNativeSeparators(path)));
+    return true;
 }
 
 void MainWindow::applyTheme() {
@@ -853,6 +876,10 @@ void MainWindow::finishSession() {
     if (summary.fillers)
         text += " · " + tr("%n filler word(s) recognized", nullptr, summary.fillers);
     audioStatus_->setText(text);
+    lastSession_ = summary;
+    lastSessionScript_ = script_->toPlainText();
+    lastSessionAt_ = QDateTime::currentDateTime();
+    reportAction_->setEnabled(true);
 }
 
 // --- Settings ---------------------------------------------------------------
