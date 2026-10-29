@@ -61,7 +61,7 @@ public:
         for (int i = 0; i < count(); ++i)
             text = std::max(text, fontMetrics().horizontalAdvance(itemText(i)));
         const int room = fontMetrics().averageCharWidth();
-        size.setWidth(std::clamp(text + 64, room * 20, room * 40));
+        size.setWidth(std::clamp(text + 84, room * 20, room * 44));
         return size;
     }
 };
@@ -669,6 +669,8 @@ void MainWindow::seekWord(int word) {
 }
 
 void MainWindow::refreshReading() {
+    // The status depends on the position (time left), so it is refreshed here too.
+    prompter_->setRunning(running(), statusText());
     prompter_->highlight(tracker_.character(), tracker_.length());
     prompter_->setProgress(tracker_.position() + 1, tracker_.count());
     if (persist_ && !currentId_.isEmpty())
@@ -758,7 +760,7 @@ void MainWindow::changeSpeed(int delta) {
     refreshReading();
 }
 
-void MainWindow::refreshRunning() {
+QString MainWindow::statusText() const {
     const bool active = running();
     QString status;
     switch (mode_) {
@@ -782,9 +784,10 @@ void MainWindow::refreshRunning() {
                                            : speechStatus_;
         break;
     }
-    prompter_->setRunning(active, status);
-    refreshReading();
+    return status;
 }
+
+void MainWindow::refreshRunning() { refreshReading(); }
 
 void MainWindow::startListening() {
     saveSettings();
