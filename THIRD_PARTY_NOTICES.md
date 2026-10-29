@@ -23,3 +23,9 @@ catalog and component notices, standard license texts, and SDK SBOM files when
 provided by the installed Qt package. The catalog covers more components than
 Kalipso ships; only the licenses of included components apply. Qt's source
 archive location and Kalipso's source repository are recorded in that directory.
+
+Speaker-note import includes `puff`, Mark Adler's minimal deflate decoder from zlib 1.3.1,
+unmodified, under the zlib license; [provenance and license](third_party/puff/README.md).
+
+The remote-control QR code uses Project Nayuki's QR Code generator library v1.8.0, unmodified,
+under the MIT license; [provenance and license](third_party/qrcodegen/README.md).

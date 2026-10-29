@@ -9,11 +9,11 @@
 #endif
 
 // Samples only in memory. The palette always paints an opaque reading surface.
-class Backdrop:public QObject {
+class Backdrop : public QObject {
     Q_OBJECT
 public:
     explicit Backdrop(QWidget *reader);
-    ~Backdrop() override {stop();}
+    ~Backdrop() override { stop(); }
     void setEnabled(bool enabled);
     QString source() const;
     bool usesWindowPortal() const;
@@ -22,8 +22,10 @@ public:
 signals:
     void colorChanged(const QColor &color);
     void unavailable(const QString &reason);
+
 protected:
-    bool eventFilter(QObject *object,QEvent *event) override;
+    bool eventFilter(QObject *object, QEvent *event) override;
+
 private:
     void sample();
     void stop();
@@ -31,8 +33,8 @@ private:
     PortalColors portal_;
 #endif
     QWidget *reader_;
-    QTimer timer_,timeout_;
+    QTimer timer_, timeout_;
     QProcess helper_;
     QByteArray output_;
-    bool enabled_=false,pending_=false;
+    bool enabled_ = false, pending_ = false;
 };

@@ -70,8 +70,8 @@ void MoonshineRecognizer::unload() {
     p.lastText.clear();
 }
 
-bool MoonshineRecognizer::load(const QString &library, const QString &model, const QString &language,
-                               int architecture, QString &error) {
+bool MoonshineRecognizer::load(const QString &library, const QString &model, const QString &language, int architecture,
+                               QString &error) {
     unload();
     auto &p = *impl_;
     if (architecture < 2 || architecture > 5) {
@@ -87,12 +87,12 @@ bool MoonshineRecognizer::load(const QString &library, const QString &model, con
         member = reinterpret_cast<std::remove_reference_t<decltype(member)>>(p.library.resolve(name));
         return member != nullptr;
     };
-    const bool complete =
-        resolve(p.load, "moonshine_load_transcriber_from_files") & resolve(p.free, "moonshine_free_transcriber") &
-        resolve(p.create, "moonshine_create_stream") & resolve(p.start, "moonshine_start_stream") &
-        resolve(p.stop, "moonshine_stop_stream") & resolve(p.release, "moonshine_free_stream") &
-        resolve(p.add, "moonshine_transcribe_add_audio_to_stream") &
-        resolve(p.transcribe, "moonshine_transcribe_stream");
+    const bool complete = resolve(p.load, "moonshine_load_transcriber_from_files") &
+                          resolve(p.free, "moonshine_free_transcriber") & resolve(p.create, "moonshine_create_stream") &
+                          resolve(p.start, "moonshine_start_stream") & resolve(p.stop, "moonshine_stop_stream") &
+                          resolve(p.release, "moonshine_free_stream") &
+                          resolve(p.add, "moonshine_transcribe_add_audio_to_stream") &
+                          resolve(p.transcribe, "moonshine_transcribe_stream");
     if (!complete) {
         error = QStringLiteral("The library does not provide the supported Moonshine streaming API.");
         unload();

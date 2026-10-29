@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
+#include <QJsonObject>
 #include <QObject>
 #include <QProcess>
-#include <QJsonObject>
 #include <QStringList>
 
 class SystemSpeechClient : public QObject {
     Q_OBJECT
 public:
-    explicit SystemSpeechClient(QObject *parent=nullptr, QString executable={});
+    explicit SystemSpeechClient(QObject *parent = nullptr, QString executable = {});
     ~SystemSpeechClient() override;
     static bool platformSupported();
     void check(const QString &language);
@@ -25,14 +25,15 @@ signals:
     void message(const QString &text);
     void failed(const QString &text);
     void completed();
+
 private:
     void launch(const QString &operation, const QString &language);
     void readOutput();
     void fail(const QString &message);
     QString executable_, operation_;
     QStringList phrases_;
-    QProcess *process_=nullptr;
+    QProcess *process_ = nullptr;
     QByteArray output_;
-    int revision_=0;
-    bool receivedResult_=false;
+    int revision_ = 0;
+    bool receivedResult_ = false;
 };

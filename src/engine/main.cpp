@@ -40,7 +40,9 @@ void requestShutdown(int) {
     errno = saved;
 }
 
-QString json(const QJsonObject &value) { return QString::fromUtf8(QJsonDocument(value).toJson(QJsonDocument::Compact)); }
+QString json(const QJsonObject &value) {
+    return QString::fromUtf8(QJsonDocument(value).toJson(QJsonDocument::Compact));
+}
 } // namespace
 
 class Engine final : public QObject, protected QDBusContext {
@@ -194,7 +196,8 @@ public slots:
                 lease_.restart();
                 return true;
             }
-            sendErrorReply(QDBusError::AccessDenied, "Another frontend owns the microphone. Stop listening there first.");
+            sendErrorReply(QDBusError::AccessDenied,
+                           "Another frontend owns the microphone. Stop listening there first.");
             return false;
         }
         const auto check = SpeechConfig::dependencies(SpeechConfig::selected());
@@ -279,8 +282,9 @@ private:
     QElapsedTimer lease_;
     QJsonArray events_;
     int sequence_ = 0;
-    QJsonObject state_{{"status", "ready"}, {"message", "Local engine ready"}, {"active", false}, {"text", ""},
-                       {"final", false},    {"sequence", 0},                    {"backend", "moonshine"}};
+    QJsonObject state_{
+        {"status", "ready"}, {"message", "Local engine ready"}, {"active", false}, {"text", ""}, {"final", false},
+        {"sequence", 0},     {"backend", "moonshine"}};
 
     PortalColors colors_;
     QDBusServiceWatcher colorWatcher_;
@@ -375,7 +379,8 @@ int main(int argc, char **argv) {
 
     auto bus = QDBusConnection::sessionBus();
     Engine engine;
-    if (!bus.registerObject(kObjectPath, &engine, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals) ||
+    if (!bus.registerObject(kObjectPath, &engine,
+                            QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals) ||
         !bus.registerService(kService)) {
         std::fprintf(stderr, "Cannot register session D-Bus service: %s\n", qPrintable(bus.lastError().message()));
         return 1;

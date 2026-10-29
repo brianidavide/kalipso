@@ -92,5 +92,5 @@ def install_assets(backend,language,prefix,cache):
                 target=model_dir.parent/entry.filename
                 if not target.is_file() or sha(target)!=hashlib.sha256(package.read(entry)).hexdigest():
                     raise ValueError(f'Installed model differs from the pinned archive: {model_dir}. Move that directory aside and retry.')
-    (model_dir/'kalipso-source.json').write_text(json.dumps(model,indent=2)+'\n')
+    (model_dir/'kalipso-source.json').write_text(json.dumps({**model,'language':language},indent=2)+'\n')
     return runtime_dir/runtime['library'],model_dir

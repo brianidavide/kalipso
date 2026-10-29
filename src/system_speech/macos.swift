@@ -58,17 +58,22 @@ struct SystemSpeech {
     static func main() async {
         do {
             guard CommandLine.arguments.count == 3 else { exit(2) }
+            if CommandLine.arguments[1] == "--colors" {
+                guard #available(macOS 14.0, *) else {
+                    throw SpeechFailure(message: "Screen colors require macOS 14 or later.")
+                }
+                try await colors(first: CommandLine.arguments[2]); return
+            }
             guard #available(macOS 26.0, *) else {
                 throw SpeechFailure(message: "Apple system speech requires macOS 26 or later. Choose Moonshine or Vosk on older systems.")
             }
-            if CommandLine.arguments[1] == "--colors" { try await colors(first: CommandLine.arguments[2]); return }
             try await run(operation: CommandLine.arguments[1], language: CommandLine.arguments[2])
         } catch {
             send(["type": "error", "message": error.localizedDescription])
             exit(1)
         }
     }
-    @available(macOS 26.0, *)
+    @available(macOS 14.0, *)
     static func colors(first: String) async throws {
         var request: String? = first
         while let line = request {
@@ -83,8 +88,8 @@ struct SystemSpeech {
             guard let display = content.displays.first(where: { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) }) else {
                 throw SpeechFailure(message: "The reader's display is unavailable.")
             }
+            // A reader hidden from capture is not listed; it is then absent from the image too.
             let windows = content.windows.filter { $0.owningApplication?.processID == getppid() && $0.title == "Kalipso — reading" }
-            guard !windows.isEmpty else { throw SpeechFailure(message: "Cannot exclude Kalipso's reader from screen color sampling.") }
             let filter = SCContentFilter(display: display, excludingWindows: windows)
             let config = SCStreamConfiguration()
             config.sourceRect = rect.intersection(display.frame).offsetBy(dx: -display.frame.minX, dy: -display.frame.minY)
