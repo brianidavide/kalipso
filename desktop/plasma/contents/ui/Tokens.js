@@ -75,6 +75,7 @@ var tokens = {
     "prompt": "720px",
     "panel": "36rem",
     "stroke": "1px",
+    "progress": "3px",
     "strokeStrong": "2px",
     "focusRing": "3px",
     "brand": "28px",
