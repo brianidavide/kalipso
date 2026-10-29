@@ -3,6 +3,7 @@
 #include "library.h"
 #include "remote.h"
 #include "session_stats.h"
+#include "tracker.h"
 #include <QSignalSpy>
 #include <QTcpSocket>
 #include <QTemporaryDir>
@@ -177,6 +178,54 @@ private slots:
         QVERIFY(result.text.contains("Mention the  two  spaces."));
         QVERIFY(result.text.contains("# Slide 3: Results\n\nRevenue grew by twelve percent.\nPause for questions."));
         QVERIFY(!result.text.contains("Slide 2")); // A slide without notes adds no section.
+    }
+
+    void importsDocumentsAsMarkdown_data() {
+        QTest::addColumn<QString>("file");
+        QTest::newRow("writer odt") << "script.odt";
+        QTest::newRow("writer-exported docx") << "script.docx";
+    }
+    void importsDocumentsAsMarkdown() {
+        QFETCH(QString, file);
+        const auto path = QFINDTESTDATA("fixtures/" + file);
+        QVERIFY2(!path.isEmpty(), qPrintable(file));
+        const auto result = ScriptImport::read(path);
+        QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+        // Headings become sections, the list stays together, emphasis is kept,
+        // and the comment and footnote are not part of the script.
+        QCOMPARE(result.text, QString("# Opening\n\nHello **everyone** and *welcome* to the launch.\n\n"
+                                      "- First point\n- Second point\n\n## Results\n\n"
+                                      "Revenue grew by twelve percent."));
+        QCOMPARE(ScriptTracker::sections(result.text).size(), 2);
+    }
+
+    void importsCraftedDocumentsSafely() {
+        // Word: translated style ids are still headings by their English names; deleted
+        // text, field codes and switched-off bold are ignored.
+        const QByteArray styles =
+            R"(<w:styles xmlns:w="w"><w:style w:styleId="Titolo1"><w:name w:val="heading 1"/></w:style></w:styles>)";
+        const QByteArray document = R"(<w:document xmlns:w="w"><w:body>
+<w:p><w:pPr><w:pStyle w:val="Titolo1"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Apertura</w:t></w:r></w:p>
+<w:p><w:r><w:rPr><w:b w:val="0"/></w:rPr><w:t xml:space="preserve">Buongiorno </w:t></w:r><w:del><w:r><w:delText>vecchio</w:delText></w:r></w:del><w:r><w:instrText>PAGE</w:instrText></w:r><w:r><w:rPr><w:b/><w:i/></w:rPr><w:t>a tutti</w:t></w:r></w:p>
+<w:p></w:p></w:body></w:document>)";
+        auto result = ScriptImport::fromDocx(storedZip({{"word/document.xml", document}, {"word/styles.xml", styles}}));
+        QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+        QCOMPARE(result.text, QString("# Apertura\n\nBuongiorno **a tutti**"));
+        // OpenDocument: nested spans combine; tracked deletions and the table of contents are skipped.
+        const QByteArray content =
+            R"(<office:document-content xmlns:office="o" xmlns:style="s" xmlns:text="t" xmlns:fo="f">
+<office:automatic-styles><style:style style:name="T1" style:family="text"><style:text-properties fo:font-style="italic"/></style:style></office:automatic-styles>
+<office:body><office:text><text:tracked-changes><text:changed-region><text:deletion><text:p>Removed</text:p></text:deletion></text:changed-region></text:tracked-changes>
+<text:table-of-content><text:index-body><text:p>Contents 1</text:p></text:index-body></text:table-of-content>
+<text:h text:outline-level="3">Deep</text:h><text:p>One<text:s text:c="2"/><text:span text:style-name="T1">two</text:span></text:p>
+</office:text></office:body></office:document-content>)";
+        result = ScriptImport::fromOdt(storedZip({{"content.xml", content}}));
+        QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+        QCOMPARE(result.text, QString("### Deep\n\nOne  *two*"));
+        QVERIFY(!ScriptImport::fromDocx("not a zip").error.isEmpty());
+        QVERIFY(!ScriptImport::fromOdt(storedZip({{"content.xml", "<x/>"}})).error.isEmpty()); // No text.
+        QVERIFY(!ScriptImport::fromDocx(storedZip({{"word/document.xml", "<w:document xmlns:w=\"w\"><w:p>"}}))
+                     .error.isEmpty());
     }
 
     void importsCraftedPresentationsSafely() {

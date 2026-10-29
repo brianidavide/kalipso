@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Regenerate notes.odp and notes.pptx with LibreOffice Impress through UNO.
+"""Regenerate the import fixtures with LibreOffice through UNO.
 
-Builds slides the way a user would: real title and notes placeholders.
+notes.odp and notes.pptx: slides built the way a user would, with real title
+and notes placeholders. script.odt and script.docx: a Writer document with
+headings, a bulleted list, bold and italic words, a comment and a footnote.
 Requires LibreOffice and its Python UNO bridge (python3-uno on Debian).
 """
 import os
@@ -61,9 +63,48 @@ def main():
             for name, filter_name in (('notes.odp', 'impress8'), ('notes.pptx', 'Impress MS PowerPoint 2007 XML')):
                 document.storeToURL((here / name).as_uri(), (prop('FilterName', filter_name),))
             document.close(True)
+            write_document(desktop, here)
         finally:
             office.terminate()
             office.wait(timeout=30)
+
+
+def write_document(desktop, here):
+    from com.sun.star.text.ControlCharacter import PARAGRAPH_BREAK
+    document = desktop.loadComponentFromURL('private:factory/swriter', '_blank', 0, (prop('Hidden', True),))
+    text = document.Text
+    cursor = text.createTextCursor()
+
+    def paragraph(style, parts, bulleted=False):
+        cursor.ParaStyleName = style
+        cursor.NumberingStyleName = 'List 1' if bulleted else ''  # 'List 1' is the "Bullet •" list style.
+        for part, weight, posture in parts:
+            cursor.CharWeight = weight
+            cursor.CharPosture = posture
+            text.insertString(cursor, part, False)
+        cursor.CharWeight, cursor.CharPosture = 100.0, 0  # NORMAL weight and posture
+        text.insertControlCharacter(cursor, PARAGRAPH_BREAK, False)
+
+    from com.sun.star.awt.FontSlant import ITALIC, NONE
+    bold, normal = 150.0, 100.0
+    paragraph('Heading 1', [('Opening', normal, NONE)])
+    paragraph('Standard', [('Hello ', normal, NONE), ('everyone', bold, NONE), (' and ', normal, NONE),
+                           ('welcome', normal, ITALIC), (' to the launch.', normal, NONE)])
+    paragraph('Standard', [('First point', normal, NONE)], bulleted=True)
+    paragraph('Standard', [('Second point', normal, NONE)], bulleted=True)
+    paragraph('Heading 2', [('Results', normal, NONE)])
+    paragraph('Standard', [('Revenue grew by twelve percent.', normal, NONE)])
+    # A comment and a footnote are not part of what is read aloud.
+    end = text.getEnd()
+    annotation = document.createInstance('com.sun.star.text.textfield.Annotation')
+    annotation.Content = 'Reviewer comment'
+    text.insertTextContent(end, annotation, False)
+    footnote = document.createInstance('com.sun.star.text.Footnote')
+    text.insertTextContent(text.getEnd(), footnote, False)
+    footnote.setString('Footnote text')
+    for name, filter_name in (('script.odt', 'writer8'), ('script.docx', 'MS Word 2007 XML')):
+        document.storeToURL((here / name).as_uri(), (prop('FilterName', filter_name),))
+    document.close(True)
 
 
 if __name__ == '__main__':

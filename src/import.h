@@ -5,6 +5,8 @@
 
 // Turns files into script text. Presentations become one "# Slide N: Title"
 // section per slide with speaker notes, so the reader can jump between slides.
+// Documents (.docx, .odt) become Markdown: headings are sections, list items
+// start with "-", bold and italic are kept as emphasis.
 namespace ScriptImport {
 struct Result {
     QString text;
@@ -15,5 +17,7 @@ struct Result {
 Result read(const QString &path);
 Result fromPptx(const QByteArray &archive);
 Result fromOdp(const QByteArray &archive);
+Result fromDocx(const QByteArray &archive);
+Result fromOdt(const QByteArray &archive);
 QString dialogFilter();
 } // namespace ScriptImport
