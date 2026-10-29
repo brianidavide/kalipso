@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include "remote.h"
 #include "window.h"
 #include <QAbstractButton>
 #include <QAccessible>
@@ -314,6 +315,43 @@ private slots:
         font->setCurrentIndex(0);
         emit font->activated(0);
         QCOMPARE(reader->text->font().family(), QApplication::font().family());
+    }
+
+    void eachScriptKeepsItsSpeedAndTheRemoteJumpsBetweenSections() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("# One\nalpha beta\n# Two\ngamma delta\n# Three\nepsilon");
+        auto *remote = window.findChild<RemoteControl *>();
+        QVERIFY(remote);
+        // A jump leaves the position just before the section's first word.
+        const auto expect = [&window](const char *command, const char *label) {
+            emit window.findChild<RemoteControl *>()->command(command);
+            return positionLabel(window)->text().startsWith(label);
+        };
+        QVERIFY(expect("section-next", "Word 2 of 5"));     // Before "gamma"
+        QVERIFY(expect("section-next", "Word 4 of 5"));     // Before "epsilon"
+        QVERIFY(expect("section-next", "Word 4 of 5"));     // No further section
+        QVERIFY(expect("section-previous", "Word 2 of 5")); // Back to Two
+        QVERIFY(expect("section-previous", "Word 0 of 5")); // Back to One
+        QVERIFY(expect("section-previous", "Word 0 of 5")); // Stays on the first
+
+        // Each script keeps its own steady speed when switching between them.
+        auto *picker = window.findChild<QComboBox *>("scriptPicker");
+        auto *speed = window.prompter()->findChild<QLabel *>("readerSpeed");
+        const auto first = picker->currentData().toString();
+        emit window.prompter()->speedRequested(30);
+        const auto firstSpeed = speed->text();
+        window.findChild<QPushButton *>("newScript")->click();
+        const auto second = picker->currentData().toString();
+        QVERIFY(second != first);
+        emit window.prompter()->speedRequested(-60);
+        const auto secondSpeed = speed->text();
+        QVERIFY(secondSpeed != firstSpeed);
+        picker->setCurrentIndex(picker->findData(first));
+        emit picker->activated(picker->currentIndex());
+        QCOMPARE(speed->text(), firstSpeed);
+        picker->setCurrentIndex(picker->findData(second));
+        emit picker->activated(picker->currentIndex());
+        QCOMPARE(speed->text(), secondSpeed);
     }
 
     void readerKeysStepTheScript() {

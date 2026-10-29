@@ -48,7 +48,7 @@ void ScriptLibrary::readIndex() {
             const auto object = value.toObject();
             Entry entry{object.value("id").toString(), object.value("title").toString(),
                         QDateTime::fromString(object.value("modified").toString(), Qt::ISODate),
-                        object.value("position").toInt(-1)};
+                        object.value("position").toInt(-1), object.value("speed").toInt(0)};
             if (validId(entry.id) && QFile::exists(path(entry.id)))
                 entries_.push_back(entry);
         }
@@ -57,7 +57,7 @@ void ScriptLibrary::readIndex() {
     for (const auto &info : QDir(directory_).entryInfoList({"*.txt"}, QDir::Files)) {
         const auto id = info.completeBaseName();
         if (validId(id) && !contains(id))
-            entries_.push_back({id, titleFor(load(id)), info.lastModified(), -1});
+            entries_.push_back({id, titleFor(load(id)), info.lastModified(), -1, 0});
     }
 }
 
@@ -67,7 +67,8 @@ bool ScriptLibrary::writeIndex() {
         array.append(QJsonObject{{"id", entry.id},
                                  {"title", entry.title},
                                  {"modified", entry.modified.toString(Qt::ISODate)},
-                                 {"position", entry.position}});
+                                 {"position", entry.position},
+                                 {"speed", entry.speed}});
     QSaveFile file(directory_ + "/" + kIndex);
     const auto data = QJsonDocument(array).toJson();
     dirty_ = false;
@@ -87,7 +88,7 @@ bool ScriptLibrary::contains(const QString &id) const {
 
 QString ScriptLibrary::create(const QString &text) {
     const auto id = QUuid::createUuid().toString(QUuid::Id128);
-    entries_.push_back({id, titleFor(text), QDateTime::currentDateTimeUtc(), -1});
+    entries_.push_back({id, titleFor(text), QDateTime::currentDateTimeUtc(), -1, 0});
     if (!save(id, text)) {
         entries_.removeLast();
         return {};
@@ -137,6 +138,21 @@ void ScriptLibrary::setPosition(const QString &id, int character) {
     for (auto &entry : entries_)
         if (entry.id == id && entry.position != character) {
             entry.position = character;
+            dirty_ = true;
+        }
+}
+
+int ScriptLibrary::speed(const QString &id) const {
+    for (const auto &entry : entries_)
+        if (entry.id == id)
+            return entry.speed;
+    return 0;
+}
+
+void ScriptLibrary::setSpeed(const QString &id, int wordsPerMinute) {
+    for (auto &entry : entries_)
+        if (entry.id == id && entry.speed != wordsPerMinute) {
+            entry.speed = wordsPerMinute;
             dirty_ = true;
         }
 }

@@ -12,7 +12,8 @@
 namespace {
 constexpr qsizetype kMaxRequest = 8192;
 constexpr int kMaxConnections = 16;
-const QStringList kCommands{"toggle", "next", "previous", "faster", "slower", "reset"};
+const QStringList kCommands{"toggle", "next",  "previous",         "faster",
+                            "slower", "reset", "section-previous", "section-next"};
 
 // The remote page. Inline script is avoided so a strict CSP can apply.
 constexpr auto kPage = R"(<!doctype html>
@@ -33,6 +34,7 @@ button:focus-visible{outline:3px solid #F7F8FC;outline-offset:2px}
 <p id="state" role="status">Connecting…</p>
 <button id="toggle" data-command="toggle">Start or pause</button>
 <div class="row"><button data-command="previous">Previous</button><button data-command="next">Next</button></div>
+<div class="row"><button data-command="section-previous">&#8249; Section</button><button data-command="section-next">Section &#8250;</button></div>
 <div class="row"><button data-command="slower">Slower</button><button data-command="faster">Faster</button></div>
 <button data-command="reset">Back to start</button>
 <script src="app.js"></script>

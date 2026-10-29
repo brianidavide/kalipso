@@ -104,6 +104,20 @@ export class Tracker {
         this.misses = 0;
     }
 
+    // Start of the section to jump to, or -1 without one. Forward: the next heading after
+    // the word about to be read. Backward: the section before the current one (at most the
+    // first). Measured from the next word because a jump leaves the position just before it.
+    sectionTarget(direction) {
+        const list = sections(this.text);
+        if (!list.length)
+            return -1;
+        const next = this.position + 1 < this.words.length ? this.words[this.position + 1].start : this.text.length;
+        if (direction > 0)
+            return list.find(section => section.start > next)?.start ?? -1;
+        const before = list.filter(section => section.start < next).length;
+        return list[Math.max(0, before - 2)].start;
+    }
+
     // The word at or before a character offset; -1 before the first word.
     seekCharacter(character) {
         let index = -1;

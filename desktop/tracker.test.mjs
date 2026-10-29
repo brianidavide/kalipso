@@ -67,4 +67,11 @@ assert(!offScript.lost);
 const seeker = new Tracker('uno due tre');
 seeker.seekCharacter(5); assert.equal(seeker.position, 1);
 seeker.seekCharacter(-1); assert.equal(seeker.position, -1);
-console.log('tracker: long-jump recovery, off-script state and character seeking PASS');
+// Section jumps advance one section at a time and go back to the previous one.
+const sectioned = new Tracker('# One\nalpha beta\n# Two\ngamma delta\n# Three\nepsilon');
+const jump = direction => { const target = sectioned.sectionTarget(direction); if (target >= 0) sectioned.seekCharacter(target); return sectioned.position; };
+assert.deepEqual([jump(1), jump(1), jump(1)], [1, 3, 3]); // Before gamma, before epsilon, stays.
+assert.deepEqual([jump(-1), jump(-1), jump(-1)], [1, -1, -1]);
+sectioned.seek(2); assert.equal(jump(-1), -1); // Inside Two, back goes to One.
+assert.equal(new Tracker('no headings here').sectionTarget(1), -1);
+console.log('tracker: long-jump recovery, off-script state, character seeking and section jumps PASS');

@@ -325,7 +325,7 @@ export default class Kalipso extends Extension {
         editContent.add_child(this.editor);
         editScroll.set_child(editContent);
         this.editPane.add_child(editScroll);
-        this.editPane.add_child(this._note('Saved automatically. [Bracketed cues] are shown but not read aloud. Lines starting with # are sections.'));
+        this.editPane.add_child(this._note(_('Saved automatically. [Bracketed cues] are shown but not read aloud. Lines starting with # are sections.')));
     }
 
     _buildSettingsPane() {
@@ -674,12 +674,9 @@ export default class Kalipso extends Extension {
     }
 
     jumpSection(direction) {
-        const here = this.tracker.position >= 0 ? this.tracker.words[this.tracker.position].start : -1;
-        const list = sections(this.tracker.text);
-        const target = direction > 0 ? list.find(section => section.start > here)
-            : list.filter(section => section.start < here).at(-2) ?? list[0];
-        if (target)
-            this.tracker.seekCharacter(target.start);
+        const target = this.tracker.sectionTarget(direction);
+        if (target >= 0)
+            this.tracker.seekCharacter(target);
         this.render();
     }
 

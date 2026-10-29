@@ -118,11 +118,13 @@ private slots:
             QVERIFY(!id.isEmpty());
             QCOMPARE(library.entries().first().title, QString("Keynote"));
             library.setPosition(id, 10);
+            library.setSpeed(id, 170);
             QVERIFY(library.flush());
         }
         ScriptLibrary reopened(directory.path());
         QCOMPARE(reopened.load(id), QString("# Keynote\nHello"));
         QCOMPARE(reopened.position(id), 10);
+        QCOMPARE(reopened.speed(id), 170); // Each script keeps its own steady speed.
         // A lost index is rebuilt from the script files.
         QVERIFY(QFile::remove(directory.filePath("library.json")));
         ScriptLibrary recovered(directory.path());
@@ -318,6 +320,10 @@ private slots:
         QCOMPARE(http(remote.port(), "POST", base + "command/next").first, 204);
         QTRY_COMPARE(commands.size(), 1);
         QCOMPARE(commands.first().first().toString(), QString("next"));
+        commands.clear();
+        QCOMPARE(http(remote.port(), "POST", base + "command/section-next").first, 204);
+        QTRY_COMPARE(commands.size(), 1);
+        QCOMPARE(commands.first().first().toString(), QString("section-next"));
         const auto oldToken = remote.token();
         remote.stop();
         QVERIFY(remote.start());
