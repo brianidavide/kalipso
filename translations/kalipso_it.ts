@@ -38,28 +38,12 @@
         <translation>Kalipso</translation>
     </message>
     <message>
-        <source>Your script. Ready to read.</source>
-        <translation>Il tuo copione. Pronto da leggere.</translation>
-    </message>
-    <message>
-        <source>Scripts are saved automatically on this device. Open the reader near your camera, then follow your voice, scroll at a steady speed or step manually.</source>
-        <translation>I copioni vengono salvati automaticamente su questo dispositivo. Apri il lettore vicino alla videocamera, poi fatti seguire dalla voce, scorri a velocità costante o avanza a mano.</translation>
-    </message>
-    <message>
         <source>Open reader</source>
         <translation>Apri il lettore</translation>
     </message>
     <message>
-        <source>Start listening</source>
-        <translation>Inizia ad ascoltare</translation>
-    </message>
-    <message>
         <source>Read from cursor</source>
         <translation>Leggi dal cursore</translation>
-    </message>
-    <message>
-        <source>Listening is off. No audio is being captured.</source>
-        <translation>Ascolto spento. Nessun audio viene catturato.</translation>
     </message>
     <message>
         <source>Paste or write the script you want to read…
@@ -108,10 +92,6 @@ Le [indicazioni tra parentesi quadre] si vedono ma non si leggono ad alta voce. 
     <message>
         <source>Export…</source>
         <translation>Esporta…</translation>
-    </message>
-    <message>
-        <source>Delete</source>
-        <translation>Elimina</translation>
     </message>
     <message>
         <source>Cannot save the script. Check the available disk space.</source>
@@ -201,14 +181,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Copione di esempio (non salvato)</translation>
     </message>
     <message>
-        <source>Voice following resumes after your next pause; the reading position is preserved.</source>
-        <translation>Il riconoscimento vocale riprende dopo la prossima pausa; la posizione di lettura resta invariata.</translation>
-    </message>
-    <message>
-        <source>Word %1 of %2 · Ctrl+Enter opens the reader · in the reader, arrow keys step and Space starts or pauses</source>
-        <translation>Parola %1 di %2 · Ctrl+Invio apre il lettore · nel lettore le frecce avanzano e Spazio avvia o mette in pausa</translation>
-    </message>
-    <message>
         <source>End of script</source>
         <translation>Fine del copione</translation>
     </message>
@@ -229,14 +201,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>In pausa · microfono spento</translation>
     </message>
     <message>
-        <source>Pause scrolling</source>
-        <translation>Metti in pausa</translation>
-    </message>
-    <message>
-        <source>Start scrolling</source>
-        <translation>Avvia lo scorrimento</translation>
-    </message>
-    <message>
         <source>Microphone off</source>
         <translation>Microfono spento</translation>
     </message>
@@ -247,10 +211,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Listening</source>
         <translation>In ascolto</translation>
-    </message>
-    <message>
-        <source>Pause listening</source>
-        <translation>Metti in pausa l'ascolto</translation>
     </message>
     <message numerus="yes">
         <source>Last session: %1 · %n word(s)</source>
@@ -280,10 +240,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
             <numerusform>%n intercalare riconosciuto</numerusform>
             <numerusform>%n intercalari riconosciuti</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>Lettura</translation>
     </message>
     <message>
         <source>Monitor</source>
@@ -541,6 +497,58 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Your latest changes could not be saved. Close Kalipso anyway and lose them?</source>
         <translation>Le ultime modifiche non sono state salvate. Chiudere comunque Kalipso e perderle?</translation>
     </message>
+    <message>
+        <source>Open the reader near your camera (Ctrl+Enter)</source>
+        <translation>Apri il lettore vicino alla videocamera (Ctrl+Invio)</translation>
+    </message>
+    <message>
+        <source>Ctrl+Enter opens the reader. In the reader, arrow keys step and Space starts or pauses.</source>
+        <translation>Ctrl+Invio apre il lettore. Nel lettore le frecce avanzano e Spazio avvia o mette in pausa.</translation>
+    </message>
+    <message>
+        <source>Start reading at the word under the text cursor</source>
+        <translation>Inizia a leggere dalla parola sotto il cursore</translation>
+    </message>
+    <message>
+        <source>Kalipso settings</source>
+        <translation>Impostazioni di Kalipso</translation>
+    </message>
+    <message>
+        <source>Your scripts, saved on this device</source>
+        <translation>I tuoi copioni, salvati su questo dispositivo</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>Nuovo</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation>Altro</translation>
+    </message>
+    <message>
+        <source>More script actions</source>
+        <translation>Altre azioni sul copione</translation>
+    </message>
+    <message>
+        <source>Delete script…</source>
+        <translation>Elimina copione…</translation>
+    </message>
+    <message>
+        <source>Resumes after your next pause</source>
+        <translation>Riprende dopo la prossima pausa</translation>
+    </message>
+    <message>
+        <source>Word %1 of %2</source>
+        <translation>Parola %1 di %2</translation>
+    </message>
+    <message>
+        <source>Reader</source>
+        <translation>Lettore</translation>
+    </message>
+    <message>
+        <source>Appearance</source>
+        <translation>Aspetto</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>
@@ -642,14 +650,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Vai alla sezione</translation>
     </message>
     <message>
-        <source>Previous</source>
-        <translation>Indietro</translation>
-    </message>
-    <message>
-        <source>Next</source>
-        <translation>Avanti</translation>
-    </message>
-    <message>
         <source>Edit</source>
         <translation>Modifica</translation>
     </message>
@@ -664,10 +664,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Start listening</source>
         <translation>Inizia ad ascoltare</translation>
-    </message>
-    <message>
-        <source>Reading mode</source>
-        <translation>Modalità di lettura</translation>
     </message>
     <message>
         <source>Manual</source>
@@ -724,6 +720,50 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Screen sharing may include this reader.</source>
         <translation>La condivisione dello schermo può includere questo lettore.</translation>
+    </message>
+    <message>
+        <source>Edit the script in the reader</source>
+        <translation>Modifica il copione nel lettore</translation>
+    </message>
+    <message>
+        <source>Hide the reader (Esc). The microphone turns off.</source>
+        <translation>Nascondi il lettore (Esc). Il microfono si spegne.</translation>
+    </message>
+    <message>
+        <source>Reading progress</source>
+        <translation>Avanzamento della lettura</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Parola precedente</translation>
+    </message>
+    <message>
+        <source>Previous word (← or Page Up)</source>
+        <translation>Parola precedente (← o Pag↑)</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Parola successiva</translation>
+    </message>
+    <message>
+        <source>Next word (→ or Page Down)</source>
+        <translation>Parola successiva (→ o Pag↓)</translation>
+    </message>
+    <message>
+        <source>Start or pause (Space)</source>
+        <translation>Avvia o metti in pausa (Spazio)</translation>
+    </message>
+    <message>
+        <source>Slower (−)</source>
+        <translation>Più lento (−)</translation>
+    </message>
+    <message>
+        <source>Faster (+)</source>
+        <translation>Più veloce (+)</translation>
+    </message>
+    <message>
+        <source>Reading mode: %1</source>
+        <translation>Modalità di lettura: %1</translation>
     </message>
 </context>
 <context>

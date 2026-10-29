@@ -8,9 +8,13 @@
 #include <QTextEdit>
 
 class QComboBox;
+class QProgressBar;
 class QPropertyAnimation;
 class QToolButton;
+class QAbstractButton;
+class QPainter;
 class ScriptHighlighter;
+class DragHandle;
 
 enum class Mirror { None, Horizontal, Vertical, Both };
 enum class ReadingMode { Manual, Steady, Voice };
@@ -27,6 +31,10 @@ public:
     void setReadingLine(double fraction);
     void scrollToCharacter(int character, bool animate);
     void setTextColor(const QColor &color) { textColor_ = color; }
+    void setMarkerColor(const QColor &color) {
+        markerColor_ = color;
+        viewport()->update();
+    }
     ScriptHighlighter *highlighter() const { return highlighter_; }
 signals:
     void characterClicked(int character);
@@ -38,10 +46,13 @@ protected:
 
 private:
     QPoint unmirrored(QPoint point) const;
+    void paintMarker(QPainter &painter, int lineCenter) const;
+    int currentLineCenter() const;
+    static constexpr int kMarkerSpace = 22;
     Mirror mirror_ = Mirror::None;
     double readingLine_ = 0.3;
     int anchor_ = 0;
-    QColor textColor_;
+    QColor textColor_, markerColor_;
     ScriptHighlighter *highlighter_;
     QPropertyAnimation *scroll_;
 };
@@ -67,6 +78,8 @@ public:
     void setCaptureExcluded(bool excluded);
     // Shows a large number over the text; 0 hides it.
     void showCountdown(int seconds);
+    void setTitle(const QString &title);
+    void setProgress(int read, int total);
 
     QString colorSource() const { return backdrop_->source(); }
     bool usesWindowPortal() const { return backdrop_->usesWindowPortal(); }
@@ -98,7 +111,10 @@ private:
 
     StatusLabel *status_;
     QPushButton *primary_;
-    QComboBox *mode_;
+    QToolButton *modes_;
+    DragHandle *handle_;
+    QProgressBar *progress_;
+    QList<QPair<QAbstractButton *, QString>> icons_;
     QWidget *speedBox_;
     QLabel *speed_;
     QToolButton *sections_;
@@ -111,6 +127,7 @@ private:
     ReadingMode readingMode_ = ReadingMode::Voice;
     bool running_ = false;
     bool editing_ = false;
+    bool compact_ = false;
     bool captureExcluded_ = false;
     bool placing_ = false;
     int position_ = 0, length_ = 0;

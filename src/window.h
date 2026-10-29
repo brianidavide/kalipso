@@ -8,7 +8,9 @@
 #include <QMainWindow>
 #include <QTimer>
 
+class QAbstractButton;
 class QCheckBox;
+class QDialog;
 class QComboBox;
 class QLineEdit;
 class QPlainTextEdit;
@@ -62,6 +64,7 @@ private:
     QWidget *makeReadingSettings();
     QWidget *makeSpeechSettings();
     QWidget *makeRemoteSettings();
+    void applyTheme();
     void refreshScreens();
     void refreshInstalledSpeech();
     void loadSpeechProfile();
@@ -92,7 +95,9 @@ private:
 
     QComboBox *scripts_;
     QPlainTextEdit *script_;
-    QPushButton *run_;
+    QDialog *settings_ = nullptr;
+    class ScriptHighlighter *editorHighlighter_ = nullptr;
+    QList<QPair<QAbstractButton *, QString>> icons_; // Buttons whose icon follows the theme.
     StatusLabel *audioStatus_;
     QLabel *position_;
 

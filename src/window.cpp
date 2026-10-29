@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "window.h"
 #include "design_tokens.h"
+#include "icons.h"
 #include "import.h"
 #include "platform/capture_exclusion.h"
 #include "remote.h"
@@ -11,6 +12,8 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -18,6 +21,7 @@
 #include <QHBoxLayout>
 #include <QJsonArray>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QResizeEvent>
@@ -30,6 +34,7 @@
 #include <QSpinBox>
 #include <QTabWidget>
 #include <QTextBlock>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <QWheelEvent>
 #include <algorithm>
@@ -52,7 +57,11 @@ class ScriptPicker : public SettingsComboBox {
 public:
     QSize sizeHint() const override {
         auto size = SettingsComboBox::sizeHint();
-        size.setWidth(std::max(size.width(), fontMetrics().averageCharWidth() * 28));
+        int text = 0;
+        for (int i = 0; i < count(); ++i)
+            text = std::max(text, fontMetrics().horizontalAdvance(itemText(i)));
+        const int room = fontMetrics().averageCharWidth();
+        size.setWidth(std::clamp(text + 64, room * 20, room * 40));
         return size;
     }
 };
@@ -62,29 +71,55 @@ protected:
     void wheelEvent(QWheelEvent *event) override { event->ignore(); }
 };
 
-// Puts labels above fields when the form becomes too narrow for both on one row.
-class SettingsGroup : public QGroupBox {
+// A titled block of settings. Labels move above their fields when the form
+// becomes too narrow for both on one row.
+class SettingsSection : public QWidget {
 public:
-    explicit SettingsGroup(const QString &title) : QGroupBox(title) {}
+    explicit SettingsSection(const QString &title) : form(new QFormLayout) {
+        setObjectName("settingsSection");
+        auto *layout = new QVBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, Design::Metric::space5);
+        layout->setSpacing(Design::Metric::space3);
+        auto *heading = new QLabel(title);
+        heading->setProperty("role", "title");
+        auto font = heading->font();
+        font.setPointSizeF(font.pointSizeF() * 1.25);
+        heading->setFont(font);
+        layout->addWidget(heading);
+        form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        form->setHorizontalSpacing(Design::Metric::space4);
+        form->setVerticalSpacing(Design::Metric::space3);
+        form->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        layout->addLayout(form);
+    }
+    QFormLayout *form;
+    int labelWidth() const {
+        int width = 0;
+        for (int row = 0; row < form->rowCount(); ++row)
+            if (auto *item = form->itemAt(row, QFormLayout::LabelRole); item && item->widget())
+                width = std::max(width, item->widget()->fontMetrics().horizontalAdvance(
+                                            static_cast<QLabel *>(item->widget())->text()));
+        return width + 4;
+    }
+    void setLabelWidth(int width) {
+        labelWidth_ = width;
+        adaptForm();
+    }
 
 protected:
     void resizeEvent(QResizeEvent *event) override {
-        QGroupBox::resizeEvent(event);
+        QWidget::resizeEvent(event);
         adaptForm();
     }
     void changeEvent(QEvent *event) override {
-        QGroupBox::changeEvent(event);
+        QWidget::changeEvent(event);
         if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange)
             adaptForm();
     }
 
 private:
     void adaptForm() {
-        auto *form = qobject_cast<QFormLayout *>(layout());
-        if (!form)
-            return;
-        const auto margins = form->contentsMargins();
-        const int available = std::max(1, contentsRect().width() - margins.left() - margins.right());
+        const int available = std::max(1, contentsRect().width());
         const bool narrow = available < fontMetrics().horizontalAdvance(QStringLiteral("Application appearance")) + 350;
         form->setRowWrapPolicy(narrow ? QFormLayout::WrapAllRows : QFormLayout::WrapLongRows);
         for (int row = 0; row < form->rowCount(); ++row)
@@ -92,7 +127,36 @@ private:
                 if (auto *label = qobject_cast<QLabel *>(item->widget())) {
                     label->setWordWrap(narrow);
                     label->setMaximumWidth(narrow ? available : QWIDGETSIZE_MAX);
+                    label->setMinimumWidth(narrow ? 0 : std::min(labelWidth_, available / 2));
                 }
+    }
+    int labelWidth_ = 0;
+};
+
+// The script as a comfortable reading column, centred in wide windows.
+class ScriptEditor : public QPlainTextEdit {
+protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QPlainTextEdit::resizeEvent(event);
+        updateColumn();
+    }
+    void changeEvent(QEvent *event) override {
+        QPlainTextEdit::changeEvent(event);
+        if (event->type() == QEvent::FontChange)
+            updateColumn();
+    }
+
+private:
+    void updateColumn() {
+        const int column = fontMetrics().averageCharWidth() * 72;
+        const int side = std::max(Design::Metric::space5, (width() - column) / 2);
+        const QMargins margins(side, Design::Metric::space5, side, Design::Metric::space4);
+        if (margins == viewportMargins())
+            return;
+        setViewportMargins(margins);
+        // The text wraps at the viewport width: lay it out again for the new column.
+        QResizeEvent relayout(size(), QSize(-1, -1));
+        QPlainTextEdit::resizeEvent(&relayout);
     }
 };
 
@@ -126,12 +190,6 @@ protected:
         return QWidget::eventFilter(object, event);
     }
 };
-
-QFormLayout *formFor(QWidget *group) {
-    auto *form = new QFormLayout(group);
-    form->setRowWrapPolicy(QFormLayout::WrapLongRows);
-    return form;
-}
 
 // Applies an edit as one contiguous replacement so undo and the reading
 // anchor stay meaningful.
@@ -175,63 +233,88 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     setMinimumSize(320, 240);
     Accessibility::apply(this, Design::light);
 
+    // App bar: the script being edited on the left, settings and the one
+    // primary action, Open reader, on the right. Wraps on narrow windows.
     auto *central = new QWidget;
     auto *layout = new QVBoxLayout(central);
-    layout->setContentsMargins(24, 20, 24, 20);
-    layout->setSpacing(14);
-    auto *heading = new QLabel(tr("Your script. Ready to read."));
-    heading->setWordWrap(true);
-    auto headingFont = heading->font();
-    headingFont.setPointSize(20);
-    headingFont.setBold(true);
-    heading->setFont(headingFont);
-    layout->addWidget(heading);
-    layout->addWidget(note(tr("Scripts are saved automatically on this device. Open the reader near your camera, "
-                              "then follow your voice, scroll at a steady speed or step manually.")));
-
-    auto *libraryBar = new QWidget;
-    buildLibraryBar(libraryBar);
-    layout->addWidget(libraryBar);
-
-    auto *actions = new FlowLayout;
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    auto *appBar = new QWidget;
+    appBar->setObjectName("appBar");
+    buildLibraryBar(appBar);
+    auto *barLayout = static_cast<FlowLayout *>(appBar->layout());
+    auto *settingsButton = new AccessibleButton(tr("Settings"));
+    settingsButton->setObjectName("settingsButton");
+    settingsButton->setProperty("quiet", true);
     auto *show = new AccessibleButton(tr("Open reader"));
     show->setDefault(true);
     show->setObjectName("primaryAction");
-    run_ = new AccessibleButton(tr("Start listening"));
-    run_->setObjectName("runAction");
-    auto *readHere = new AccessibleButton(tr("Read from cursor"));
-    readHere->setObjectName("readHere");
-    for (auto *button : {show, static_cast<AccessibleButton *>(run_), readHere})
-        actions->addWidget(button);
-    layout->addLayout(actions);
-    audioStatus_ = new StatusLabel(tr("Listening is off. No audio is being captured."));
-    audioStatus_->setObjectName("audioStatus");
-    layout->addWidget(audioStatus_);
+    show->setToolTip(tr("Open the reader near your camera (Ctrl+Enter)"));
+    barLayout->addTrailing(settingsButton);
+    barLayout->addTrailing(show);
+    icons_.append({settingsButton, "settings"});
+    icons_.append({show, "reader"});
+    layout->addWidget(appBar);
 
-    auto *tabs = new QTabWidget;
-    script_ = new QPlainTextEdit;
+    script_ = new ScriptEditor;
     script_->setObjectName("scriptEditor");
+    script_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     script_->setPlaceholderText(tr("Paste or write the script you want to read…\n\n"
                                    "[Bracketed cues] are shown but not read aloud. "
                                    "Lines starting with # become sections you can jump to."));
     script_->setAccessibleName(tr("Editable script"));
     auto editorFont = script_->font();
-    editorFont.setPointSize(14);
+    editorFont.setPointSizeF(editorFont.pointSizeF() * 1.4);
     script_->setFont(editorFont);
-    auto *editorHighlighter = new ScriptHighlighter(script_->document());
-    editorHighlighter->setColors(QColor(Design::light.muted), QColor(Design::light.accent));
-    tabs->addTab(script_, tr("Script"));
-    tabs->addTab(makeSettings(), tr("Settings"));
-    layout->addWidget(tabs, 1);
-    position_ = note(tr("Ready to write."));
+    editorHighlighter_ = new ScriptHighlighter(script_->document());
+    layout->addWidget(script_, 1);
+
+    // Status line: what is happening on the left, where you are on the right.
+    auto *statusRow = new QWidget;
+    statusRow->setObjectName("statusRow");
+    auto *statusLayout = new FlowLayout(statusRow);
+    statusLayout->setContentsMargins(Design::Metric::space4, Design::Metric::space2, Design::Metric::space4,
+                                     Design::Metric::space2);
+    audioStatus_ = new StatusLabel(tr("Microphone off"));
+    audioStatus_->setObjectName("audioStatus");
+    audioStatus_->setProperty("role", "muted");
+    position_ = new StatusLabel(tr("Ready to write."));
     position_->setObjectName("readingPosition");
-    layout->addWidget(position_);
+    position_->setToolTip(tr("Ctrl+Enter opens the reader. In the reader, arrow keys step and Space starts or "
+                             "pauses."));
+    position_->setProperty("role", "muted");
+    auto *readHere = new AccessibleButton(tr("Read from cursor"));
+    readHere->setObjectName("readHere");
+    readHere->setProperty("quiet", true);
+    readHere->setToolTip(tr("Start reading at the word under the text cursor"));
+    statusLayout->addWidget(audioStatus_);
+    statusLayout->addTrailing(position_);
+    statusLayout->addTrailing(readHere);
+    layout->addWidget(statusRow);
 
     auto *page = new QScrollArea;
     page->setWidgetResizable(true);
     page->setWidget(central);
     page->setFrameShape(QFrame::NoFrame);
     setCentralWidget(page);
+
+    settings_ = new QDialog(this);
+    settings_->setWindowTitle(tr("Kalipso settings"));
+    settings_->setObjectName("settingsDialog");
+    auto *dialogLayout = new QVBoxLayout(settings_);
+    dialogLayout->setContentsMargins(0, 0, 0, Design::Metric::space4);
+    dialogLayout->addWidget(makeSettings(), 1);
+    auto *close = new QDialogButtonBox(QDialogButtonBox::Close);
+    close->setContentsMargins(Design::Metric::space5, 0, Design::Metric::space5, 0);
+    connect(close, &QDialogButtonBox::rejected, settings_, &QDialog::close);
+    dialogLayout->addWidget(close);
+    settings_->resize(620, 700);
+    connect(settingsButton, &QPushButton::clicked, this, [this] {
+        settings_->show();
+        settings_->raise();
+        settings_->activateWindow();
+    });
+    applyTheme();
 
     autosave_.setSingleShot(true);
     autosave_.setInterval(800);
@@ -249,7 +332,6 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     });
 
     connect(show, &QPushButton::clicked, this, &MainWindow::showPrompter);
-    connect(run_, &QPushButton::clicked, this, &MainWindow::toggleRunning);
     connect(readHere, &QPushButton::clicked, this, [this] {
         tracker_.setScript(script_->toPlainText());
         tracker_.seekCharacter(script_->textCursor().position());
@@ -271,6 +353,7 @@ MainWindow::MainWindow(const QString &libraryDirectory)
             replaceText(prompter_->text->document(), text);
         }
         prompter_->setSections(ScriptTracker::sections(text));
+        prompter_->setTitle(ScriptLibrary::titleFor(text));
         if (!loading_)
             autosave_.start();
         refreshReading();
@@ -371,24 +454,50 @@ MainWindow::~MainWindow() {
 
 void MainWindow::buildLibraryBar(QWidget *bar) {
     auto *layout = new FlowLayout(bar);
+    layout->setContentsMargins(Design::Metric::space4, Design::Metric::space3, Design::Metric::space4,
+                               Design::Metric::space3);
     scripts_ = new ScriptPicker;
     scripts_->setObjectName("scriptPicker");
     scripts_->setAccessibleName(tr("Script"));
-    auto *add = new AccessibleButton(tr("New script"));
+    scripts_->setToolTip(tr("Your scripts, saved on this device"));
+    auto *add = new AccessibleButton(tr("New"));
     add->setObjectName("newScript");
-    auto *import = new AccessibleButton(tr("Import…"));
-    import->setObjectName("importScript");
+    add->setAccessibleName(tr("New script"));
+    add->setProperty("quiet", true);
+    auto *more = new QToolButton;
+    more->setObjectName("scriptActions");
+    more->setText(tr("More"));
+    more->setAccessibleName(tr("More script actions"));
+    more->setProperty("quiet", true);
+    more->setPopupMode(QToolButton::InstantPopup);
+    more->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    auto *menu = new QMenu(more);
+    auto *import = menu->addAction(tr("Import…"));
     import->setToolTip(tr("Text, Markdown, or speaker notes from PowerPoint (.pptx) and Impress (.odp)"));
-    auto *exportButton = new AccessibleButton(tr("Export…"));
-    auto *remove = new AccessibleButton(tr("Delete"));
-    remove->setObjectName("deleteScript");
-    for (auto *widget : QList<QWidget *>{scripts_, add, import, exportButton, remove})
+    auto *exportAction = menu->addAction(tr("Export…"));
+    menu->addSeparator();
+    auto *remove = menu->addAction(tr("Delete script…"));
+    more->setMenu(menu);
+    for (auto *widget : QList<QWidget *>{scripts_, add, more})
         layout->addWidget(widget);
+    icons_.append({add, "plus"});
     connect(scripts_, &QComboBox::activated, this, [this] { openScript(scripts_->currentData().toString()); });
     connect(add, &QPushButton::clicked, this, &MainWindow::newScript);
-    connect(import, &QPushButton::clicked, this, &MainWindow::importScript);
-    connect(exportButton, &QPushButton::clicked, this, &MainWindow::exportScript);
-    connect(remove, &QPushButton::clicked, this, &MainWindow::deleteScript);
+    connect(import, &QAction::triggered, this, &MainWindow::importScript);
+    connect(exportAction, &QAction::triggered, this, &MainWindow::exportScript);
+    connect(remove, &QAction::triggered, this, &MainWindow::deleteScript);
+}
+
+void MainWindow::applyTheme() {
+    const auto theme = QSettings().value("appearance/theme", "light").toString();
+    const auto &palette = theme == "dark" ? Design::dark : Design::light;
+    Accessibility::apply(this, palette);
+    Accessibility::apply(settings_, palette);
+    editorHighlighter_->setColors(QColor(palette.muted), QColor(palette.accent));
+    for (const auto &[button, name] : icons_) {
+        const bool primary = button->objectName() == QLatin1String("primaryAction");
+        button->setIcon(Icons::icon(name, QColor(primary ? palette.actionText : palette.text), QColor(palette.muted)));
+    }
 }
 
 void MainWindow::refreshLibrary() {
@@ -397,6 +506,7 @@ void MainWindow::refreshLibrary() {
     for (const auto &entry : library_.entries())
         scripts_->addItem(entry.title, entry.id);
     scripts_->setCurrentIndex(std::max(0, scripts_->findData(currentId_)));
+    scripts_->updateGeometry();
 }
 
 void MainWindow::openScript(const QString &id) {
@@ -521,6 +631,7 @@ void MainWindow::setDemoScript() {
         const QSignalBlocker block(scripts_);
         scripts_->clear();
         scripts_->addItem(tr("Sample script (not saved)"));
+        scripts_->updateGeometry();
     }
     tracker_.setScript(script_->toPlainText());
     tracker_.seek(6);
@@ -559,6 +670,7 @@ void MainWindow::seekWord(int word) {
 
 void MainWindow::refreshReading() {
     prompter_->highlight(tracker_.character(), tracker_.length());
+    prompter_->setProgress(tracker_.position() + 1, tracker_.count());
     if (persist_ && !currentId_.isEmpty())
         library_.setPosition(currentId_, tracker_.position() >= 0 ? tracker_.character() : -1);
     if (remote_ && remote_->active())
@@ -568,13 +680,10 @@ void MainWindow::refreshReading() {
                            {"total", tracker_.count()},
                            {"speed", wordsPerMinute_}});
     if (waitForNewUtterance_) {
-        position_->setText(tr("Voice following resumes after your next pause; the reading position is preserved."));
+        position_->setText(tr("Resumes after your next pause"));
         return;
     }
-    position_->setText(tr("Word %1 of %2 · Ctrl+Enter opens the reader · in the reader, arrow keys step and Space "
-                          "starts or pauses")
-                           .arg(tracker_.position() + 1)
-                           .arg(tracker_.count()));
+    position_->setText(tr("Word %1 of %2").arg(tracker_.position() + 1).arg(tracker_.count()));
 }
 
 void MainWindow::setMode(ReadingMode mode) {
@@ -626,7 +735,7 @@ void MainWindow::pauseRunning() {
     steady_.stop();
     if (speech_.active()) {
         speech_.stop();
-        audioStatus_->setText(tr("Listening is off. No audio is being captured."));
+        audioStatus_->setText(tr("Microphone off"));
     }
     refreshRunning();
 }
@@ -653,25 +762,19 @@ void MainWindow::refreshRunning() {
     const bool active = running();
     QString status;
     switch (mode_) {
-    case ReadingMode::Manual:
-        status = tr("Manual · microphone off");
-        run_->setText(tr("Start listening"));
-        break;
+    case ReadingMode::Manual: status = tr("Manual · microphone off"); break;
     case ReadingMode::Steady:
         status = countdown_.isActive() ? tr("Starting…")
                  : active              ? tr("Scrolling · microphone off")
                                        : tr("Paused · microphone off");
-        run_->setText(active ? tr("Pause scrolling") : tr("Start scrolling"));
         break;
     case ReadingMode::Voice:
         status = !active                   ? tr("Microphone off")
                  : tracker_.lost()         ? tr("Off script · Kalipso catches up when you return to the text")
                  : speechStatus_.isEmpty() ? tr("Listening")
                                            : speechStatus_;
-        run_->setText(active ? tr("Pause listening") : tr("Start listening"));
         break;
     }
-    run_->setVisible(mode_ != ReadingMode::Manual);
     prompter_->setRunning(active, status);
     refreshReading();
 }
@@ -722,6 +825,8 @@ void MainWindow::finishSession() {
 QWidget *MainWindow::makeSettings() {
     auto *contents = new QWidget;
     auto *layout = new QVBoxLayout(contents);
+    layout->setContentsMargins(Design::Metric::space5, Design::Metric::space5, Design::Metric::space5, 0);
+    layout->setSpacing(0);
     layout->addWidget(makeReadingSettings());
     layout->addWidget(makeSpeechSettings());
     layout->addWidget(makeRemoteSettings());
@@ -740,6 +845,15 @@ QWidget *MainWindow::makeSettings() {
             label->setBuddy(input);
             input->setAccessibleName(label->text());
         }
+    // One label column for every section, so fields line up down the page.
+    QList<SettingsSection *> sections;
+    for (auto *widget : contents->findChildren<QWidget *>(QStringLiteral("settingsSection")))
+        sections.append(static_cast<SettingsSection *>(widget));
+    int labelWidth = 0;
+    for (auto *section : sections)
+        labelWidth = std::max(labelWidth, section->labelWidth());
+    for (auto *section : sections)
+        section->setLabelWidth(labelWidth);
     layout->addStretch();
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
@@ -752,8 +866,8 @@ QWidget *MainWindow::makeSettings() {
 
 QWidget *MainWindow::makeReadingSettings() {
     QSettings settings;
-    auto *group = new SettingsGroup(tr("Reading"));
-    auto *form = formFor(group);
+    auto *group = new SettingsSection(tr("Reader"));
+    auto *form = group->form;
 
     screen_ = new SettingsComboBox;
     screen_->setObjectName("readerScreen");
@@ -813,17 +927,17 @@ QWidget *MainWindow::makeReadingSettings() {
             [countdown] { QSettings().setValue("reading/countdown", countdown->currentData()); });
     form->addRow(tr("Countdown before steady scrolling"), countdown);
 
+    auto *appearanceGroup = new SettingsSection(tr("Appearance"));
+    form = appearanceGroup->form;
     auto *appearance = new SettingsComboBox;
     appearance->setObjectName("applicationTheme");
     appearance->addItem(tr("Light"), "light");
     appearance->addItem(tr("Dark"), "dark");
     const auto savedTheme = settings.value("appearance/theme", "light").toString();
     appearance->setCurrentIndex(savedTheme == "dark" ? 1 : 0);
-    Accessibility::apply(this, savedTheme == "dark" ? Design::dark : Design::light);
     connect(appearance, &QComboBox::currentIndexChanged, this, [this, appearance] {
-        const auto name = appearance->currentData().toString();
-        Accessibility::apply(this, name == "dark" ? Design::dark : Design::light);
-        QSettings().setValue("appearance/theme", name);
+        QSettings().setValue("appearance/theme", appearance->currentData().toString());
+        applyTheme();
     });
     form->addRow(tr("Application appearance"), appearance);
 
@@ -903,16 +1017,23 @@ QWidget *MainWindow::makeReadingSettings() {
             prompter_->setCaptureExcluded(checked);
             QSettings().setValue("reading/excludeFromCapture", checked);
         });
-        form->addRow(hiddenRow);
-        form->addRow(note(tr("Screen sharing apps that use the system capture service leave the reader out. "
-                             "Check the view from another participant before relying on it.")));
+        group->form->addRow(hiddenRow);
+        group->form->addRow(note(tr("Screen sharing apps that use the system capture service leave the reader out. "
+                                    "Check the view from another participant before relying on it.")));
     } else {
         hiddenRow->deleteLater();
-        form->addRow(note(tr("Screen sharing may include the reader. Share a single window instead of the whole "
-                             "screen, or on KDE Plasma 6.6 or later use Hide from Screencast in the reader's window "
-                             "menu (Alt+F3). Check the view from another participant.")));
+        group->form->addRow(
+            note(tr("Screen sharing may include the reader. Share a single window instead of the whole "
+                    "screen, or on KDE Plasma 6.6 or later use Hide from Screencast in the reader's window "
+                    "menu (Alt+F3). Check the view from another participant.")));
     }
-    return group;
+    auto *container = new QWidget;
+    auto *layout = new QVBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(group);
+    layout->addWidget(appearanceGroup);
+    return container;
 }
 
 void MainWindow::refreshScreens() {
@@ -951,8 +1072,8 @@ void MainWindow::applyInterfaceScale(double scale) {
 
 QWidget *MainWindow::makeSpeechSettings() {
     QSettings settings;
-    auto *group = new SettingsGroup(tr("Speech"));
-    auto *form = formFor(group);
+    auto *group = new SettingsSection(tr("Speech"));
+    auto *form = group->form;
     backend_ = new SettingsComboBox;
     backend_->setObjectName("speechBackend");
     if (SystemSpeechClient::platformSupported())
@@ -1131,8 +1252,8 @@ void MainWindow::refreshInstalledSpeech() {
 }
 
 QWidget *MainWindow::makeRemoteSettings() {
-    auto *group = new SettingsGroup(tr("Remote control"));
-    auto *form = formFor(group);
+    auto *group = new SettingsSection(tr("Remote control"));
+    auto *form = group->form;
     form->addRow(note(tr("Foot pedals and presentation clickers work while the reader is focused: arrow keys and "
                          "Page Up/Down step, Space starts or pauses, + and − change the steady speed, Home returns "
                          "to the start.")));

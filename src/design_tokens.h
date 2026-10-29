@@ -31,7 +31,21 @@ inline constexpr const char *controlBorder = "#747C8B";
 inline constexpr const char *overlayBorder = "#8F98A9";
 inline constexpr const char *overlayFocus = "#F7F8FC";
 inline constexpr const char *actionText = "#FFFFFF";
-struct Palette { const char *background; const char *text; const char *muted; const char *surface; const char *hover; const char *border; const char *focus; const char *accent; const char *action; const char *actionHover; const char *actionText; const char *selection; const char *selectionText; };
-inline constexpr Palette light = {"#F7F8FA","#17191F","#626875","#FFFFFF","#EAF0FF","#747C8B","#17191F","#2447D3","#345CF5","#2447D3","#FFFFFF","#2447D3","#FFFFFF"};
-inline constexpr Palette dark = {"#17191F","#F7F8FC","#A7AFBF","#242933","#363C48","#8F98A9","#F7F8FC","#C8D4FF","#345CF5","#2447D3","#FFFFFF","#C8D4FF","#17191F"};
+struct Palette { const char *background; const char *text; const char *muted; const char *surface; const char *hover; const char *border; const char *focus; const char *accent; const char *action; const char *actionHover; const char *actionText; const char *selection; const char *selectionText; const char *divider; };
+inline constexpr Palette light = {"#F7F8FA","#17191F","#626875","#FFFFFF","#EAF0FF","#747C8B","#17191F","#2447D3","#345CF5","#2447D3","#FFFFFF","#2447D3","#FFFFFF","#DDE0E7"};
+inline constexpr Palette dark = {"#17191F","#F7F8FC","#A7AFBF","#242933","#363C48","#8F98A9","#F7F8FC","#C8D4FF","#345CF5","#2447D3","#FFFFFF","#C8D4FF","#17191F","#2E333D"};
+namespace Metric {
+inline constexpr int space1 = 4;
+inline constexpr int space2 = 8;
+inline constexpr int space3 = 12;
+inline constexpr int space4 = 16;
+inline constexpr int space5 = 24;
+inline constexpr int space6 = 32;
+inline constexpr int space7 = 48;
+inline constexpr int space8 = 64;
+inline constexpr int space9 = 96;
+inline constexpr int space10 = 128;
+inline constexpr int radius = 8;
+inline constexpr int control = 36;
+}
 }

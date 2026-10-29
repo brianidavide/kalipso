@@ -34,13 +34,13 @@ All three work without speech components (manual and steady modes). Voice follow
 Debian 13 / Ubuntu 24.04 or newer:
 
 ```sh
-sudo apt install build-essential cmake ninja-build git qt6-base-dev qt6-l10n-tools qt6-tools-dev libpipewire-0.3-dev pkg-config pipewire-bin
+sudo apt install build-essential cmake ninja-build git qt6-base-dev qt6-svg-dev qt6-l10n-tools qt6-tools-dev libpipewire-0.3-dev pkg-config pipewire-bin
 ```
 
 Arch / EndeavourOS:
 
 ```sh
-sudo pacman -S --needed base-devel cmake ninja git qt6-base qt6-tools pipewire pipewire-audio pkgconf
+sudo pacman -S --needed base-devel cmake ninja git qt6-base qt6-svg qt6-tools pipewire pipewire-audio pkgconf
 ```
 
 Then:

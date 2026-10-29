@@ -4,6 +4,7 @@
 #include <QAccessible>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialog>
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QMenu>
@@ -22,6 +23,10 @@
 namespace {
 QPlainTextEdit *editor(MainWindow &window) { return window.findChild<QPlainTextEdit *>("scriptEditor"); }
 QLabel *positionLabel(MainWindow &window) { return window.findChild<QLabel *>("readingPosition"); }
+QDialog *openSettings(MainWindow &window) {
+    window.findChild<QPushButton *>("settingsButton")->click();
+    return window.findChild<QDialog *>("settingsDialog");
+}
 
 void setCursor(QPlainTextEdit *edit, int position) {
     auto cursor = edit->textCursor();
@@ -139,8 +144,10 @@ private slots:
             const auto selections = reader.text->extraSelections();
             QCOMPARE(selections.size(), 2);
             QVERIFY(Accessibility::contrast(selections[0].format.foreground().color(), QColor(p.surface)) >= 4.5);
+            // The current word is accent text on a soft tint, underlined.
             QVERIFY(Accessibility::contrast(selections[1].format.foreground().color(),
                                             selections[1].format.background().color()) >= 4.5);
+            QVERIFY(selections[1].format.fontUnderline());
         }
         QVERIFY(Accessibility::contrast(QColor("#777777"), Qt::white) < 4.5);
     }
@@ -169,14 +176,14 @@ private slots:
     void settingsScrollDoesNotChangeSelections() {
         MainWindow window(scripts_.path());
         window.show();
-        auto *tabs = window.findChild<QTabWidget *>();
-        tabs->setCurrentIndex(tabs->count() - 1);
+        auto *settings = openSettings(window);
+        QVERIFY(settings && settings->isVisible());
         const auto wheel = [](QComboBox *combo) {
             QWheelEvent event(QPointF(10, 10), combo->mapToGlobal(QPoint(10, 10)), QPoint(), QPoint(0, -120),
                               Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
             QApplication::sendEvent(combo, &event);
         };
-        for (auto *combo : window.findChildren<QComboBox *>()) {
+        for (auto *combo : settings->findChildren<QComboBox *>()) {
             if (!combo->isVisible() || combo->count() < 2)
                 continue;
             combo->setFocus();
@@ -197,9 +204,11 @@ private slots:
         editor(window)->setPlainText("one two three four five six seven eight");
         window.showPrompter();
         auto *reader = window.prompter();
-        auto *mode = reader->findChild<QComboBox *>("readerMode");
-        mode->setCurrentIndex(mode->findData(int(ReadingMode::Steady)));
-        emit mode->activated(mode->currentIndex());
+        auto *mode = reader->findChild<QToolButton *>("readerMode");
+        for (auto *action : mode->menu()->actions())
+            if (action->text() == "Steady speed")
+                action->trigger();
+        QCOMPARE(mode->text(), QString("Steady speed"));
         auto *primary = reader->findChild<QPushButton *>("readerListeningButton");
         auto *status = reader->findChild<QLabel *>("readerListeningStatus");
         primary->click();
@@ -243,7 +252,6 @@ private slots:
         ReaderWindow reader;
         for (auto *button : reader.findChildren<QAbstractButton *>())
             QCOMPARE(button->focusPolicy(), Qt::TabFocus);
-        QCOMPARE(reader.findChild<QComboBox *>("readerMode")->focusPolicy(), Qt::TabFocus);
     }
 
     void sectionsJumpAndCuesStayOutOfTheWordCount() {
@@ -279,10 +287,11 @@ private slots:
     void navigationAndReaderTextScaling() {
         MainWindow window(scripts_.path());
         window.show();
-        auto *tabs = window.findChild<QTabWidget *>();
-        QCOMPARE(tabs->count(), 2);
-        QCOMPARE(tabs->tabText(0), QString("Script"));
-        QCOMPARE(tabs->tabText(1), QString("Settings"));
+        // Settings is its own window; the main window is the script.
+        QVERIFY(!window.findChild<QTabWidget *>());
+        auto *settings = openSettings(window);
+        QVERIFY(settings && settings->isVisible());
+        QCOMPARE(window.findChild<QPushButton *>("primaryAction")->text(), QString("Open reader"));
         auto *button = window.prompter()->findChild<QPushButton *>("readerListeningButton");
         const double original = button->font().pointSizeF();
         const double scriptSize = window.prompter()->text->font().pointSizeF();
@@ -312,6 +321,7 @@ private slots:
         MainWindow window(scripts_.path());
         window.resize(640, 760);
         window.show();
+        auto *settings = openSettings(window);
         auto *scale = window.findChild<QComboBox *>("interfaceTextSize");
         scale->setCurrentIndex(2);
         QTest::qWait(80);
@@ -319,16 +329,22 @@ private slots:
         auto *scroll = qobject_cast<QScrollArea *>(window.centralWidget());
         QVERIFY(scroll);
         QCOMPARE(scroll->horizontalScrollBar()->maximum(), 0);
-        auto *tabs = window.findChild<QTabWidget *>();
-        tabs->setCurrentIndex(tabs->count() - 1);
-        QTest::qWait(80);
-        QCOMPARE(scroll->horizontalScrollBar()->maximum(), 0);
-        window.resize(320, 760);
-        QTest::qWait(100);
-        for (auto *area : window.findChildren<QScrollArea *>())
-            if (area->isVisible())
-                QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
-        for (auto *form : tabs->currentWidget()->findChildren<QFormLayout *>()) {
+        for (const int width : {640, 320}) {
+            window.resize(width, 760);
+            settings->resize(width, 700);
+            QTest::qWait(100);
+            for (auto *area : window.findChildren<QScrollArea *>())
+                if (area->isVisible())
+                    QCOMPARE(area->horizontalScrollBar()->maximum(), 0);
+            // Every visible control fits inside its window.
+            for (QWidget *top : {static_cast<QWidget *>(&window), static_cast<QWidget *>(settings)})
+                for (auto *control : top->findChildren<QAbstractButton *>())
+                    if (control->isVisible() && control->window() == top) {
+                        const auto right = control->mapTo(top, QPoint(control->width(), 0)).x();
+                        QVERIFY2(right <= top->width(), qPrintable(control->text()));
+                    }
+        }
+        for (auto *form : settings->findChildren<QFormLayout *>()) {
             if (!form->parentWidget()->isVisible())
                 continue;
             const auto bounds = form->parentWidget()->contentsRect();
@@ -339,28 +355,51 @@ private slots:
                         QVERIFY(label->height() >= label->heightForWidth(label->width()));
                     }
         }
-        auto *settings = qobject_cast<QScrollArea *>(tabs->currentWidget());
-        QVERIFY(settings);
-        const int minimum = settings->widget()->minimumWidth();
-        settings->widget()->setMinimumWidth(900);
+        auto *settingsScroll = settings->findChild<QScrollArea *>();
+        QVERIFY(settingsScroll);
+        const int minimum = settingsScroll->widget()->minimumWidth();
+        settingsScroll->widget()->setMinimumWidth(900);
         QTest::qWait(30);
-        QVERIFY(settings->horizontalScrollBar()->maximum() > 0); // Detects the nested-overflow regression.
-        settings->widget()->setMinimumWidth(minimum);
+        QVERIFY(settingsScroll->horizontalScrollBar()->maximum() > 0); // Detects the nested-overflow regression.
+        settingsScroll->widget()->setMinimumWidth(minimum);
         if (const auto directory = qEnvironmentVariable("KALIPSO_A11Y_SHOTS"); !directory.isEmpty()) {
             QDir().mkpath(directory);
-            window.grab().save(directory + "/qt-settings-200.png");
+            window.grab().save(directory + "/qt-editor-320-200.png");
+            settings->grab().save(directory + "/qt-settings-320-200.png");
             scale->setCurrentIndex(0);
             window.resize(1100, 760);
-            QTest::qWait(80);
-            window.grab().save(directory + "/qt-settings.png");
+            settings->resize(620, 700);
             window.setDemoScript();
+            QTest::qWait(80);
+            window.grab().save(directory + "/qt-editor.png");
+            settings->grab().save(directory + "/qt-settings.png");
             window.showPrompter();
-            window.prompter()->setReaderTheme("light");
+            for (const auto *theme : {"light", "dark"}) {
+                window.prompter()->setReaderTheme(theme);
+                QTest::qWait(80);
+                window.prompter()->grab().save(directory + QString("/qt-reader-%1.png").arg(theme));
+            }
+            window.prompter()->setMode(ReadingMode::Steady);
+            window.prompter()->resize(320, 300);
             QTest::qWait(80);
-            window.prompter()->grab().save(directory + "/qt-reader-light.png");
-            window.prompter()->setReaderTheme("dark");
+            window.prompter()->grab().save(directory + "/qt-reader-320.png");
+            window.findChild<QComboBox *>("applicationTheme")->setCurrentIndex(1);
+            window.resize(1100, 760);
             QTest::qWait(80);
-            window.prompter()->grab().save(directory + "/qt-reader-dark.png");
+            window.grab().save(directory + "/qt-editor-dark.png");
+            settings->grab().save(directory + "/qt-settings-dark.png");
+        }
+    }
+
+    void editorWrapsLongLinesInsideTheColumn() {
+        MainWindow window(scripts_.path());
+        window.resize(1100, 760);
+        window.show();
+        editor(window)->setPlainText(QString("A long line of words ").repeated(40));
+        for (const int width : {1100, 700, 1400}) {
+            window.resize(width, 760);
+            QTest::qWait(50);
+            QCOMPARE(editor(window)->horizontalScrollBar()->maximum(), 0);
         }
     }
 
