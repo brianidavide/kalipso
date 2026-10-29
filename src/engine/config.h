@@ -36,11 +36,21 @@ inline QString library(const QString &backend) {
 
 inline QStringList requiredSymbols(const QString &backend) {
     if (backend == QLatin1String("moonshine"))
-        return {"moonshine_load_transcriber_from_files", "moonshine_free_transcriber", "moonshine_create_stream",
-                "moonshine_start_stream", "moonshine_stop_stream", "moonshine_free_stream",
-                "moonshine_transcribe_add_audio_to_stream", "moonshine_transcribe_stream"};
-    return {"vosk_model_new", "vosk_model_free", "vosk_recognizer_new", "vosk_recognizer_free",
-            "vosk_recognizer_accept_waveform", "vosk_recognizer_result", "vosk_recognizer_partial_result"};
+        return {"moonshine_load_transcriber_from_files",
+                "moonshine_free_transcriber",
+                "moonshine_create_stream",
+                "moonshine_start_stream",
+                "moonshine_stop_stream",
+                "moonshine_free_stream",
+                "moonshine_transcribe_add_audio_to_stream",
+                "moonshine_transcribe_stream"};
+    return {"vosk_model_new",
+            "vosk_model_free",
+            "vosk_recognizer_new",
+            "vosk_recognizer_free",
+            "vosk_recognizer_accept_waveform",
+            "vosk_recognizer_result",
+            "vosk_recognizer_partial_result"};
 }
 
 inline bool modelComplete(const QString &backend, const QString &model) {
@@ -51,8 +61,8 @@ inline bool modelComplete(const QString &backend, const QString &model) {
         // Current releases name the frontend graph frontend.model.ort.
         if (!has("frontend.ort") && !has("frontend.model.ort"))
             return false;
-        for (const auto *file : {"encoder.ort", "adapter.ort", "cross_kv.ort", "decoder_kv.ort",
-                                 "streaming_config.json", "tokenizer.bin"})
+        for (const auto *file :
+             {"encoder.ort", "adapter.ort", "cross_kv.ort", "decoder_kv.ort", "streaming_config.json", "tokenizer.bin"})
             if (!has(file))
                 return false;
         return true;

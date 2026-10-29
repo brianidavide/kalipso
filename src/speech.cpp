@@ -14,7 +14,7 @@
 
 namespace {
 constexpr int kSampleRate = 16000;
-constexpr int kChunkBytes = 6400;     // 200 ms of 16-bit mono PCM.
+constexpr int kChunkBytes = 6400;       // 200 ms of 16-bit mono PCM.
 constexpr int kMaxBacklogBytes = 64000; // 2 s; beyond this the model cannot keep up.
 } // namespace
 
@@ -40,8 +40,7 @@ void SpeechWorker::load(const SpeechRequest &request, quint64 generation) {
     backend_ = request.backend;
     if (request.backend == QLatin1String("moonshine")) {
         QString message;
-        if (!moonshine_.load(request.library, request.model, request.language, request.architecture,
-                             message)) {
+        if (!moonshine_.load(request.library, request.model, request.language, request.architecture, message)) {
             emit error(generation, message);
             return;
         }
@@ -69,12 +68,11 @@ bool SpeechWorker::loadVosk(const SpeechRequest &request, quint64 generation) {
         member = reinterpret_cast<std::remove_reference_t<decltype(member)>>(vosk_.resolve(name));
         return member != nullptr;
     };
-    const bool complete = resolve(modelNew_, "vosk_model_new") & resolve(modelFree_, "vosk_model_free") &
-                          resolve(recognizerNew_, "vosk_recognizer_new") &
-                          resolve(recognizerFree_, "vosk_recognizer_free") &
-                          resolve(accept_, "vosk_recognizer_accept_waveform") &
-                          resolve(result_, "vosk_recognizer_result") &
-                          resolve(partial_, "vosk_recognizer_partial_result");
+    const bool complete =
+        resolve(modelNew_, "vosk_model_new") & resolve(modelFree_, "vosk_model_free") &
+        resolve(recognizerNew_, "vosk_recognizer_new") & resolve(recognizerFree_, "vosk_recognizer_free") &
+        resolve(accept_, "vosk_recognizer_accept_waveform") & resolve(result_, "vosk_recognizer_result") &
+        resolve(partial_, "vosk_recognizer_partial_result");
     if (!complete) {
         unload();
         emit error(generation, tr("This library does not provide the required Vosk API."));
@@ -150,11 +148,10 @@ SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new Spe
         if (active_ && generation == generation_)
             fail(message);
     });
-    connect(worker_, &SpeechWorker::transcript, this,
-            [this](const QString &text, bool final, quint64 generation) {
-                if (active_ && generation == generation_)
-                    emit transcript(text, final);
-            });
+    connect(worker_, &SpeechWorker::transcript, this, [this](const QString &text, bool final, quint64 generation) {
+        if (active_ && generation == generation_)
+            emit transcript(text, final);
+    });
     connect(worker_, &SpeechWorker::consumed, this, [this](int bytes, quint64 generation) {
         if (generation == generation_)
             queued_ -= bytes;
@@ -226,9 +223,7 @@ void SpeechService::start(const SpeechRequest &request) {
     const auto generation = ++generation_;
     epoch_->store(generation);
     emit status(tr("Loading the local speech model…"));
-    QMetaObject::invokeMethod(worker_, [worker = worker_, request, generation] {
-        worker->load(request, generation);
-    });
+    QMetaObject::invokeMethod(worker_, [worker = worker_, request, generation] { worker->load(request, generation); });
 }
 
 void SpeechService::setScript(const QString &script, int position) {
@@ -295,9 +290,8 @@ void SpeechService::queueAudio(const QByteArray &pcm) {
         const auto data = buffer_.first(kChunkBytes);
         buffer_.remove(0, kChunkBytes);
         queued_ += kChunkBytes;
-        QMetaObject::invokeMethod(worker_, [worker = worker_, data, generation = generation_] {
-            worker->consume(data, generation);
-        });
+        QMetaObject::invokeMethod(
+            worker_, [worker = worker_, data, generation = generation_] { worker->consume(data, generation); });
     }
 }
 
@@ -349,8 +343,8 @@ void SpeechService::startCapture() {
     captureReady();
 #else
     recorder_ = new QProcess(this);
-    QStringList arguments{"--raw", "--format", "s16", "--rate", QString::number(kSampleRate),
-                          "--channels", "1", "--latency", "100ms"};
+    QStringList arguments{"--raw",      "--format", "s16",       "--rate", QString::number(kSampleRate),
+                          "--channels", "1",        "--latency", "100ms"};
     if (!microphone_.isEmpty())
         arguments << "--target" << microphone_;
     arguments << "-";

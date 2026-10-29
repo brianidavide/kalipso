@@ -15,8 +15,7 @@ public:
     };
     MoonshineRecognizer();
     ~MoonshineRecognizer();
-    bool load(const QString &library, const QString &model, const QString &language, int architecture,
-              QString &error);
+    bool load(const QString &library, const QString &model, const QString &language, int architecture, QString &error);
     // Accepts 16 kHz signed 16-bit little-endian mono PCM.
     bool consume(const QByteArray &pcm, QList<Event> &events, QString &error);
     void unload();
