@@ -29,9 +29,12 @@ def compile_po(path):
     """Compile a .po file (plurals included, no contexts) to .mo bytes."""
     messages = {}
     entry, field = {}, None
+    fuzzy = False  # "#, fuzzy" translations are guesses from msgmerge: never ship them.
 
     def finish():
         if 'msgid' not in entry or 'msgstr' not in entry and 'msgstr[0]' not in entry:
+            return
+        if fuzzy and entry['msgid']:
             return
         if 'msgid_plural' in entry:  # .mo plural: "singular\0plural" -> "form0\0form1..."
             forms = [entry[f'msgstr[{n}]'] for n in range(10) if f'msgstr[{n}]' in entry]
@@ -42,8 +45,14 @@ def compile_po(path):
 
     for line in path.read_text(encoding='utf-8').splitlines() + ['']:
         line = line.strip()
-        if line.startswith('msgid '):
+        if line.startswith('#,') and 'fuzzy' in line:
             finish()
+            entry, field, fuzzy = {}, None, True
+            continue
+        if line.startswith('msgid '):
+            if field is not None:
+                finish()
+                fuzzy = False
             entry, field = {}, 'msgid'
         elif line.startswith(('msgid_plural ', 'msgstr ', 'msgstr[')):
             field = line.split(' ', 1)[0]

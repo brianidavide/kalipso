@@ -919,18 +919,35 @@ void MainWindow::followSlide(int number, const QString &notes) {
     audioStatus_->setText(tr("Following Impress · slide %1").arg(number));
 }
 
+namespace {
+enum class VoiceCommand { NextSection, PreviousSection, Start };
+const QList<QPair<QStringList, VoiceCommand>> &voiceCommands() {
+    static const QList<QPair<QStringList, VoiceCommand>> commands{
+        {{"go", "next"}, VoiceCommand::NextSection},
+        {{"go", "back"}, VoiceCommand::PreviousSection},
+        {{"go", "start"}, VoiceCommand::Start},
+        {{"vai", "avanti"}, VoiceCommand::NextSection},
+        {{"torna", "indietro"}, VoiceCommand::PreviousSection},
+        {{"da", "capo"}, VoiceCommand::Start}};
+    return commands;
+}
+// For recognizers limited to known phrases (Windows system speech).
+QStringList voiceCommandPhrases() {
+    QStringList phrases;
+    for (const auto &command : voiceCommands())
+        phrases << command.first.join(u' ');
+    return phrases;
+}
+} // namespace
+
 // Spoken commands, when enabled: a whole utterance that is exactly one of these
 // phrases, and not the words the script continues with. Two-word phrases make
 // accidental matches with ordinary speech unlikely.
 bool MainWindow::voiceCommand(const QString &utterance) {
-    enum Command { NextSection, PreviousSection, Start };
-    static const QList<QPair<QStringList, Command>> commands{
-        {{"go", "next"}, NextSection},    {{"go", "back"}, PreviousSection},        {{"go", "start"}, Start},
-        {{"vai", "avanti"}, NextSection}, {{"torna", "indietro"}, PreviousSection}, {{"da", "capo"}, Start}};
     QStringList spoken;
     for (const auto &word : ScriptTracker::tokenize(utterance))
         spoken << word.normalized;
-    for (const auto &[phrase, command] : commands) {
+    for (const auto &[phrase, command] : voiceCommands()) {
         if (spoken != phrase)
             continue;
         QStringList next; // The script's own next words win: then this is reading, not a command.
@@ -938,14 +955,14 @@ bool MainWindow::voiceCommand(const QString &utterance) {
             next << tracker_.words()[i].normalized;
         if (next == phrase)
             return false;
-        if (command == Start)
+        if (command == VoiceCommand::Start)
             seekWord(-1);
         else
-            jumpSection(command == NextSection ? 1 : -1);
+            jumpSection(command == VoiceCommand::NextSection ? 1 : -1);
         audioStatus_->setText(tr("Voice command: %1")
-                                  .arg(command == Start         ? tr("back to the start")
-                                       : command == NextSection ? tr("next section")
-                                                                : tr("previous section")));
+                                  .arg(command == VoiceCommand::Start         ? tr("back to the start")
+                                       : command == VoiceCommand::NextSection ? tr("next section")
+                                                                              : tr("previous section")));
         return true;
     }
     return false;
@@ -1463,8 +1480,10 @@ QWidget *MainWindow::makeSpeechSettings() {
     commands->box->setObjectName("voiceCommands");
     commands->box->setChecked(settings.value("speech/voiceCommands", false).toBool());
     voiceCommands_ = commands->box->isChecked();
+    speech_.setCommandPhrases(voiceCommands_ ? voiceCommandPhrases() : QStringList());
     connect(commands->box, &QCheckBox::toggled, this, [this](bool checked) {
         voiceCommands_ = checked;
+        speech_.setCommandPhrases(checked ? voiceCommandPhrases() : QStringList());
         QSettings().setValue("speech/voiceCommands", checked);
     });
     form->addRow(commands);
@@ -1609,7 +1628,16 @@ QWidget *MainWindow::makeRemoteSettings() {
     auto *code = new QLabel;
     code->setObjectName("remoteCode");
     code->setAccessibleName(tr("QR code for the remote control link"));
+    // The network the phone uses; containers, VMs and VPNs come last and are never the default.
+    auto *network = new SettingsComboBox;
+    network->setObjectName("remoteNetwork");
+    for (const auto &entry : RemoteControl::networks())
+        network->addItem(QStringLiteral("%1 · %2").arg(entry.address.toString(), entry.name), entry.address.toString());
+    if (network->count() == 0)
+        network->addItem(tr("No network found"), QString());
+    network->setCurrentIndex(std::max(0, network->findData(QSettings().value("remote/address").toString())));
     form->addRow(enableRow);
+    form->addRow(tr("Network"), network);
     form->addRow(link);
     form->addRow(code);
     form->addRow(note(tr("Anyone on this network who has the link can start, pause and step the reader; the script "
@@ -1638,8 +1666,16 @@ QWidget *MainWindow::makeRemoteSettings() {
         else if (name == QLatin1String("section-previous"))
             jumpSection(-1);
     });
-    connect(enable, &QCheckBox::toggled, this, [this, link, code, enable](bool on) {
-        if (on && !remote_->start()) {
+    const auto restart = [this, network, enable] {
+        if (enable->isChecked())
+            emit enable->toggled(true);
+        QSettings().setValue("remote/address", network->currentData().toString());
+    };
+    connect(network, &QComboBox::activated, this, restart);
+    connect(enable, &QCheckBox::toggled, this, [this, link, code, enable, network](bool on) {
+        const QHostAddress address(network->currentData().toString());
+        if (on && !remote_->start(address.isNull() ? QHostAddress(QHostAddress::LocalHost) : address,
+                                  quint16(QSettings().value("remote/port", 0).toUInt()))) {
             const QSignalBlocker block(enable);
             enable->setChecked(false);
             link->setText(tr("Remote control could not start on this network."));
@@ -1651,6 +1687,7 @@ QWidget *MainWindow::makeRemoteSettings() {
         link->setVisible(on);
         code->setVisible(on);
         if (on) {
+            QSettings().setValue("remote/port", remote_->port()); // Reused next time.
             link->setText(tr("Open on your phone: %1").arg(remote_->url()));
             code->setPixmap(QPixmap::fromImage(RemoteControl::qrCode(remote_->url())));
             refreshReading();

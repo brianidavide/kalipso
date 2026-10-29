@@ -802,6 +802,14 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Voice commands: say “go next”, “go back” or “go start” (in Italian “vai avanti”, “torna indietro”, “da capo”) on their own</source>
         <translation>Comandi vocali: di' da solo «vai avanti», «torna indietro» o «da capo» (in inglese «go next», «go back», «go start»)</translation>
     </message>
+    <message>
+        <source>No network found</source>
+        <translation>Nessuna rete trovata</translation>
+    </message>
+    <message>
+        <source>Network</source>
+        <translation>Rete</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>
@@ -1193,10 +1201,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>In ascolto · microfono · su questo dispositivo</translation>
     </message>
     <message>
-        <source>Recognition cannot keep up. Listening stopped; try a smaller model.</source>
-        <translation>Il riconoscimento non riesce a stare al passo. Ascolto interrotto; prova un modello più piccolo.</translation>
-    </message>
-    <message>
         <source>The selected microphone is unavailable.</source>
         <translation>Il microfono scelto non è disponibile.</translation>
     </message>
@@ -1223,6 +1227,14 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Audio capture ended. Check PipeWire and restart listening.</source>
         <translation>Cattura audio terminata. Controlla PipeWire e riavvia l'ascolto.</translation>
+    </message>
+    <message>
+        <source>Recognition cannot keep up on this computer. Listening stopped; try a smaller model.</source>
+        <translation>Il riconoscimento non riesce a stare al passo su questo computer. Ascolto interrotto; prova un modello più piccolo.</translation>
+    </message>
+    <message>
+        <source>Catching up: a moment of audio was skipped. Following continues.</source>
+        <translation>Recupero: un istante di audio è stato saltato. Kalipso continua a seguirti.</translation>
     </message>
 </context>
 <context>

@@ -34,15 +34,30 @@ class SavedState {
 
     load(callback) {
         this._file.load_contents_async(null, (file, result) => {
+            let bytes = null;
             try {
-                const [, bytes] = file.load_contents_finish(result);
+                [, bytes] = file.load_contents_finish(result);
                 this.values = JSON.parse(new TextDecoder().decode(bytes)) ?? {};
-            } catch {
-                this.values = {}; // First run, or an unreadable file: start fresh.
+            } catch (error) {
+                this.values = {}; // First run, or an unreadable file: start fresh...
+                // ...but never overwrite a damaged file that may still hold the script: keep a copy.
+                if (bytes !== null || !error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND))
+                    this._keepDamagedCopy();
             }
             this._loaded = true;
             callback({...this.values});
         });
+    }
+
+    _keepDamagedCopy() {
+        const stamp = GLib.DateTime.new_now_local().format('%Y%m%d-%H%M%S');
+        const copy = Gio.File.new_for_path(`${this._file.get_path()}.damaged-${stamp}`);
+        try {
+            this._file.copy(copy, Gio.FileCopyFlags.NONE, null, null);
+            console.warn(`Kalipso: the saved script could not be read; a copy is in ${copy.get_path()}`);
+        } catch (error) {
+            console.error(`Kalipso: cannot keep a copy of ${this._file.get_path()}: ${error.message}`);
+        }
     }
 
     // Coalesces frequent updates (typing, reading) into one write per second.

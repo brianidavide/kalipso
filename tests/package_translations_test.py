@@ -18,4 +18,15 @@ assert mo.ngettext('Starting in %1 second…', 'Starting in %1 seconds…', 3) =
 assert mo.gettext('Untranslated sentence stays as is') == 'Untranslated sentence stays as is'
 # Negative control: the previous compiler dropped plural entries, so English came back.
 assert mo.ngettext('%1 second', '%1 seconds', 5) != '%1 seconds'
-print('package translations: singular and plural Italian strings PASS')
+# A fuzzy entry (a guess left by msgmerge) is not shipped; the entries around it are.
+import tempfile  # noqa: E402
+with tempfile.TemporaryDirectory() as work:
+    po = pathlib.Path(work) / 'it.po'
+    po.write_text('msgid ""\nmsgstr "Content-Type: text/plain; charset=UTF-8\\n"\n\n'
+                  'msgid "Before"\nmsgstr "Prima"\n\n'
+                  '#, fuzzy\nmsgid "Guess"\nmsgstr "Indovinato"\n\n'
+                  '#, c-format\nmsgid "After"\nmsgstr "Dopo"\n', encoding='utf-8')
+    fuzzy = gettext.GNUTranslations(io.BytesIO(package.compile_po(po)))
+    assert fuzzy.gettext('Before') == 'Prima' and fuzzy.gettext('After') == 'Dopo'
+    assert fuzzy.gettext('Guess') == 'Guess', fuzzy.gettext('Guess')
+print('package translations: singular, plural and fuzzy Italian strings PASS')

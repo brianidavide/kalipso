@@ -64,6 +64,10 @@ private slots:
         QVERIFY(!phrases.contains("word0"));
         QVERIFY(scriptPhrases("", -1).isEmpty());
         QVERIFY(scriptPhrases("hello <tag> world", -1).contains("hello tag world"));
+        // Voice command phrases are added, and the total stays within Windows' limit of 256.
+        const auto withCommands = scriptPhrases(script, 150, {"go next", "torna indietro"});
+        QVERIFY(withCommands.contains("go next") && withCommands.contains("torna indietro"));
+        QVERIFY(withCommands.size() <= 256);
         const auto changed = scriptPhrases("prefix " + script, 151);
         QCOMPARE(changed, phrases);
     }

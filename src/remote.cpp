@@ -8,6 +8,7 @@
 #include <QRandomGenerator>
 #include <QTcpSocket>
 #include <QTimer>
+#include <algorithm>
 
 namespace {
 constexpr qsizetype kMaxRequest = 8192;
@@ -85,14 +86,41 @@ RemoteControl::RemoteControl(QObject *parent) : QObject(parent) {
     });
 }
 
-bool RemoteControl::start(quint16 port) {
+QList<RemoteControl::Network> RemoteControl::networks() {
+    static const QStringList virtualPrefixes{"docker", "br-", "virbr", "veth", "vmnet", "vboxnet",
+                                             "tun",    "tap", "wg",    "utun", "zt",    "tailscale"};
+    QList<Network> found;
+    for (const auto &interface : QNetworkInterface::allInterfaces()) {
+        const auto flags = interface.flags();
+        if (!flags.testFlag(QNetworkInterface::IsUp) || !flags.testFlag(QNetworkInterface::IsRunning) ||
+            flags.testFlag(QNetworkInterface::IsLoopBack))
+            continue;
+        const auto name = interface.humanReadableName();
+        const bool likelyVirtual =
+            interface.type() == QNetworkInterface::Virtual ||
+            std::any_of(virtualPrefixes.begin(), virtualPrefixes.end(),
+                        [&name](const QString &prefix) { return name.startsWith(prefix, Qt::CaseInsensitive); });
+        for (const auto &entry : interface.addressEntries()) {
+            const auto address = entry.ip();
+            // IPv4 only: global IPv6 addresses could expose the remote beyond the local network.
+            if (address.protocol() == QAbstractSocket::IPv4Protocol &&
+                !address.isInSubnet(QHostAddress::parseSubnet("169.254.0.0/16")))
+                found.append({name, address, likelyVirtual});
+        }
+    }
+    std::stable_sort(found.begin(), found.end(),
+                     [](const Network &a, const Network &b) { return !a.likelyVirtual && b.likelyVirtual; });
+    return found;
+}
+
+bool RemoteControl::start(const QHostAddress &address, quint16 port) {
     stop();
     const auto random = [] {
         return QString::number(QRandomGenerator::system()->generate64(), 16).rightJustified(16, u'0');
     };
     token_ = random() + random();
-    // IPv4 only: global IPv6 addresses could expose the remote beyond the local network.
-    return server_.listen(QHostAddress::AnyIPv4, port);
+    // A stable port keeps the phone's bookmark and the firewall's permission valid.
+    return server_.listen(address, port) || (port != 0 && server_.listen(address, 0));
 }
 
 void RemoteControl::stop() {
@@ -101,14 +129,12 @@ void RemoteControl::stop() {
 }
 
 QString RemoteControl::url() const {
-    QString host = QStringLiteral("127.0.0.1");
-    for (const auto &address : QNetworkInterface::allAddresses())
-        if (address.protocol() == QAbstractSocket::IPv4Protocol && !address.isLoopback() &&
-            !address.isInSubnet(QHostAddress::parseSubnet("169.254.0.0/16"))) {
-            host = address.toString();
-            break;
-        }
-    return QStringLiteral("http://%1:%2/%3/").arg(host).arg(port()).arg(token_);
+    auto host = server_.serverAddress();
+    if (host == QHostAddress::AnyIPv4 || host.isNull()) {
+        const auto all = networks();
+        host = all.isEmpty() ? QHostAddress(QHostAddress::LocalHost) : all.first().address;
+    }
+    return QStringLiteral("http://%1:%2/%3/").arg(host.toString()).arg(port()).arg(token_);
 }
 
 void RemoteControl::serve(QTcpSocket *socket) {

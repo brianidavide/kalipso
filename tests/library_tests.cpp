@@ -332,6 +332,26 @@ private slots:
         QVERIFY(!RemoteControl::qrCode(remote.url()).isNull());
     }
 
+    void remoteListensOnTheChosenNetworkWithAStablePort() {
+        RemoteControl remote;
+        QVERIFY(remote.start(QHostAddress(QHostAddress::LocalHost), 0));
+        const auto port = remote.port();
+        QCOMPARE(remote.url(), QString("http://127.0.0.1:%1/%2/").arg(port).arg(remote.token()));
+        // Not reachable through other addresses of this computer.
+        for (const auto &network : RemoteControl::networks()) {
+            QTcpSocket socket;
+            socket.connectToHost(network.address, port);
+            QVERIFY(!socket.waitForConnected(300));
+        }
+        // The same port again keeps the phone's bookmark; a taken port falls back to a free one.
+        remote.stop();
+        QVERIFY(remote.start(QHostAddress(QHostAddress::LocalHost), port));
+        QCOMPARE(remote.port(), port);
+        RemoteControl other;
+        QVERIFY(other.start(QHostAddress(QHostAddress::LocalHost), port));
+        QVERIFY(other.port() != port);
+    }
+
     void sessionSummaryMeasuresPaceAndPauses() {
         SessionStats stats;
         stats.start(-1, 0);

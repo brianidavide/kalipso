@@ -118,8 +118,14 @@ public:
         const auto phrases = command.value("phrases").toArray();
         if (phrases.isEmpty() || phrases.size() > 256)
             throw QString("Add a script before using Windows system speech.");
-        require(recognizer_->SetRecoState(SPRST_INACTIVE_WITH_PURGE), "Pause grammar update");
-        drain();
+        // While listening, pausing the context keeps the audio already captured: the engine
+        // resumes on it with the new grammar. Only the first grammar starts from silence.
+        if (started_) {
+            require(context_->Pause(0), "Pause for grammar update");
+        } else {
+            require(recognizer_->SetRecoState(SPRST_INACTIVE_WITH_PURGE), "Pause grammar update");
+            drain();
+        }
         require(grammar_->ResetGrammar(language_), "Reset script grammar");
         SPSTATEHANDLE rule = nullptr;
         require(grammar_->GetRule(L"script", 1, SPRAF_TopLevel | SPRAF_Dynamic, TRUE, &rule), "Create script rule");
@@ -134,6 +140,10 @@ public:
         require(grammar_->Commit(0), "Compile script grammar");
         require(grammar_->SetRuleState(L"script", nullptr, SPRS_ACTIVE), "Activate script grammar");
         revision_ = command.value("revision").toInt();
+        if (started_) {
+            require(context_->Resume(0), "Resume after grammar update");
+            return;
+        }
         require(recognizer_->SetRecoState(SPRST_ACTIVE_ALWAYS), "Start microphone");
         if (!started_) {
             started_ = true;
@@ -161,8 +171,17 @@ private:
         while (context_->GetEvents(1, &event, &count) == S_OK && count) {
             if (event.eEventId == SPEI_HYPOTHESIS || event.eEventId == SPEI_RECOGNITION) {
                 auto *result = reinterpret_cast<ISpRecoResult *>(event.lParam);
+                // The grammar only knows script phrases, so off-script speech gets forced into one
+                // of them; such guesses come back with low confidence and are not reported.
+                bool lowConfidence = false;
+                SPPHRASE *phrase = nullptr;
+                if (result && event.eEventId == SPEI_RECOGNITION && SUCCEEDED(result->GetPhrase(&phrase)) && phrase) {
+                    lowConfidence = phrase->Rule.Confidence == SP_LOW_CONFIDENCE;
+                    CoTaskMemFree(phrase);
+                }
                 wchar_t *text = nullptr;
-                if (result && SUCCEEDED(result->GetText(SP_GETWHOLEPHRASE, SP_GETWHOLEPHRASE, TRUE, &text, nullptr))) {
+                if (result && !lowConfidence &&
+                    SUCCEEDED(result->GetText(SP_GETWHOLEPHRASE, SP_GETWHOLEPHRASE, TRUE, &text, nullptr))) {
                     send({{"type", "transcript"},
                           {"text", QString::fromWCharArray(text)},
                           {"final", event.eEventId == SPEI_RECOGNITION},
