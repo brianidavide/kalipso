@@ -12,6 +12,8 @@ Scripts are saved automatically as you type, together with your reading position
 
 - **Move** it by dragging its title, **resize** it from the bottom-right corner. Its size and position are remembered for each monitor (on Wayland, the compositor decides the position).
 - The current word is highlighted and already-read words are dimmed. The current line stays at the height chosen in **Settings → Current line position** (top, upper third or centre).
+- **Settings → Font** and **Line spacing** change the reader's typeface and spacing. Any installed font works, including ones designed for easier reading such as Atkinson Hyperlegible or OpenDyslexic. Lines cut by the window's edges fade out rather than ending abruptly.
+- Below the editor, the status shows the reading time of the whole script at the steady speed, as a rehearsal guide.
 - **Edit** lets you change the text inside the reader; changes go straight to the script.
 - **Sections** jumps to a `#` heading. Clicking a word moves the reading position there.
 - While the reader scrolls or listens, its controls fade out after a moment and come back when you move the mouse, press a key or pause (Settings → Hide the reader's controls while reading). The text never moves when they do.
