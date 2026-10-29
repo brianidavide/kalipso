@@ -86,10 +86,6 @@ Le [indicazioni tra parentesi quadre] si vedono ma non si leggono ad alta voce. 
         <translation>Importa…</translation>
     </message>
     <message>
-        <source>Text, Markdown, or speaker notes from PowerPoint (.pptx) and Impress (.odp)</source>
-        <translation>Testo, Markdown o note del relatore da PowerPoint (.pptx) e Impress (.odp)</translation>
-    </message>
-    <message>
         <source>Export…</source>
         <translation>Esporta…</translation>
     </message>
@@ -552,7 +548,9 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message numerus="yes">
         <source>%n min left</source>
         <translation>
-            <numerusform>%n min rimanente</numerusform><numerusform>%n min rimanenti</numerusform></translation>
+            <numerusform>%n min rimanente</numerusform>
+            <numerusform>%n min rimanenti</numerusform>
+        </translation>
     </message>
     <message>
         <source>Scrolling · %1</source>
@@ -565,6 +563,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Hide the reader's controls while reading</source>
         <translation>Nascondi i comandi del lettore durante la lettura</translation>
+    </message>
+    <message>
+        <source>Text, Markdown, Word (.docx) and OpenDocument (.odt) documents, or speaker notes from PowerPoint (.pptx) and Impress (.odp)</source>
+        <translation>Testo, Markdown, documenti Word (.docx) e OpenDocument (.odt), o note del relatore da PowerPoint (.pptx) e Impress (.odp)</translation>
     </message>
 </context>
 <context>
@@ -786,10 +788,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
 <context>
     <name>ScriptImport</name>
     <message>
-        <source>Scripts and presentations (*.txt *.md *.markdown *.pptx *.odp);;Text (*.txt *.md *.markdown);;PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;All files (*)</source>
-        <translation>Copioni e presentazioni (*.txt *.md *.markdown *.pptx *.odp);;Testo (*.txt *.md *.markdown);;PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;Tutti i file (*)</translation>
-    </message>
-    <message>
         <source>Cannot open this file.</source>
         <translation>Impossibile aprire questo file.</translation>
     </message>
@@ -832,6 +830,30 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>These speaker notes are too long to import.</source>
         <translation>Queste note del relatore sono troppo lunghe da importare.</translation>
+    </message>
+    <message>
+        <source>Scripts, documents and presentations (*.txt *.md *.markdown *.docx *.odt *.pptx *.odp);;Text (*.txt *.md *.markdown);;Word (*.docx);;OpenDocument text (*.odt);;PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;All files (*)</source>
+        <translation>Copioni, documenti e presentazioni (*.txt *.md *.markdown *.docx *.odt *.pptx *.odp);;Testo (*.txt *.md *.markdown);;Word (*.docx);;Testo OpenDocument (*.odt);;PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;Tutti i file (*)</translation>
+    </message>
+    <message>
+        <source>This is not a readable Word (.docx) document.</source>
+        <translation>Questo non è un documento Word (.docx) leggibile.</translation>
+    </message>
+    <message>
+        <source>This document is too long to import.</source>
+        <translation>Questo documento è troppo lungo da importare.</translation>
+    </message>
+    <message>
+        <source>This document could not be read.</source>
+        <translation>Impossibile leggere questo documento.</translation>
+    </message>
+    <message>
+        <source>This document has no text.</source>
+        <translation>Questo documento non contiene testo.</translation>
+    </message>
+    <message>
+        <source>This is not a readable OpenDocument text (.odt) file.</source>
+        <translation>Questo non è un file di testo OpenDocument (.odt) leggibile.</translation>
     </message>
 </context>
 <context>

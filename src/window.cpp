@@ -473,7 +473,8 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     more->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     auto *menu = new QMenu(more);
     auto *import = menu->addAction(tr("Import…"));
-    import->setToolTip(tr("Text, Markdown, or speaker notes from PowerPoint (.pptx) and Impress (.odp)"));
+    import->setToolTip(tr("Text, Markdown, Word (.docx) and OpenDocument (.odt) documents, or speaker notes from "
+                          "PowerPoint (.pptx) and Impress (.odp)"));
     auto *exportAction = menu->addAction(tr("Export…"));
     menu->addSeparator();
     auto *remove = menu->addAction(tr("Delete script…"));

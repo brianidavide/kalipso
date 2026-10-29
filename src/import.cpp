@@ -226,12 +226,94 @@ QString odfParagraph(QXmlStreamReader &xml) {
     }
     return text;
 }
+// A document paragraph built from runs of text. Bold and italic become Markdown
+// emphasis (bold wins when both apply: "***" is ambiguous in the highlighter).
+class Paragraph {
+public:
+    void add(const QString &text, bool bold, bool italic) {
+        if (text.isEmpty())
+            return;
+        if (!runs_.isEmpty() && runs_.last().bold == bold && runs_.last().italic == italic)
+            runs_.last().text += text;
+        else
+            runs_.append({text, bold, italic});
+        size_ += text.size();
+    }
+    qsizetype size() const { return size_; }
+    QString plain() const {
+        QString text;
+        for (const auto &run : runs_)
+            text += run.text;
+        return text.trimmed();
+    }
+    QString markdown() const {
+        QString text;
+        for (const auto &run : runs_) {
+            const QString marker = run.bold ? QStringLiteral("**") : run.italic ? QStringLiteral("*") : QString();
+            const auto core = run.text.trimmed();
+            if (marker.isEmpty() || core.isEmpty()) {
+                text += run.text;
+                continue;
+            }
+            // Markers must touch the words, so surrounding spaces stay outside them.
+            const auto lead = run.text.indexOf(core);
+            text += run.text.left(lead) + marker + core + marker + run.text.mid(lead + core.size());
+        }
+        return text.trimmed();
+    }
+
+private:
+    struct Run {
+        QString text;
+        bool bold, italic;
+    };
+    QList<Run> runs_;
+    qsizetype size_ = 0;
+};
+
+// Collects document paragraphs as Markdown: "#" headings, "-" list items, blank lines between blocks.
+class Blocks {
+public:
+    void add(const Paragraph &paragraph, int heading, bool list) {
+        collected_ += paragraph.size();
+        auto text = heading ? paragraph.plain() : paragraph.markdown();
+        if (text.isEmpty())
+            return;
+        if (heading)
+            text = QString(std::clamp(heading, 1, 6), u'#') + u' ' + text.simplified();
+        else if (list)
+            text = QStringLiteral("- ") + text;
+        list = list && !heading;
+        if (!text_.isEmpty())
+            text_ += list && previousList_ ? QStringLiteral("\n") : QStringLiteral("\n\n");
+        text_ += text;
+        previousList_ = list;
+    }
+    bool full() const { return collected_ > kMaxText || text_.size() > kMaxText; }
+    QString text() const { return text_; }
+
+private:
+    QString text_;
+    qsizetype collected_ = 0;
+    bool previousList_ = false;
+};
+
+bool switchedOn(const QXmlStreamReader &xml) {
+    const auto value = attribute(xml, u"val", true);
+    return value.isEmpty() || (value != QLatin1String("0") && value != QLatin1String("false") &&
+                               value != QLatin1String("off") && value != QLatin1String("none"));
+}
+
+struct Emphasis {
+    bool bold = false, italic = false;
+};
 } // namespace
 
 namespace ScriptImport {
 QString dialogFilter() {
     return QCoreApplication::translate(
-        "ScriptImport", "Scripts and presentations (*.txt *.md *.markdown *.pptx *.odp);;Text (*.txt *.md *.markdown);;"
+        "ScriptImport", "Scripts, documents and presentations (*.txt *.md *.markdown *.docx *.odt *.pptx *.odp);;"
+                        "Text (*.txt *.md *.markdown);;Word (*.docx);;OpenDocument text (*.odt);;"
                         "PowerPoint (*.pptx);;LibreOffice Impress (*.odp);;All files (*)");
 }
 
@@ -247,6 +329,10 @@ Result read(const QString &path) {
         return fromPptx(data);
     if (suffix == QLatin1String("odp"))
         return fromOdp(data);
+    if (suffix == QLatin1String("docx"))
+        return fromDocx(data);
+    if (suffix == QLatin1String("odt"))
+        return fromOdt(data);
     if (data.size() > 2 * 1024 * 1024)
         return {{}, QCoreApplication::translate("ScriptImport", "Choose a text file smaller than 2 MiB."), 0};
     QStringDecoder utf8(QStringDecoder::Utf8);
@@ -356,5 +442,173 @@ Result fromOdp(const QByteArray &archive) {
     if (!result.sections)
         result.error = QCoreApplication::translate("ScriptImport", "This presentation has no speaker notes.");
     return result;
+}
+
+Result fromDocx(const QByteArray &archive) {
+    const ZipArchive zip(archive);
+    const QString main = "word/document.xml";
+    if (!zip.valid() || !zip.contains(main))
+        return {{}, QCoreApplication::translate("ScriptImport", "This is not a readable Word (.docx) document."), 0};
+    // Heading levels by style id. Word writes style names in English ("heading 1",
+    // "Title") whatever the interface language; the ids may be translated.
+    QHash<QString, int> headingStyles;
+    QXmlStreamReader styles(zip.file("word/styles.xml"));
+    QString style;
+    while (!styles.atEnd()) {
+        styles.readNext();
+        if (styles.isStartElement()) {
+            if (styles.name() == QLatin1String("style")) {
+                style = attribute(styles, u"styleId", true);
+            } else if (styles.name() == QLatin1String("name") && !style.isEmpty()) {
+                const auto name = attribute(styles, u"val", true).toLower();
+                if (name == QLatin1String("title"))
+                    headingStyles.insert(style, 1);
+                else if (name.startsWith(QLatin1String("heading ")))
+                    headingStyles.insert(style, std::clamp(name.mid(8).toInt(), 1, 6));
+            } else if (styles.name() == QLatin1String("outlineLvl") && !style.isEmpty()) {
+                const int level = attribute(styles, u"val", true).toInt();
+                if (level >= 0 && level < 6 && !headingStyles.contains(style))
+                    headingStyles.insert(style, level + 1);
+            }
+        } else if (styles.isEndElement() && styles.name() == QLatin1String("style")) {
+            style.clear();
+        }
+    }
+
+    QXmlStreamReader xml(zip.file(main));
+    Blocks blocks;
+    while (!xml.atEnd() && !blocks.full()) {
+        xml.readNext();
+        if (!xml.isStartElement() || xml.name() != QLatin1String("p"))
+            continue;
+        Paragraph paragraph;
+        int heading = 0;
+        bool list = false;
+        Emphasis run;
+        for (int depth = 1; depth > 0 && !xml.atEnd();) {
+            xml.readNext();
+            if (xml.isEndElement()) {
+                --depth;
+                continue;
+            }
+            if (!xml.isStartElement())
+                continue;
+            ++depth;
+            const auto name = xml.name();
+            if (name == QLatin1String("pStyle")) {
+                heading = headingStyles.value(attribute(xml, u"val", true));
+            } else if (name == QLatin1String("outlineLvl")) {
+                const int level = attribute(xml, u"val", true).toInt();
+                heading = level >= 0 && level < 6 ? level + 1 : 0;
+            } else if (name == QLatin1String("numId")) {
+                list = attribute(xml, u"val", true).toInt() != 0; // Numbering 0 means "not a list item".
+            } else if (name == QLatin1String("r")) {
+                run = {};
+            } else if (name == QLatin1String("b")) {
+                run.bold = switchedOn(xml);
+            } else if (name == QLatin1String("i")) {
+                run.italic = switchedOn(xml);
+            } else if (name == QLatin1String("t")) {
+                paragraph.add(xml.readElementText(), run.bold, run.italic);
+                --depth; // readElementText() consumed the end element.
+            } else if (name == QLatin1String("tab")) {
+                paragraph.add(QStringLiteral("\t"), run.bold, run.italic);
+            } else if (name == QLatin1String("br") || name == QLatin1String("cr")) {
+                paragraph.add(QStringLiteral("\n"), false, false);
+            }
+            // Deleted text (w:delText) and field codes (w:instrText) are not "t", so they are skipped.
+        }
+        blocks.add(paragraph, heading, list);
+    }
+    if (blocks.full())
+        return {{}, QCoreApplication::translate("ScriptImport", "This document is too long to import."), 0};
+    if (xml.hasError())
+        return {{}, QCoreApplication::translate("ScriptImport", "This document could not be read."), 0};
+    if (blocks.text().isEmpty())
+        return {{}, QCoreApplication::translate("ScriptImport", "This document has no text."), 0};
+    return {blocks.text(), {}, 0};
+}
+
+Result fromOdt(const QByteArray &archive) {
+    const ZipArchive zip(archive);
+    if (!zip.valid() || !zip.contains("content.xml"))
+        return {{},
+                QCoreApplication::translate("ScriptImport", "This is not a readable OpenDocument text (.odt) file."),
+                0};
+    QXmlStreamReader xml(zip.file("content.xml"));
+    QHash<QString, Emphasis> textStyles; // Automatic styles, where direct bold and italic live.
+    QString style;
+    int lists = 0;
+    Blocks blocks;
+    while (!xml.atEnd() && !blocks.full()) {
+        xml.readNext();
+        const auto name = xml.name();
+        if (xml.isEndElement()) {
+            if (name == QLatin1String("style"))
+                style.clear();
+            else if (name == QLatin1String("list"))
+                lists = std::max(0, lists - 1);
+            continue;
+        }
+        if (!xml.isStartElement())
+            continue;
+        if (name == QLatin1String("tracked-changes") || name == QLatin1String("table-of-content") ||
+            name == QLatin1String("annotation") || name == QLatin1String("note")) {
+            xml.skipCurrentElement(); // Deleted text, generated indexes, comments and footnotes.
+        } else if (name == QLatin1String("style")) {
+            style = attribute(xml, u"name", true);
+        } else if (name == QLatin1String("text-properties") && !style.isEmpty()) {
+            const auto weight = attribute(xml, u"font-weight", true);
+            const auto slant = attribute(xml, u"font-style", true);
+            textStyles.insert(style, {weight == QLatin1String("bold") || weight.toInt() >= 600,
+                                      slant == QLatin1String("italic") || slant == QLatin1String("oblique")});
+        } else if (name == QLatin1String("list")) {
+            ++lists;
+        } else if (name == QLatin1String("p") || name == QLatin1String("h")) {
+            const int heading =
+                name == QLatin1String("h") ? std::max(1, attribute(xml, u"outline-level", true).toInt()) : 0;
+            Paragraph paragraph;
+            QList<Emphasis> spans{{}};
+            for (int depth = 1; depth > 0 && !xml.atEnd();) {
+                xml.readNext();
+                if (xml.isStartElement()) {
+                    const auto inner = xml.name();
+                    if (inner == QLatin1String("annotation") || inner == QLatin1String("note")) {
+                        xml.skipCurrentElement();
+                        continue;
+                    }
+                    ++depth;
+                    auto current = spans.last();
+                    if (inner == QLatin1String("span")) {
+                        const auto found = textStyles.value(attribute(xml, u"style-name", true));
+                        current = {current.bold || found.bold, current.italic || found.italic};
+                    }
+                    spans.append(current);
+                    if (inner == QLatin1String("s"))
+                        paragraph.add(QString(std::clamp(attribute(xml, u"c", true).toInt(), 1, 100), u' '),
+                                      current.bold, current.italic);
+                    else if (inner == QLatin1String("tab"))
+                        paragraph.add(QStringLiteral("\t"), current.bold, current.italic);
+                    else if (inner == QLatin1String("line-break"))
+                        paragraph.add(QStringLiteral("\n"), false, false);
+                } else if (xml.isEndElement()) {
+                    --depth;
+                    spans.removeLast();
+                } else if (xml.isCharacters() && !spans.isEmpty()) {
+                    paragraph.add(xml.text().toString(), spans.last().bold, spans.last().italic);
+                }
+                if (paragraph.size() > kMaxText)
+                    break;
+            }
+            blocks.add(paragraph, heading, lists > 0);
+        }
+    }
+    if (blocks.full())
+        return {{}, QCoreApplication::translate("ScriptImport", "This document is too long to import."), 0};
+    if (xml.hasError())
+        return {{}, QCoreApplication::translate("ScriptImport", "This document could not be read."), 0};
+    if (blocks.text().isEmpty())
+        return {{}, QCoreApplication::translate("ScriptImport", "This document has no text."), 0};
+    return {blocks.text(), {}, 0};
 }
 } // namespace ScriptImport

@@ -38,6 +38,7 @@ The standalone app imports:
 | File | What you get |
 | --- | --- |
 | `.txt`, `.md` | The text as is (UTF-8). |
+| `.docx` (Word), `.odt` (LibreOffice Writer) | The document as Markdown: headings become `#` sections (`##` and deeper for lower levels), list items start with `-`, bold and italic words keep their emphasis. Comments, footnotes, deleted tracked changes and tables of contents are left out. |
 | `.pptx` (PowerPoint) | The speaker notes of each slide, under a `# Slide N: Title` heading. Slides without notes are skipped. |
 | `.odp` (LibreOffice Impress) | The same, from Impress speaker notes. |
 
