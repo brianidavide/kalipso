@@ -80,4 +80,4 @@ Then follow [installing the widget or extension](desktop/README.md).
 
 Kalipso is free software under the **AGPL-3.0-or-later** ([LICENSE](LICENSE)); third-party components keep their own licenses ([notices](THIRD_PARTY_NOTICES.md)). AppStream metadata is CC0-1.0. Kalipso is an independent project, not affiliated with KDE or GNOME.
 
-Contributing, tests and the release process: [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributing, tests and the release process: [CONTRIBUTING.md](CONTRIBUTING.md). Resource use and latency: [performance](docs/performance.md).

@@ -175,6 +175,9 @@ void ScriptTracker::setScript(const QString &text) {
     const bool started = position_ >= 0;
     script_ = text;
     words_ = tokenize(text);
+    occurrences_.clear();
+    for (int i = 0; i < words_.size(); ++i)
+        occurrences_[words_[i].normalized].push_back(i);
     lastHypothesis_.clear();
     misses_ = 0;
     position_ = -1;
@@ -229,10 +232,29 @@ int ScriptTracker::localMatch(const QVector<Word> &spoken) const {
 int ScriptTracker::globalMatch(const QVector<Word> &spoken) const {
     const int m = int(spoken.size());
     const int minimumExact = std::max(4, m - m / 4);
+    // A valid match contains all but at most m - minimumExact spoken words, so it
+    // contains one of the (m - minimumExact + 1) rarest. Only alignments that
+    // start shortly before one of their occurrences need to be checked.
+    QVector<const QVector<int> *> rare;
+    for (const auto &word : spoken)
+        if (const auto found = occurrences_.constFind(word.normalized); found != occurrences_.cend())
+            rare.push_back(&found.value());
+    if (rare.size() < minimumExact)
+        return -1;
+    std::sort(rare.begin(), rare.end(), [](const auto *a, const auto *b) { return a->size() < b->size(); });
+    rare.resize(m - minimumExact + 1 < rare.size() ? m - minimumExact + 1 : rare.size());
+    QVector<int> starts;
+    for (const auto *positions : rare)
+        for (const int position : *positions)
+            for (int start = std::max(0, position - m - 1); start <= position; ++start)
+                starts.push_back(start);
+    std::sort(starts.begin(), starts.end());
+    starts.erase(std::unique(starts.begin(), starts.end()), starts.end());
+
     QVector<int> previous(m + 1), current(m + 1);
     int bestEdits = std::numeric_limits<int>::max();
     QVector<int> ends;
-    for (int start = 0; start < words_.size(); ++start)
+    for (const int start : starts)
         alignAt(spoken, words_, start, int(words_.size()), previous, current, [&](int n, int edits) {
             if (n < m - 1 || edits > m / 4 || edits > bestEdits ||
                 exactMatches(spoken, words_, start, n) < minimumExact)

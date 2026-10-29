@@ -518,6 +518,15 @@ void MainWindow::setDemoScript() {
 
 // --- Reading ----------------------------------------------------------------
 
+void MainWindow::startSteadyScrolling() {
+    pauseRunning();
+    mode_ = ReadingMode::Steady;
+    prompter_->setMode(mode_);
+    steady_.setInterval(60000 / wordsPerMinute_);
+    steady_.start();
+    refreshRunning();
+}
+
 void MainWindow::showPrompter() {
     const auto name = screen_->currentData().toString();
     QScreen *target = QGuiApplication::primaryScreen();

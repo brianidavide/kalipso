@@ -176,6 +176,8 @@ if(BUILD_TESTING)
 
   add_executable(speech_probe benchmarks/speech_probe.cpp)
   target_link_libraries(speech_probe PRIVATE kalipso_speech)
+  add_executable(tracker_benchmark benchmarks/tracker_benchmark.cpp)
+  target_link_libraries(tracker_benchmark PRIVATE prompter_core)
 
   if(Python3_Interpreter_FOUND)
     add_test(NAME speech_assets COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/speech_assets_test.py)
