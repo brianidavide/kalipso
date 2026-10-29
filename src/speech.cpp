@@ -1,237 +1,371 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "speech.h"
+#include "system_speech/grammar.h"
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
-#include <QTimer>
-#include "system_speech/grammar.h"
 #ifdef KALIPSO_QT_AUDIO
-#include <QMediaDevices>
 #include <QAudioDevice>
 #include <QCoreApplication>
+#include <QMediaDevices>
 #include <QPermissions>
 #endif
 
+namespace {
+constexpr int kSampleRate = 16000;
+constexpr int kChunkBytes = 6400;     // 200 ms of 16-bit mono PCM.
+constexpr int kMaxBacklogBytes = 64000; // 2 s; beyond this the model cannot keep up.
+} // namespace
+
 SpeechWorker::~SpeechWorker() { unload(); }
+
 void SpeechWorker::unload() {
     moonshine_.unload();
-    for (auto &recognizer : recognizers_) {
-        if (recognizer && recognizerFree_) recognizerFree_(recognizer);
-        recognizer=nullptr;
-    }
-    if (model_ && modelFree_) modelFree_(model_);
-    model_=nullptr; library_.unload();
+    if (recognizer_ && recognizerFree_)
+        recognizerFree_(recognizer_);
+    recognizer_ = nullptr;
+    if (model_ && modelFree_)
+        modelFree_(model_);
+    model_ = nullptr;
+    vosk_.unload();
+    backend_.clear();
 }
-void SpeechWorker::load(const QString &library, const QString &model, bool meeting, quint64 generation, const QString &backend, const QString &language, int architecture) {
-    if(epoch_->load() != generation) return;
-    unload(); generation_=generation;backend_=backend;
-    if(backend=="moonshine") {
+
+void SpeechWorker::load(const SpeechRequest &request, quint64 generation) {
+    if (!current(generation))
+        return;
+    unload();
+    generation_ = generation;
+    backend_ = request.backend;
+    if (request.backend == QLatin1String("moonshine")) {
         QString message;
-        if(!moonshine_.load(library,model,language,architecture,meeting,message)){emit error(generation,message);return;}
-        if(epoch_->load()!=generation){unload();return;}
-        emit ready(generation);return;
+        if (!moonshine_.load(request.library, request.model, request.language, request.architecture,
+                             message)) {
+            emit error(generation, message);
+            return;
+        }
+    } else if (request.backend == QLatin1String("vosk")) {
+        if (!loadVosk(request, generation))
+            return;
+    } else {
+        emit error(generation, tr("Unsupported speech engine."));
+        return;
     }
-    if(backend!="vosk"){emit error(generation,tr("Unsupported speech engine."));return;}
-    library_.setFileName(library);
-    if (!library_.load()) { emit error(generation,tr("Cannot load libvosk. Select a valid Vosk shared library in Settings.")); return; }
-#define LOAD(member,name) member = reinterpret_cast<decltype(member)>(library_.resolve(name))
-    LOAD(modelNew_,"vosk_model_new"); LOAD(modelFree_,"vosk_model_free");
-    LOAD(recognizerNew_,"vosk_recognizer_new"); LOAD(recognizerFree_,"vosk_recognizer_free");
-    LOAD(accept_,"vosk_recognizer_accept_waveform"); LOAD(result_,"vosk_recognizer_result");
-    LOAD(partial_,"vosk_recognizer_partial_result");
-#undef LOAD
-    if (!modelNew_ || !modelFree_ || !recognizerNew_ || !recognizerFree_ || !accept_ || !result_ || !partial_) {
-        unload(); emit error(generation,tr("This library does not provide the required Vosk API.")); return;
-    }
-    auto logLevel=reinterpret_cast<void(*)(int)>(library_.resolve("vosk_set_log_level"));
-    if (logLevel) logLevel(-1);
-    model_=modelNew_(model.toUtf8().constData());
-    if(epoch_->load() != generation) { unload(); return; }
-    if (!model_) { unload(); emit error(generation,tr("Cannot open this speech model. Choose the extracted model folder.")); return; }
-    recognizers_[0]=recognizerNew_(model_,16000.0F);
-    if (meeting) recognizers_[1]=recognizerNew_(model_,16000.0F);
-    if (!recognizers_[0] || (meeting && !recognizers_[1])) {
-        unload(); emit error(generation,tr("Not enough resources to start speech recognition.")); return;
+    if (!current(generation)) {
+        unload();
+        return;
     }
     emit ready(generation);
 }
-void SpeechWorker::consume(int channel, const QByteArray &pcm, quint64 generation) {
-    if(backend_=="moonshine"&&generation==generation_&&epoch_->load()==generation) {
-        QList<MoonshineRecognizer::Event> events;QString message;
-        if(!moonshine_.consume(channel,pcm,events,message))emit error(generation,message);
-        else if(epoch_->load()==generation)for(const auto &event:events)emit transcript(channel,event.text,event.final,generation);
-        emit consumed(channel,int(pcm.size()),generation);return;
+
+bool SpeechWorker::loadVosk(const SpeechRequest &request, quint64 generation) {
+    vosk_.setFileName(request.library);
+    if (!vosk_.load()) {
+        emit error(generation, tr("Cannot load libvosk. Select a valid Vosk library in Settings."));
+        return false;
     }
-    if (generation == generation_ && epoch_->load() == generation && channel >= 0 && channel < 2 && recognizers_[channel]) {
-        const int result=accept_(recognizers_[channel],pcm.constData(),int(pcm.size()));
-        if (result < 0) emit error(generation,tr("The speech recognizer could not process the audio."));
-        else {
-            const auto data=QJsonDocument::fromJson(result ? result_(recognizers_[channel]) : partial_(recognizers_[channel])).object();
-            const auto text=data.value(result ? "text" : "partial").toString();
-            emit transcript(channel,text,result!=0,generation);
+    const auto resolve = [this](auto &member, const char *name) {
+        member = reinterpret_cast<std::remove_reference_t<decltype(member)>>(vosk_.resolve(name));
+        return member != nullptr;
+    };
+    const bool complete = resolve(modelNew_, "vosk_model_new") & resolve(modelFree_, "vosk_model_free") &
+                          resolve(recognizerNew_, "vosk_recognizer_new") &
+                          resolve(recognizerFree_, "vosk_recognizer_free") &
+                          resolve(accept_, "vosk_recognizer_accept_waveform") &
+                          resolve(result_, "vosk_recognizer_result") &
+                          resolve(partial_, "vosk_recognizer_partial_result");
+    if (!complete) {
+        unload();
+        emit error(generation, tr("This library does not provide the required Vosk API."));
+        return false;
+    }
+    if (auto setLogLevel = reinterpret_cast<void (*)(int)>(vosk_.resolve("vosk_set_log_level")))
+        setLogLevel(-1);
+    model_ = modelNew_(request.model.toUtf8().constData());
+    if (!current(generation)) {
+        unload();
+        return false;
+    }
+    if (!model_) {
+        unload();
+        emit error(generation, tr("Cannot open this speech model. Choose the extracted model folder."));
+        return false;
+    }
+    recognizer_ = recognizerNew_(model_, float(kSampleRate));
+    if (!recognizer_) {
+        unload();
+        emit error(generation, tr("Not enough resources to start speech recognition."));
+        return false;
+    }
+    return true;
+}
+
+void SpeechWorker::consume(const QByteArray &pcm, quint64 generation) {
+    const bool live = generation == generation_ && current(generation);
+    if (live && backend_ == QLatin1String("moonshine")) {
+        QList<MoonshineRecognizer::Event> events;
+        QString message;
+        if (!moonshine_.consume(pcm, events, message))
+            emit error(generation, message);
+        else if (current(generation))
+            for (const auto &event : events)
+                emit transcript(event.text, event.final, generation);
+    } else if (live && recognizer_) {
+        const int result = accept_(recognizer_, pcm.constData(), int(pcm.size()));
+        if (result < 0) {
+            emit error(generation, tr("The speech recognizer could not process the audio."));
+        } else {
+            const auto json = result ? result_(recognizer_) : partial_(recognizer_);
+            const auto data = QJsonDocument::fromJson(json).object();
+            emit transcript(data.value(result ? "text" : "partial").toString(), result != 0, generation);
         }
     }
-    emit consumed(channel,int(pcm.size()),generation);
+    emit consumed(int(pcm.size()), generation);
 }
-SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new SpeechWorker(epoch_)) {
-    connect(&system_,&SystemSpeechClient::ready,this,[this]{if(active_&&systemMode_)captureReady();});
-    connect(&system_,&SystemSpeechClient::transcript,this,[this](const QString &text,bool final){if(active_&&systemMode_)emit transcript(0,text,final);});
-    connect(&system_,&SystemSpeechClient::failed,this,[this](const QString &message){if(systemMode_){stop();emit status(message);}});
-    connect(&system_,&SystemSpeechClient::message,this,&SpeechService::status);
-    qputenv("MOONSHINE_ORT_SINGLE_THREAD","1"); // Set once, before the inference worker starts.
-    worker_->moveToThread(&thread_);
-    connect(&thread_,&QThread::finished,worker_,&QObject::deleteLater);
-    connect(worker_,&SpeechWorker::ready,this,[this](quint64 generation) {
-        if (!active_ || generation!=generation_) return;
-        capture(0,microphone_);
-        if (active_ && meeting_) capture(1,meetingTarget_);
 
+SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new SpeechWorker(epoch_)) {
+    connect(&system_, &SystemSpeechClient::ready, this, [this] {
+        if (active_ && systemMode_)
+            captureReady();
     });
-    connect(worker_,&SpeechWorker::error,this,[this](quint64 generation,const QString &message) {
-        if (generation != generation_ || !active_) return;
-        stop(); emit status(message);
+    connect(&system_, &SystemSpeechClient::transcript, this, [this](const QString &text, bool final) {
+        if (active_ && systemMode_)
+            emit transcript(text, final);
     });
-    connect(worker_,&SpeechWorker::transcript,this,[this](int channel,const QString &text,bool final,quint64 generation) {
-        if (active_ && generation==generation_) emit transcript(channel,text,final);
+    connect(&system_, &SystemSpeechClient::failed, this, [this](const QString &message) {
+        if (systemMode_)
+            fail(message);
     });
-    connect(worker_,&SpeechWorker::consumed,this,[this](int channel,int bytes,quint64 generation) {
-        if (generation==generation_) queued_[channel]-=bytes;
+    connect(&system_, &SystemSpeechClient::message, this, &SpeechService::status);
+
+    qputenv("MOONSHINE_ORT_SINGLE_THREAD", "1"); // Must be set before the worker loads ONNX Runtime.
+    worker_->moveToThread(&thread_);
+    connect(&thread_, &QThread::finished, worker_, &QObject::deleteLater);
+    connect(worker_, &SpeechWorker::ready, this, [this](quint64 generation) {
+        if (active_ && generation == generation_)
+            startCapture();
+    });
+    connect(worker_, &SpeechWorker::error, this, [this](quint64 generation, const QString &message) {
+        if (active_ && generation == generation_)
+            fail(message);
+    });
+    connect(worker_, &SpeechWorker::transcript, this,
+            [this](const QString &text, bool final, quint64 generation) {
+                if (active_ && generation == generation_)
+                    emit transcript(text, final);
+            });
+    connect(worker_, &SpeechWorker::consumed, this, [this](int bytes, quint64 generation) {
+        if (generation == generation_)
+            queued_ -= bytes;
     });
     thread_.start(QThread::LowPriority);
 }
+
 SpeechService::~SpeechService() {
     stop();
     // Drain pending recognizer work before its shared library is unloaded.
-    QMetaObject::invokeMethod(worker_,&SpeechWorker::unload,Qt::BlockingQueuedConnection);
-    thread_.quit(); thread_.wait();
+    QMetaObject::invokeMethod(worker_, &SpeechWorker::unload, Qt::BlockingQueuedConnection);
+    thread_.quit();
+    thread_.wait();
 }
-void SpeechService::start(const QString &library,const QString &model,const QString &microphone,
-                           const QString &meetingTarget,bool meeting,const QString &backend,const QString &language,int architecture) {
+
+void SpeechService::start(const SpeechRequest &request) {
     stop();
-    if(backend=="system"){
-        if(!SystemSpeechClient::platformSupported()){emit status(tr("System speech is available only on supported macOS and Windows installations."));return;}
-        if(meeting||!microphone.trimmed().isEmpty()){emit status(tr("System speech uses the default microphone. Turn off meeting capture and clear the microphone override."));return;}
-        systemMode_=true;active_=true;meeting_=false;
+    if (request.backend == QLatin1String("system")) {
+        if (!SystemSpeechClient::platformSupported()) {
+            emit status(tr("System speech is available only on macOS and Windows."));
+            return;
+        }
+        systemMode_ = true;
+        active_ = true;
         emit status(tr("Starting on-device system speech…"));
-        system_.start(language,scriptPhrases(script_,scriptPosition_));return;
+        system_.start(request.language, scriptPhrases(script_, scriptPosition_));
+        return;
     }
-    if(backend!="moonshine"&&backend!="vosk"){emit status(tr("Unsupported speech engine."));return;}
+    if (request.backend != QLatin1String("moonshine") && request.backend != QLatin1String("vosk")) {
+        emit status(tr("Unsupported speech engine."));
+        return;
+    }
 #ifndef KALIPSO_QT_AUDIO
     if (QStandardPaths::findExecutable("pw-record").isEmpty()) {
-        emit status(tr("Install pipewire-audio (Arch) or pipewire-bin (Debian) to enable audio capture.")); return;
+        emit status(tr("Install pipewire-audio (Arch) or pipewire-bin (Debian) to enable audio capture."));
+        return;
     }
-#else
-    if(meeting){emit status(tr("Meeting-output capture is currently available only with PipeWire on Linux."));return;}
 #endif
-    if (!QFileInfo(model).isDir()) { emit status(tr("Choose an extracted speech model folder in Settings.")); return; }
-    if (meeting && meetingTarget.trimmed().isEmpty()) {
-        emit status(tr("Choose the meeting output node in Settings before listening to meeting audio.")); return;
+    if (!QFileInfo(request.model).isDir()) {
+        emit status(tr("Choose an extracted speech model folder in Settings."));
+        return;
     }
 #ifdef Q_OS_MACOS
     const QMicrophonePermission permission;
-    const auto access=QCoreApplication::instance()->checkPermission(permission);
-    if(access==Qt::PermissionStatus::Denied){emit status(tr("Enable microphone access for Kalipso in System Settings."));return;}
-    if(access==Qt::PermissionStatus::Undetermined){
-        active_=true;const auto requestGeneration=generation_;
+    const auto access = qApp->checkPermission(permission);
+    if (access == Qt::PermissionStatus::Denied) {
+        emit status(tr("Enable microphone access for Kalipso in System Settings."));
+        return;
+    }
+    if (access == Qt::PermissionStatus::Undetermined) {
+        active_ = true;
+        const auto requestGeneration = generation_;
         emit status(tr("Waiting for microphone permission…"));
-        QCoreApplication::instance()->requestPermission(permission,this,[=,this](const QPermission &result){
-            if(!active_||generation_!=requestGeneration)return;
-            if(result.status()==Qt::PermissionStatus::Granted)start(library,model,microphone,meetingTarget,meeting,backend,language,architecture);
-            else{stop();emit status(tr("Microphone access was denied."));}
-        });return;
+        qApp->requestPermission(permission, this, [=, this](const QPermission &result) {
+            if (!active_ || generation_ != requestGeneration)
+                return;
+            if (result.status() == Qt::PermissionStatus::Granted) {
+                active_ = false; // Not a user-visible stop: continue starting.
+                start(request);
+            } else {
+                fail(tr("Microphone access was denied."));
+            }
+        });
+        return;
     }
 #endif
-    active_=true; meeting_=meeting; microphone_=microphone; meetingTarget_=meetingTarget;
-    const auto generation=++generation_;
+    active_ = true;
+    microphone_ = request.microphone.trimmed();
+    const auto generation = ++generation_;
     epoch_->store(generation);
     emit status(tr("Loading the local speech model…"));
-    QMetaObject::invokeMethod(worker_,[=,this] { worker_->load(library,model,meeting,generation,backend,language,architecture); });
-}
-void SpeechService::setScript(const QString &script,int position){
-    if(script_==script&&scriptPosition_==position)return;
-    script_=script;scriptPosition_=position;
-#ifdef Q_OS_WIN
-    if(active_&&systemMode_)system_.updateScript(scriptPhrases(script_,scriptPosition_));
-#endif
-}
-void SpeechService::captureReady(){
-    if(!active_)return;emit listening();
-    emit status(meeting_?tr("Listening · microphone and meeting audio"):tr("Listening · microphone · on this device"));
-}
-void SpeechService::stop() {
-    system_.stop();systemMode_=false;
-#ifdef KALIPSO_QT_AUDIO
-    if(audio_){audio_->disconnect(this);audio_->stop();audio_->deleteLater();audio_=nullptr;}
-#endif
-    active_=false; ++generation_;
-    epoch_->store(generation_);
-    for (auto &process : processes_) {
-        if (process) {
-            process->disconnect(this);
-            process->kill(); process->waitForFinished(1000);
-            process->deleteLater(); process=nullptr;
-        }
-    }
-    queued_.fill(0); for (auto &buffer : buffers_) buffer.clear();
-    QMetaObject::invokeMethod(worker_,&SpeechWorker::unload);
-    emit stopped();
-}
-void SpeechService::queueAudio(int channel,const QByteArray &pcm){
-    if(!active_||systemMode_)return;
-    buffers_[channel].append(pcm);
-    if(buffers_[channel].size()+queued_[channel]>64000){stop();emit status(tr("Recognition cannot keep up. Listening stopped; try a smaller model."));return;}
-    constexpr int chunk=6400;
-    while(buffers_[channel].size()>=chunk){
-        const auto data=buffers_[channel].first(chunk);buffers_[channel].remove(0,chunk);
-        queued_[channel]+=chunk;const auto generation=generation_;
-        QMetaObject::invokeMethod(worker_,[this,channel,data,generation]{worker_->consume(channel,data,generation);});
-    }
-}
-void SpeechService::capture(int channel,const QString &target) {
-#ifdef KALIPSO_QT_AUDIO
-    Q_UNUSED(channel);
-    auto device=QMediaDevices::defaultAudioInput();
-    if(!target.trimmed().isEmpty()){
-        bool found=false;
-        for(const auto &candidate:QMediaDevices::audioInputs())if(candidate.description()==target||QString::fromUtf8(candidate.id())==target){device=candidate;found=true;break;}
-        if(!found){stop();emit status(tr("The selected microphone is unavailable."));return;}
-    }
-    if(device.isNull()){stop();emit status(tr("No microphone is available."));return;}
-    auto format=device.preferredFormat();
-    QAudioFormat desired;desired.setSampleRate(16000);desired.setChannelCount(1);desired.setSampleFormat(QAudioFormat::Int16);
-    if(device.isFormatSupported(desired))format=desired;
-    if(format.sampleFormat()==QAudioFormat::Unknown){stop();emit status(tr("Unsupported microphone sample format."));return;}
-    const auto encoding=format.sampleFormat()==QAudioFormat::UInt8?PcmConverter::Unsigned8:format.sampleFormat()==QAudioFormat::Int16?PcmConverter::Signed16:format.sampleFormat()==QAudioFormat::Int32?PcmConverter::Signed32:PcmConverter::Float32;
-    converter_.reset(format.sampleRate(),format.channelCount(),encoding);
-    audio_=new QAudioSource(device,format,this);audio_->setBufferSize(format.bytesForDuration(100000));
-    connect(audio_,&QAudioSource::stateChanged,this,[this](QAudio::State state){
-        if(active_&&audio_&&state==QAudio::StoppedState&&audio_->error()!=QAudio::NoError){stop();emit status(tr("Microphone capture failed. Check device permissions."));}
+    QMetaObject::invokeMethod(worker_, [worker = worker_, request, generation] {
+        worker->load(request, generation);
     });
-    auto *input=audio_->start();
-    if(!active_||!audio_)return;
-    if(!input){stop();emit status(tr("Cannot start the microphone."));return;}
-    connect(input,&QIODevice::readyRead,this,[this,input]{queueAudio(0,converter_.convert(input->readAll()));});
+}
+
+void SpeechService::setScript(const QString &script, int position) {
+    if (script_ == script && scriptPosition_ == position)
+        return;
+    script_ = script;
+    scriptPosition_ = position;
+#ifdef Q_OS_WIN
+    if (active_ && systemMode_)
+        system_.updateScript(scriptPhrases(script_, scriptPosition_));
+#endif
+}
+
+void SpeechService::captureReady() {
+    if (!active_)
+        return;
+    emit listening();
+    emit status(tr("Listening · microphone · on this device"));
+}
+
+void SpeechService::fail(const QString &message) {
+    stop();
+    emit status(message);
+}
+
+void SpeechService::stop() {
+    system_.stop();
+    systemMode_ = false;
+#ifdef KALIPSO_QT_AUDIO
+    if (audio_) {
+        audio_->disconnect(this);
+        audio_->stop();
+        audio_->deleteLater();
+        audio_ = nullptr;
+    }
+#else
+    if (recorder_) {
+        recorder_->disconnect(this);
+        recorder_->kill();
+        recorder_->waitForFinished(1000);
+        recorder_->deleteLater();
+        recorder_ = nullptr;
+    }
+#endif
+    const bool wasActive = active_;
+    active_ = false;
+    epoch_->store(++generation_);
+    queued_ = 0;
+    buffer_.clear();
+    QMetaObject::invokeMethod(worker_, &SpeechWorker::unload);
+    if (wasActive)
+        emit stopped();
+}
+
+void SpeechService::queueAudio(const QByteArray &pcm) {
+    if (!active_ || systemMode_)
+        return;
+    buffer_.append(pcm);
+    if (buffer_.size() + queued_ > kMaxBacklogBytes) {
+        fail(tr("Recognition cannot keep up. Listening stopped; try a smaller model."));
+        return;
+    }
+    while (buffer_.size() >= kChunkBytes) {
+        const auto data = buffer_.first(kChunkBytes);
+        buffer_.remove(0, kChunkBytes);
+        queued_ += kChunkBytes;
+        QMetaObject::invokeMethod(worker_, [worker = worker_, data, generation = generation_] {
+            worker->consume(data, generation);
+        });
+    }
+}
+
+void SpeechService::startCapture() {
+#ifdef KALIPSO_QT_AUDIO
+    auto device = QMediaDevices::defaultAudioInput();
+    if (!microphone_.isEmpty()) {
+        bool found = false;
+        for (const auto &candidate : QMediaDevices::audioInputs()) {
+            if (candidate.description() == microphone_ || QString::fromUtf8(candidate.id()) == microphone_) {
+                device = candidate;
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return fail(tr("The selected microphone is unavailable."));
+    }
+    if (device.isNull())
+        return fail(tr("No microphone is available."));
+    auto format = device.preferredFormat();
+    QAudioFormat desired;
+    desired.setSampleRate(kSampleRate);
+    desired.setChannelCount(1);
+    desired.setSampleFormat(QAudioFormat::Int16);
+    if (device.isFormatSupported(desired))
+        format = desired;
+    PcmConverter::Format encoding;
+    switch (format.sampleFormat()) {
+    case QAudioFormat::UInt8: encoding = PcmConverter::Unsigned8; break;
+    case QAudioFormat::Int16: encoding = PcmConverter::Signed16; break;
+    case QAudioFormat::Int32: encoding = PcmConverter::Signed32; break;
+    case QAudioFormat::Float: encoding = PcmConverter::Float32; break;
+    default: return fail(tr("Unsupported microphone sample format."));
+    }
+    converter_.reset(format.sampleRate(), format.channelCount(), encoding);
+    audio_ = new QAudioSource(device, format, this);
+    audio_->setBufferSize(format.bytesForDuration(100000));
+    connect(audio_, &QAudioSource::stateChanged, this, [this](QAudio::State state) {
+        if (active_ && audio_ && state == QAudio::StoppedState && audio_->error() != QAudio::NoError)
+            fail(tr("Microphone capture failed. Check device permissions."));
+    });
+    auto *input = audio_->start();
+    if (!active_ || !audio_)
+        return;
+    if (!input)
+        return fail(tr("Cannot start the microphone."));
+    connect(input, &QIODevice::readyRead, this, [this, input] { queueAudio(converter_.convert(input->readAll())); });
     captureReady();
 #else
-    auto *process=new QProcess(this); processes_[channel]=process;
-    QStringList arguments{"--raw","--format","s16","--rate","16000","--channels","1","--latency","100ms"};
-    if (!target.trimmed().isEmpty()) arguments << "--target" << target.trimmed();
-    if (channel==1) arguments << "--properties" << "{\"stream.capture.sink\":true}";
+    recorder_ = new QProcess(this);
+    QStringList arguments{"--raw", "--format", "s16", "--rate", QString::number(kSampleRate),
+                          "--channels", "1", "--latency", "100ms"};
+    if (!microphone_.isEmpty())
+        arguments << "--target" << microphone_;
     arguments << "-";
-    connect(process,&QProcess::readyReadStandardOutput,this,[this,process,channel] {
-        queueAudio(channel,process->readAllStandardOutput());
+    connect(recorder_, &QProcess::readyReadStandardOutput, this,
+            [this] { queueAudio(recorder_->readAllStandardOutput()); });
+    connect(recorder_, &QProcess::readyReadStandardError, this, [this] { recorder_->readAllStandardError(); });
+    connect(recorder_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
+        if (active_)
+            fail(tr("Audio capture failed. Check PipeWire and the selected microphone."));
     });
-    connect(process,&QProcess::readyReadStandardError,this,[process] { process->readAllStandardError(); });
-    connect(process,&QProcess::errorOccurred,this,[this](QProcess::ProcessError) {
-        if (!active_) return;
-        stop(); emit status(tr("Audio capture failed. Check PipeWire and the selected audio nodes."));
+    connect(recorder_, &QProcess::finished, this, [this] {
+        if (active_)
+            fail(tr("Audio capture ended. Check PipeWire and restart listening."));
     });
-    connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),this,[this](int,QProcess::ExitStatus) {
-        if (!active_) return;
-        stop(); emit status(tr("Audio capture ended. Check PipeWire and restart listening."));
-    });
-    if(channel==0)connect(process,&QProcess::started,this,&SpeechService::captureReady);
-    process->start("pw-record",arguments);
+    connect(recorder_, &QProcess::started, this, &SpeechService::captureReady);
+    recorder_->start("pw-record", arguments);
 #endif
 }

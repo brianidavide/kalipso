@@ -118,8 +118,6 @@ Change a profile or input while stopped:
 "$HOME/.local/bin/kalipso-engine" --configure --microphone ''
 ```
 
-An optional second audio channel is available through `--meeting-target` / `--meeting-enabled true|false`, but its UI and AI features are outside this MVP. It never advances the microphone-driven script.
-
 ## Removal
 
 Stop listening and disable/remove the frontend. Remove the companion executable, D-Bus activation file and companion license from your chosen prefix. Configuration normally resides in `~/.config/Kalipso/engine.conf` (or `XDG_CONFIG_HOME`).

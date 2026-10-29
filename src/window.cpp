@@ -68,10 +68,6 @@ protected:
 QLabel *note(const QString &text) {
     auto *label=new QLabel(text); label->setWordWrap(true); label->setTextFormat(Qt::PlainText); return label;
 }
-QWidget *field(const QString &label,QWidget *input) {
-    auto *box=new QWidget; auto *layout=new QVBoxLayout(box); layout->setContentsMargins(0,0,0,0);
-    auto *title=new QLabel(label); title->setBuddy(input); input->setAccessibleName(label); layout->addWidget(title); layout->addWidget(input); return box;
-}
 void replaceText(QPlainTextEdit *editor, const QString &value) {
     const auto old=editor->toPlainText();
     if(old==value) return;
@@ -161,7 +157,7 @@ void Prompter::highlight(int position,int length) {
     text->setExtraSelections({read,selection});
     if (!editing_) { text->setTextCursor(cursor); text->centerCursor(); }
 }
-MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new Prompter) {
+MainWindow::MainWindow() : speech_(this), prompter_(new Prompter) {
     setWindowTitle(tr("Kalipso")); resize(1100,760); setMinimumSize(320,240);
     Accessibility::apply(this,Design::light);
     auto *central=new QWidget; auto *layout=new QVBoxLayout(central); layout->setContentsMargins(24,20,24,20); layout->setSpacing(14);
@@ -179,24 +175,6 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
     script_=new QPlainTextEdit; script_->setObjectName("scriptEditor"); script_->setPlaceholderText(tr("Paste or write the script you want to read…")); script_->setAccessibleName(tr("Editable script"));
     auto editorFont=script_->font(); editorFont.setPointSize(14); script_->setFont(editorFont);
     tabs->addTab(script_,tr("Script"));
-    auto *conversation=new QWidget(tabs); conversation->hide(); auto *conversationLayout=new QVBoxLayout(conversation);
-    auto *splitter=new QSplitter(Qt::Vertical);
-    auto *left=new QWidget; auto *leftLayout=new QVBoxLayout(left);
-    transcript_=new QPlainTextEdit; transcript_->setReadOnly(true); transcript_->document()->setMaximumBlockCount(150);
-    transcript_->setPlaceholderText(tr("Meeting audio appears here after you enable it in Settings. You can also write a question directly."));
-    leftLayout->addWidget(field(tr("Meeting transcript · kept in memory"),transcript_));
-    liveTranscript_=note(QString{}); leftLayout->addWidget(liveTranscript_);
-    auto *use=new AccessibleButton(tr("Use selected text as question")); auto *clear=new AccessibleButton(tr("Clear conversation"));
-    leftLayout->addWidget(use); leftLayout->addWidget(clear);
-    auto *right=new QWidget; auto *rightLayout=new QVBoxLayout(right);
-    question_=new QPlainTextEdit; question_->setPlaceholderText(tr("What is the question you want to answer?")); question_->setMinimumHeight(100);
-    rightLayout->addWidget(field(tr("1 · Check the question"),question_));
-    generate_=new AccessibleButton(tr("Approve question and generate")); rightLayout->addWidget(generate_);
-    answer_=new QPlainTextEdit; answer_->setPlaceholderText(tr("The proposed answer will appear here. Edit it before inserting."));
-    rightLayout->addWidget(field(tr("2 · Review the answer"),answer_));
-    insert_=new AccessibleButton(tr("Approve answer and append to script")); rightLayout->addWidget(insert_);
-    reviewStatus_=new StatusLabel(tr("Nothing is sent until you approve the question.")); rightLayout->addWidget(reviewStatus_);
-    splitter->addWidget(left); splitter->addWidget(right); splitter->setSizes({450,500}); conversationLayout->addWidget(splitter);
     tabs->addTab(makeSettings(),tr("Settings")); layout->addWidget(tabs,1);
     position_=note(tr("Ready to write.")); position_->setObjectName("readingPosition"); readHere->setObjectName("readHere"); layout->addWidget(position_); auto *pageScroll=new QScrollArea;pageScroll->setWidgetResizable(true);pageScroll->setWidget(central);pageScroll->setFrameShape(QFrame::NoFrame);setCentralWidget(pageScroll);
     connect(open,&QPushButton::clicked,this,&MainWindow::loadScript);
@@ -205,7 +183,8 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
     connect(listen_,&QPushButton::clicked,this,&MainWindow::toggleListening);
     connect(prompter_,&Prompter::listeningRequested,this,&MainWindow::toggleListening);
     connect(prompter_,&Prompter::hidden,this,[this]{
-        speech_.stop(); audioStatus_->setText(tr("Listening paused. The reader is hidden and the microphone is off."));
+        speech_.stop(); listen_->setText(tr("Start listening")); prompter_->setListeningState(false,tr("Microphone off"));
+        audioStatus_->setText(tr("Listening paused. The reader is hidden and the microphone is off."));
     });
     connect(script_,&QPlainTextEdit::textChanged,this,[this] {
         const auto text=script_->toPlainText(); tracker_.setScript(text);
@@ -224,62 +203,16 @@ MainWindow::MainWindow() : flow_(this), llm_(this), speech_(this), prompter_(new
         tracker_.seek(index); speech_.setScript(script_->toPlainText(),tracker_.position()); waitForNewUtterance_=speech_.active(); refreshReading();
     });
     connect(prompter_,&Prompter::step,this,[this](int delta){tracker_.seek(tracker_.position()+delta);speech_.setScript(script_->toPlainText(),tracker_.position());waitForNewUtterance_=speech_.active();refreshReading();});
-    connect(question_,&QPlainTextEdit::textChanged,this,[this]{flow_.setQuestion(question_->toPlainText());});
-    connect(answer_,&QPlainTextEdit::textChanged,this,[this]{flow_.editAnswer(answer_->toPlainText());});
-    connect(&flow_,&ApprovalFlow::changed,this,&MainWindow::refreshApproval);
-    connect(&flow_,&ApprovalFlow::invalidated,&llm_,&LlmClient::cancel);
-    connect(use,&QPushButton::clicked,this,[this] {
-        auto text=transcript_->textCursor().selectedText().replace(QChar::ParagraphSeparator,'\n');
-        if (text.isEmpty()) { reviewStatus_->setText(tr("Select the question in the transcript, or type it above.")); return; }
-        question_->setPlainText(text); question_->setFocus();
-    });
-    connect(clear,&QPushButton::clicked,this,[this] {
-        speech_.stop(); audioStatus_->setText(tr("Listening stopped and conversation cleared. Start listening to begin again."));
-        llm_.cancel(); flow_.fail(request_); transcript_->clear(); question_->clear(); answer_->clear(); liveTranscript_->clear();
-        reviewStatus_->setText(tr("Conversation cleared from this session."));
-    });
-    connect(generate_,&QPushButton::clicked,this,[this] {
-        request_=flow_.approveQuestion(); if (!request_) return;
-        reviewStatus_->setText(tr("Generating with %1. The script stays editable.").arg(model_->text()));
-        llm_.generate(request_,QUrl(endpoint_->text().trimmed()),model_->text().trimmed(),apiKey_->text(),flow_.question(),transcript_->toPlainText());
-    });
-    connect(&llm_,&LlmClient::completed,this,[this](quint64 id,const QString &answer) {
-        if(flow_.receiveAnswer(id,answer)) reviewStatus_->setText(tr("Review and edit this draft. It has not been added to the script."));
-    });
-    connect(&llm_,&LlmClient::failed,this,[this](quint64 id,const QString &message) {
-        flow_.fail(id); if(id==request_) reviewStatus_->setText(message);
-    });
-    connect(insert_,&QPushButton::clicked,this,[this] {
-        const auto answer=flow_.approveAnswer(); if(answer.isEmpty()) return;
-        auto cursor=script_->textCursor(); cursor.movePosition(QTextCursor::End);
-        cursor.beginEditBlock(); cursor.insertText((script_->toPlainText().isEmpty()?QString{}:QStringLiteral("\n\n"))+answer); cursor.endEditBlock();
-        reviewStatus_->setText(tr("Approved answer appended. You can still edit it in Script."));
-    });
     connect(&speech_,&SpeechService::status,audioStatus_,&StatusLabel::setText);
     connect(&speech_,&SpeechService::status,this,[this](const QString &message){prompter_->setListeningState(speech_.active(),message);});
     connect(&speech_,&SpeechService::stopped,this,[this]{listen_->setText(tr("Start listening"));prompter_->setListeningState(false,tr("Microphone off"));backend_->setEnabled(true);language_->setEnabled(true);checkSystem_->setEnabled(true);});
-    connect(&speech_,&SpeechService::transcript,this,[this](int channel,const QString &text,bool final) {
-        if(channel==0) {
-            if(waitForNewUtterance_) { if(final) { waitForNewUtterance_=false; refreshReading(); } return; }
-            if(tracker_.follow(text,final)) refreshReading();
-            if(final)speech_.setScript(script_->toPlainText(),tracker_.position());
-        }
-        else if(final) {
-            liveTranscript_->clear();
-            if(!text.isEmpty()) {
-                transcript_->appendPlainText(text.left(4000));
-                if (transcript_->toPlainText().size()>24000) transcript_->setPlainText(transcript_->toPlainText().right(20000));
-                static const QRegularExpression questionStart("^(come|cosa|che|quale|quali|quanto|quanti|quando|perché|perche|puoi|potresti|how|what|which|when|why|can|could|would|do|does|is|are)\\b",QRegularExpression::CaseInsensitiveOption);
-                if (question_->toPlainText().trimmed().isEmpty() && questionStart.match(text).hasMatch()) {
-                    question_->setPlainText(text.left(4000));
-                    reviewStatus_->setText(tr("Possible question from the last turn. Check and correct it before approving."));
-                }
-            }
-        } else liveTranscript_->setText(text.left(500));
+    connect(&speech_,&SpeechService::transcript,this,[this](const QString &text,bool final) {
+        if(waitForNewUtterance_) { if(final) { waitForNewUtterance_=false; refreshReading(); } return; }
+        if(tracker_.follow(text,final)) refreshReading();
+        if(final)speech_.setScript(script_->toPlainText(),tracker_.position());
     });
     auto *saveShortcut=new QShortcut(QKeySequence::Save,this); connect(saveShortcut,&QShortcut::activated,this,[this]{saveScript();});
     auto *showShortcut=new QShortcut(QKeySequence("Ctrl+Return"),this); connect(showShortcut,&QShortcut::activated,this,&MainWindow::showPrompter);
-    refreshApproval();
 }
 QWidget *MainWindow::makeSettings() {
     QSettings settings;
@@ -324,8 +257,6 @@ QWidget *MainWindow::makeSettings() {
     library_=new QLineEdit;library_->setObjectName("speechLibrary");modelPath_=new QLineEdit;modelPath_->setObjectName("speechModel");
     architecture_=new SettingsComboBox;architecture_->addItems({"Tiny Streaming","Base Streaming","Small Streaming","Medium Streaming"});
     microphone_=new QLineEdit(settings.value("speech/microphone").toString());microphone_->setPlaceholderText(tr("Default microphone"));
-    meetingTarget_=new QLineEdit(settings.value("speech/meetingTarget").toString());meetingTarget_->setPlaceholderText(tr("PipeWire output node.name or object.serial"));
-    meeting_=new QCheckBox(tr("Also transcribe meeting audio"));
     audioForm->addRow(tr("Speech engine"),backend_);audioForm->addRow(tr("Language"),language_);
     audioForm->addRow(tr("Native library"),library_);audioForm->addRow(tr("Model folder"),modelPath_);
     audioForm->addRow(tr("Moonshine model size"),architecture_);
@@ -339,17 +270,13 @@ QWidget *MainWindow::makeSettings() {
 #endif
     systemStatus_=note(tr("Choose a language and check its availability. No microphone is opened by this check."));
     systemStatus_->setObjectName("systemSpeechStatus");audioForm->addRow(systemActions);audioForm->addRow(systemStatus_);
-    audioForm->addRow(tr("Microphone"),microphone_);meeting_->setParent(audio);meeting_->hide();meetingTarget_->setParent(audio);meetingTarget_->hide();
+    audioForm->addRow(tr("Microphone"),microphone_);
     const auto updateFields=[this,audioForm,browse,systemActions]{
         const bool system=backend_->currentData().toString()=="system";
         for(auto *widget:QList<QWidget*>{library_,modelPath_,microphone_}){widget->setVisible(!system);if(auto *label=audioForm->labelForField(widget))label->setVisible(!system);}
         const bool moon=backend_->currentData().toString()=="moonshine";
         architecture_->setVisible(moon);audioForm->labelForField(architecture_)->setVisible(moon);
         browse->setVisible(!system);systemActions->setVisible(system);systemStatus_->setVisible(system);
-        meeting_->setEnabled(!system);if(system)meeting_->setChecked(false);
-#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
-        meeting_->hide();meetingTarget_->hide();
-#endif
     };
     QString initial=settings.value("speech/backend",settings.contains("speech/model")?"vosk":SystemSpeechClient::platformSupported()?"system":"moonshine").toString();
     int selection=backend_->findData(initial);backend_->setCurrentIndex(selection<0?0:selection);
@@ -371,12 +298,6 @@ QWidget *MainWindow::makeSettings() {
     connect(&systemCheck_,&SystemSpeechClient::completed,this,[this]{checkSystem_->setEnabled(true);if(installingSystem_){installingSystem_=false;systemCheck_.check(speechLanguage());}});
     audioForm->addRow(note(tr("Recognition stays on this device. Moonshine and Vosk require a matching native library and extracted model. System speech uses the default microphone; language availability depends on the operating system. Changing engines never switches to a cloud service.")));
     layout->addWidget(audio);
-    auto *ai=new QGroupBox(tr("Answer generation"),contents); ai->hide(); auto *aiForm=new QFormLayout(ai);aiForm->setRowWrapPolicy(QFormLayout::WrapLongRows);
-    endpoint_=new QLineEdit(settings.value("llm/endpoint","http://127.0.0.1:8080/v1/chat/completions").toString());
-    model_=new QLineEdit(settings.value("llm/model").toString());
-    apiKey_=new QLineEdit; apiKey_->setEchoMode(QLineEdit::Password); apiKey_->setPlaceholderText(tr("Kept in memory for this session only"));
-    aiForm->addRow(tr("Chat completions URL"),endpoint_); aiForm->addRow(tr("Model name"),model_); aiForm->addRow(tr("API key (optional locally)"),apiKey_);
-    aiForm->addRow(note(tr("Use a compatible local server or an HTTPS provider. Approving a question sends that question and up to 8,000 recent transcript characters to this endpoint. API keys and transcripts are never saved in settings.")));
     layout->addWidget(note(tr("Screen sharing: install the optional KWin companion or configure a window rule to exclude this app from capture. Exclusion is not verified by the app and KDE has known thumbnail/Overview limitations. Test from a second participant before relying on it.")));
     for(auto *form:contents->findChildren<QFormLayout*>())for(int row=0;row<form->rowCount();++row){
         auto *labelItem=form->itemAt(row,QFormLayout::LabelRole);auto *fieldItem=form->itemAt(row,QFormLayout::FieldRole);
@@ -420,10 +341,7 @@ void MainWindow::loadSpeechProfile(){
 }
 void MainWindow::saveSettings() {
     QSettings s; saveSpeechProfile();s.setValue("speech/backend",backend_->currentData().toString());
-    s.setValue("speech/microphone",microphone_->text()); s.setValue("speech/meetingTarget",meetingTarget_->text());
-    const QUrl url(endpoint_->text());
-    if(LlmClient::validateEndpoint(url).isEmpty()) s.setValue("llm/endpoint",url.toString());
-    s.setValue("llm/model",model_->text());
+    s.setValue("speech/microphone",microphone_->text());
 }
 void MainWindow::showPrompter() {
     const auto screens=QGuiApplication::screens();
@@ -433,18 +351,16 @@ void MainWindow::refreshReading() {
     prompter_->highlight(tracker_.character(),tracker_.length());
     position_->setText(waitForNewUtterance_ ? tr("Voice following resumes after your next pause; the reading position is preserved.") : tr("Word %1 of %2 · Ctrl+Enter opens the prompter · Ctrl+Left/Right steps through words in the prompter").arg(tracker_.position()+1).arg(tracker_.count()));
 }
-void MainWindow::refreshApproval() {
-    generate_->setEnabled(!flow_.question().trimmed().isEmpty() && flow_.stage()!=ApprovalFlow::Stage::Generating);
-    insert_->setEnabled(flow_.stage()==ApprovalFlow::Stage::Answer && !flow_.answer().trimmed().isEmpty());
-    answer_->setReadOnly(flow_.stage()!=ApprovalFlow::Stage::Answer);
-    if(answer_->toPlainText()!=flow_.answer()) { QSignalBlocker block(answer_); answer_->setPlainText(flow_.answer()); }
-}
 void MainWindow::toggleListening() {
     if(speech_.active()) { speech_.stop(); audioStatus_->setText(tr("Listening is off. No audio is being captured.")); return; }
     saveSettings();systemCheck_.stop();installingSystem_=false;waitForNewUtterance_=false;
     speech_.setScript(script_->toPlainText(),tracker_.position());
     const auto backend=backend_->currentData().toString();
-    speech_.start(library_->text(),modelPath_->text(),backend=="system"?QString{}:microphone_->text(),meetingTarget_->text(),meeting_->isChecked(),backend,speechLanguage(),architecture_->currentIndex()+2);
+    SpeechRequest request;
+    request.backend=backend; request.library=library_->text(); request.model=modelPath_->text();
+    request.microphone=backend=="system"?QString{}:microphone_->text(); request.language=speechLanguage();
+    request.architecture=architecture_->currentIndex()+2;
+    speech_.start(request);
     if(speech_.active()){checkSystem_->setEnabled(false);installSystem_->setEnabled(false);listen_->setText(tr("Pause listening"));backend_->setEnabled(false);language_->setEnabled(false);}
 }
 bool MainWindow::discardChanges() {
@@ -467,7 +383,7 @@ bool MainWindow::saveScript() {
 }
 void MainWindow::closeEvent(QCloseEvent *event) {
     if(!discardChanges()) { event->ignore(); return; }
-    speech_.stop(); llm_.cancel(); prompter_->hide(); saveSettings(); event->accept();
+    speech_.stop(); prompter_->hide(); saveSettings(); event->accept();
 }
 void MainWindow::setDemoScript() {
     script_->setPlainText(tr("Thank you for joining today.\n\nLet us start with the question that matters most. What would make this project useful to the people who depend on it?\n\nWe can take this one step at a time. Listen carefully, check the question, and choose the words we want to share."));

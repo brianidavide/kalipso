@@ -42,7 +42,7 @@ python3 desktop/package.py
 
 Frontend archives are written to `artifacts/packages/`. See [desktop installation](desktop/README.md) for installation and removal.
 
-The optional standalone Qt editor can be started with `./build/kalipso`. Its first-release interface focuses on the script, reader and local speech; deferred conversation/LLM tools are not exposed. See [standalone usage](docs/standalone.md). For a user-local installation, configure with `-DCMAKE_INSTALL_PREFIX="$HOME/.local"`, rebuild, then run `cmake --install build`. The configured prefix also determines the companion's D-Bus activation path.
+The optional standalone Qt editor can be started with `./build/kalipso`. See [standalone usage](docs/standalone.md). For a user-local installation, configure with `-DCMAKE_INSTALL_PREFIX="$HOME/.local"`, rebuild, then run `cmake --install build`. The configured prefix also determines the companion's D-Bus activation path.
 
 ## Development
 

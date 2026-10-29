@@ -93,9 +93,9 @@ private slots:
         auto *reader=window.prompter();auto *button=reader->findChild<QPushButton*>("readerListeningButton");
         auto *status=reader->findChild<QLabel*>("readerListeningStatus");QVERIFY(button&&status);
         reader->setListeningState(true,"Listening");QCOMPARE(button->text(),QString("Pause listening"));
-        reader->hide();QCOMPARE(stopped.count(),1);QVERIFY(!speech->active());
+        reader->hide();QVERIFY(!speech->active());
         QCOMPARE(button->text(),QString("Start listening"));QCOMPARE(status->text(),QString("Microphone off"));
-        window.showPrompter();QVERIFY(!speech->active());QCOMPARE(stopped.count(),1);
+        window.showPrompter();QVERIFY(!speech->active());QCOMPARE(stopped.count(),0);
         speech->status("Microphone unavailable");QCOMPARE(status->text(),QString("Microphone unavailable"));
     }
     void firstReleaseNavigationAndReaderTextScaling(){

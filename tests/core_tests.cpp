@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "tracker.h"
-#include "approval.h"
 #include <QtTest>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -57,28 +56,6 @@ private slots:
     void rejectsDistantFalseResynchronization() {
         ScriptTracker tracker; tracker.setScript(QString("parola ").repeated(120)+"obiettivo chiaro");
         QVERIFY(!tracker.follow("obiettivo chiaro",true)); QCOMPARE(tracker.position(),-1);
-    }
-    void approvalsAreRequired() {
-        ApprovalFlow flow; QVERIFY(flow.approveAnswer().isEmpty()); QCOMPARE(flow.approveQuestion(),0ULL);
-        flow.setQuestion("Qual è il prossimo passo?"); const auto request=flow.approveQuestion(); QVERIFY(request!=0);
-        QCOMPARE(flow.approveQuestion(),0ULL); QVERIFY(flow.approveAnswer().isEmpty());
-        QVERIFY(flow.receiveAnswer(request,"Verifichiamo il prototipo."));
-        flow.editAnswer("Proviamolo insieme."); QCOMPARE(flow.approveAnswer(),QString("Proviamolo insieme."));
-        QVERIFY(flow.approveAnswer().isEmpty());
-    }
-    void changingQuestionRejectsStaleResponse() {
-        ApprovalFlow flow; flow.setQuestion("prima domanda"); const auto old=flow.approveQuestion();
-        flow.setQuestion("domanda corretta"); QVERIFY(!flow.receiveAnswer(old,"risposta vecchia"));
-        const auto current=flow.approveQuestion(); flow.fail(old);
-        QCOMPARE(flow.stage(),ApprovalFlow::Stage::Generating);
-        QVERIFY(flow.receiveAnswer(current,"risposta corretta"));
-        flow.setQuestion("terza domanda"); QVERIFY(flow.approveAnswer().isEmpty());
-    }
-    void blankAnswerCannotBeInserted() {
-        ApprovalFlow flow; flow.setQuestion("domanda"); auto id=flow.approveQuestion();
-        QVERIFY(!flow.receiveAnswer(id,"  ")); flow.fail(id);
-        id=flow.approveQuestion(); QVERIFY(flow.receiveAnswer(id,"bozza"));
-        flow.editAnswer(" "); QVERIFY(flow.approveAnswer().isEmpty());
     }
 };
 QTEST_GUILESS_MAIN(CoreTests)
