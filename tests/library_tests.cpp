@@ -153,11 +153,19 @@ private slots:
         QCOMPARE(reopened.entries().size(), 2);
         QVERIFY(reopened.contains(empty));
         QCOMPARE(reopened.load(empty), QString());
-        // Unwritable storage is reported, and the saved text stays as it was.
+        // Unwritable storage is reported, and the saved text stays as it was. Windows ignores
+        // the read-only attribute on folders (and root ignores permissions), so this part only
+        // runs where the folder really refuses new files.
         QFile::setPermissions(directory.path(), QFileDevice::ReadOwner | QFileDevice::ExeOwner);
-        const bool saved = reopened.save(unicode, "Changed");
+        QFile probe(directory.filePath("probe"));
+        const bool readOnly = !probe.open(QIODevice::WriteOnly);
+        probe.close();
+        probe.remove();
+        const bool saved = readOnly && reopened.save(unicode, "Changed");
         QFile::setPermissions(directory.path(),
                               QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        if (!readOnly)
+            qInfo("Read-only folders are not enforced here; skipping the unwritable-storage check.");
         QVERIFY(!saved);
         QVERIFY(reopened.load(unicode).startsWith(QString::fromUtf8("# Bienvenue 👋")));
     }
