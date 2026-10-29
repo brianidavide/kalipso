@@ -32,6 +32,16 @@ if(script){
  render();
 }
 
+// Mirror for teleprompter glass. Kept in the address (?mirror=horizontal), so a
+// rig can be preset with a link and a reload keeps it; nothing is stored.
+const mirror=document.querySelector('#reader-mirror'),text=document.querySelector('#reading-text');
+if(mirror&&text){
+ const url=new URL(location.href),initial=url.searchParams.get('mirror');
+ if(['horizontal','vertical'].includes(initial))mirror.value=initial;
+ const apply=()=>{text.dataset.mirror=mirror.value;const next=new URL(location.href);mirror.value==='none'?next.searchParams.delete('mirror'):next.searchParams.set('mirror',mirror.value);history.replaceState(null,'',next)};
+ mirror.addEventListener('change',apply);apply();
+}
+
 const appearance=document.querySelector('#reader-appearance'),reader=document.querySelector('[data-reader]');
 if(appearance&&reader){
  const update=()=>{reader.dataset.theme=appearance.value;};
