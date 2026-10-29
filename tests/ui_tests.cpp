@@ -233,6 +233,25 @@ private slots:
         QTRY_COMPARE(reader->findChild<QLabel *>("readerListeningStatus")->text(), QString("End of script"));
     }
 
+    void readerControlsFadeWhileReadingAndReturn() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText(QString("word ").repeated(200));
+        window.showPrompter();
+        auto *reader = window.prompter();
+        emit reader->modeRequested(ReadingMode::Steady);
+        auto *status = reader->findChild<QLabel *>("readerListeningStatus");
+        emit reader->toggleRequested();
+        QVERIFY(status->text().startsWith("Scrolling · 2 min left"));
+        QVERIFY(reader->controlsVisible());
+        QTRY_VERIFY_WITH_TIMEOUT(!reader->controlsVisible(), 4000);
+        QTest::keyClick(reader->text, Qt::Key_Plus); // Any key brings the controls back.
+        QVERIFY(reader->controlsVisible());
+        emit reader->toggleRequested(); // Paused: controls stay.
+        QTest::qWait(3000);
+        QVERIFY(reader->controlsVisible());
+        QVERIFY(status->text().startsWith("Paused · "));
+    }
+
     void readerKeysStepTheScript() {
         MainWindow window(scripts_.path());
         editor(window)->setPlainText("one two three four");

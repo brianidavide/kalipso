@@ -14,6 +14,8 @@ Scripts are saved automatically as you type, together with your reading position
 - The current word is highlighted and already-read words are dimmed. The current line stays at the height chosen in **Settings → Current line position** (top, upper third or centre).
 - **Edit** lets you change the text inside the reader; changes go straight to the script.
 - **Sections** jumps to a `#` heading. Clicking a word moves the reading position there.
+- While the reader scrolls or listens, its controls fade out after a moment and come back when you move the mouse, press a key or pause (Settings → Hide the reader's controls while reading). The text never moves when they do.
+- In steady speed, the status shows the time left at the current speed.
 - **Hide** (or Escape) closes the reader and turns the microphone off. Showing it again never restarts the microphone.
 
 ### Reading modes

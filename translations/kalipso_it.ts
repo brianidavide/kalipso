@@ -193,14 +193,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Avvio…</translation>
     </message>
     <message>
-        <source>Scrolling · microphone off</source>
-        <translation>Scorrimento · microfono spento</translation>
-    </message>
-    <message>
-        <source>Paused · microphone off</source>
-        <translation>In pausa · microfono spento</translation>
-    </message>
-    <message>
         <source>Microphone off</source>
         <translation>Microfono spento</translation>
     </message>
@@ -548,6 +540,31 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Appearance</source>
         <translation>Aspetto</translation>
+    </message>
+    <message>
+        <source>end of script</source>
+        <translation>fine del copione</translation>
+    </message>
+    <message>
+        <source>under a minute left</source>
+        <translation>meno di un minuto</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n min left</source>
+        <translation>
+            <numerusform>%n min rimanente</numerusform><numerusform>%n min rimanenti</numerusform></translation>
+    </message>
+    <message>
+        <source>Scrolling · %1</source>
+        <translation>Scorrimento · %1</translation>
+    </message>
+    <message>
+        <source>Paused · %1</source>
+        <translation>In pausa · %1</translation>
+    </message>
+    <message>
+        <source>Hide the reader's controls while reading</source>
+        <translation>Nascondi i comandi del lettore durante la lettura</translation>
     </message>
 </context>
 <context>
