@@ -30,7 +30,7 @@ Choose the mode in the reader:
 | **Steady speed** | One word at a time at the chosen words per minute. **Slower**/**Faster** change it while scrolling; each script remembers its own speed. An optional 3- or 5-second countdown comes first. |
 | **Follow my voice** | Local speech recognition matches what you say to the script. If you go off script, the reader says so and catches up when you return — even after skipping ahead or going back. |
 
-After a voice session, the status line summarizes it: duration, words read, pace, long pauses and recognized filler words (many recognizers drop fillers, so this is a lower bound).
+After a voice session, the status line summarizes it: duration, words read, pace, long pauses and recognized filler words (many recognizers drop fillers, so this is a lower bound). **More → Save session report…** saves the same as a Markdown file, with the time and pace of each section and the words just before each long pause. Nothing is saved unless you choose to.
 
 ### Keys, foot pedals and clickers
 

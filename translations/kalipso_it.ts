@@ -575,7 +575,9 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message numerus="yes">
         <source>about %n min</source>
         <translation>
-            <numerusform>circa %n min</numerusform><numerusform>circa %n min</numerusform></translation>
+            <numerusform>circa %n min</numerusform>
+            <numerusform>circa %n min</numerusform>
+        </translation>
     </message>
     <message>
         <source>Word %1 of %2 · %3</source>
@@ -608,6 +610,30 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Line spacing</source>
         <translation>Interlinea</translation>
+    </message>
+    <message>
+        <source>Save session report…</source>
+        <translation>Salva resoconto della sessione…</translation>
+    </message>
+    <message>
+        <source>Save session report</source>
+        <translation>Salva resoconto della sessione</translation>
+    </message>
+    <message>
+        <source>%1 - session.md</source>
+        <translation>%1 - sessione.md</translation>
+    </message>
+    <message>
+        <source>Markdown (*.md);;Text (*.txt)</source>
+        <translation>Markdown (*.md);;Testo (*.txt)</translation>
+    </message>
+    <message>
+        <source>Cannot save the report</source>
+        <translation>Impossibile salvare il resoconto</translation>
+    </message>
+    <message>
+        <source>Session report saved to %1.</source>
+        <translation>Resoconto della sessione salvato in %1.</translation>
     </message>
 </context>
 <context>
@@ -895,6 +921,57 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>This is not a readable OpenDocument text (.odt) file.</source>
         <translation>Questo non è un file di testo OpenDocument (.odt) leggibile.</translation>
+    </message>
+</context>
+<context>
+    <name>SessionStats</name>
+    <message>
+        <source># Session report: %1</source>
+        <translation># Resoconto della sessione: %1</translation>
+    </message>
+    <message>
+        <source>- Duration: %1</source>
+        <translation>- Durata: %1</translation>
+    </message>
+    <message numerus="yes">
+        <source>- Words read: %n</source>
+        <translation><numerusform>- Parole lette: %n</numerusform><numerusform>- Parole lette: %n</numerusform></translation>
+    </message>
+    <message>
+        <source>- Pace: %1 words/min</source>
+        <translation>- Ritmo: %1 parole/min</translation>
+    </message>
+    <message numerus="yes">
+        <source>- Pauses over 3 s: %n</source>
+        <translation><numerusform>- Pause oltre 3 s: %n</numerusform><numerusform>- Pause oltre 3 s: %n</numerusform></translation>
+    </message>
+    <message>
+        <source> (longest %1)</source>
+        <translation> (la più lunga %1)</translation>
+    </message>
+    <message numerus="yes">
+        <source>- Filler words recognized: %n (many recognizers drop them, so this is a lower bound)</source>
+        <translation><numerusform>- Parole riempitive riconosciute: %n (molti riconoscitori le omettono, quindi è un minimo)</numerusform><numerusform>- Parole riempitive riconosciute: %n (molti riconoscitori le omettono, quindi è un minimo)</numerusform></translation>
+    </message>
+    <message>
+        <source>## Sections</source>
+        <translation>## Sezioni</translation>
+    </message>
+    <message>
+        <source>| Section | Time | Words | Words/min |</source>
+        <translation>| Sezione | Tempo | Parole | Parole/min |</translation>
+    </message>
+    <message>
+        <source>## Long pauses</source>
+        <translation>## Pause lunghe</translation>
+    </message>
+    <message>
+        <source>- %1 before the first word</source>
+        <translation>- %1 prima della prima parola</translation>
+    </message>
+    <message>
+        <source>- %1 after “…%2”</source>
+        <translation>- %1 dopo «…%2»</translation>
     </message>
 </context>
 <context>

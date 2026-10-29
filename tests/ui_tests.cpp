@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "remote.h"
+#include "speech.h"
 #include "window.h"
 #include <QAbstractButton>
 #include <QAccessible>
@@ -352,6 +353,28 @@ private slots:
         picker->setCurrentIndex(picker->findData(second));
         emit picker->activated(picker->currentIndex());
         QCOMPARE(speed->text(), secondSpeed);
+    }
+
+    void sessionReportCanBeSavedAfterAVoiceSession() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("# Intro\nalpha beta gamma delta epsilon zeta eta\n# Main\niota kappa");
+        auto *action = window.findChild<QAction *>("saveSessionReport");
+        QVERIFY(action && !action->isEnabled());
+        auto *speech = window.findChild<SpeechService *>();
+        QVERIFY(speech);
+        emit speech->listening();
+        emit speech->transcript("alpha beta gamma delta epsilon zeta", true);
+        emit speech->stopped();
+        QVERIFY(action->isEnabled());
+        QTemporaryDir out;
+        const auto path = out.filePath("report.md");
+        QVERIFY(window.saveSessionReport(path));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto report = QString::fromUtf8(file.readAll());
+        QVERIFY2(report.startsWith("# Session report: Intro\n"), qPrintable(report));
+        QVERIFY2(report.contains("- Words read: 6"), qPrintable(report));
+        QVERIFY2(report.contains("| Intro |"), qPrintable(report));
     }
 
     void readerKeysStepTheScript() {

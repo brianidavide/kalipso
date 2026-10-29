@@ -1,14 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
 #include "tracker.h"
+#include <QDateTime>
 #include <QSet>
 #include <QString>
+#include <QVector>
 #include <algorithm>
 
 // Delivery summary for one voice-following session: pace, pauses and filler
 // words. Computed in memory from reading positions and recognized text.
 class SessionStats {
 public:
+    struct Pause {
+        int position; // Last word read before the pause.
+        qint64 ms;
+    };
+    struct Reached {
+        int position; // A word reached for the first time while reading forward.
+        qint64 atMs;  // Since the start of the session.
+    };
     struct Summary {
         qint64 durationMs = 0;
         int words = 0;
@@ -16,6 +26,8 @@ public:
         int longPauses = 0;
         qint64 longestPauseMs = 0;
         int fillers = 0;
+        QVector<Pause> pauses;
+        QVector<Reached> reached;
     };
     static constexpr qint64 kLongPauseMs = 3000;
 
@@ -35,7 +47,9 @@ public:
         if (gap >= kLongPauseMs) {
             ++summary_.longPauses;
             summary_.longestPauseMs = std::max(summary_.longestPauseMs, gap);
+            summary_.pauses.append({furthest_, gap});
         }
+        summary_.reached.append({position, now - startedAt_});
         furthest_ = position;
         lastAdvance_ = now;
     }
@@ -66,6 +80,10 @@ public:
         summary_.wordsPerMinute = minutes > 0.05 ? summary_.words / minutes : 0;
         return summary_;
     }
+
+    // A Markdown report of a finished session: totals, time per section and where the
+    // long pauses were, for rehearsal notes. Nothing is saved unless the user asks.
+    static QString report(const Summary &summary, const QString &script, const QString &title, const QDateTime &when);
 
 private:
     bool active_ = false;

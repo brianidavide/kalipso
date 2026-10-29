@@ -22,6 +22,8 @@ class MainWindow : public QMainWindow {
 public:
     // An empty libraryDirectory uses the application data folder.
     explicit MainWindow(const QString &libraryDirectory = {});
+    // Writes the last voice session's report (More → Save session report…).
+    bool saveSessionReport(const QString &path);
     ~MainWindow() override;
 
     void showPrompter();
@@ -86,6 +88,10 @@ private:
     SpeechService speech_;
     SystemSpeechClient systemCheck_;
     SessionStats session_;
+    SessionStats::Summary lastSession_; // The last voice session, for "Save session report…".
+    QString lastSessionScript_;
+    QDateTime lastSessionAt_;
+    QAction *reportAction_ = nullptr;
     ReaderWindow *prompter_;
     RemoteControl *remote_ = nullptr;
     ReadingMode mode_ = ReadingMode::Voice;
