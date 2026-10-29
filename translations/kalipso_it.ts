@@ -635,6 +635,54 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Session report saved to %1.</source>
         <translation>Resoconto della sessione salvato in %1.</translation>
     </message>
+    <message>
+        <source>Keys and pedals</source>
+        <translation>Tasti e pedali</translation>
+    </message>
+    <message>
+        <source>Start or pause</source>
+        <translation>Avvia o metti in pausa</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Parola successiva</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Parola precedente</translation>
+    </message>
+    <message>
+        <source>Next section</source>
+        <translation>Sezione successiva</translation>
+    </message>
+    <message>
+        <source>Previous section</source>
+        <translation>Sezione precedente</translation>
+    </message>
+    <message>
+        <source>Faster</source>
+        <translation>Più veloce</translation>
+    </message>
+    <message>
+        <source>Slower</source>
+        <translation>Più lento</translation>
+    </message>
+    <message>
+        <source>Back to the start</source>
+        <translation>Torna all'inizio</translation>
+    </message>
+    <message>
+        <source>Press a key</source>
+        <translation>Premi un tasto</translation>
+    </message>
+    <message>
+        <source>Built in: %1</source>
+        <translation>Predefiniti: %1</translation>
+    </message>
+    <message>
+        <source>Pedals and clickers usually send the arrows, Page Up/Down or Space, which work without any setup. Choose a key here to add one for an action, or to give a built-in key another action, for example the arrows to change speed. Escape always hides the reader.</source>
+        <translation>Pedali e telecomandi di solito inviano le frecce, Pagina su/giù o Spazio, che funzionano senza configurazione. Scegli qui un tasto per aggiungerlo a un'azione, o per dare a un tasto predefinito un'altra azione, per esempio le frecce per cambiare velocità. Esc nasconde sempre il lettore.</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>
@@ -935,7 +983,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     </message>
     <message numerus="yes">
         <source>- Words read: %n</source>
-        <translation><numerusform>- Parole lette: %n</numerusform><numerusform>- Parole lette: %n</numerusform></translation>
+        <translation>
+            <numerusform>- Parole lette: %n</numerusform>
+            <numerusform>- Parole lette: %n</numerusform>
+        </translation>
     </message>
     <message>
         <source>- Pace: %1 words/min</source>
@@ -943,7 +994,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     </message>
     <message numerus="yes">
         <source>- Pauses over 3 s: %n</source>
-        <translation><numerusform>- Pause oltre 3 s: %n</numerusform><numerusform>- Pause oltre 3 s: %n</numerusform></translation>
+        <translation>
+            <numerusform>- Pause oltre 3 s: %n</numerusform>
+            <numerusform>- Pause oltre 3 s: %n</numerusform>
+        </translation>
     </message>
     <message>
         <source> (longest %1)</source>
@@ -951,7 +1005,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     </message>
     <message numerus="yes">
         <source>- Filler words recognized: %n (many recognizers drop them, so this is a lower bound)</source>
-        <translation><numerusform>- Parole riempitive riconosciute: %n (molti riconoscitori le omettono, quindi è un minimo)</numerusform><numerusform>- Parole riempitive riconosciute: %n (molti riconoscitori le omettono, quindi è un minimo)</numerusform></translation>
+        <translation>
+            <numerusform>- Parole riempitive riconosciute: %n (molti riconoscitori le omettono, quindi è un minimo)</numerusform>
+            <numerusform>- Parole riempitive riconosciute: %n (molti riconoscitori le omettono, quindi è un minimo)</numerusform>
+        </translation>
     </message>
     <message>
         <source>## Sections</source>

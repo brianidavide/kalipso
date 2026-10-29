@@ -8,6 +8,7 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QFormLayout>
+#include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPlainTextEdit>
@@ -377,6 +378,44 @@ private slots:
         QVERIFY2(report.contains("| Intro |"), qPrintable(report));
     }
 
+    void customKeysCanReplaceBuiltInKeys() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("# One\nalpha beta gamma\n# Two\ndelta");
+        window.showPrompter();
+        auto *reader = window.prompter();
+        openSettings(window);
+        const auto edit = [&window](const char *id) { return window.findChild<QKeySequenceEdit *>(id); };
+        const auto assign = [](QKeySequenceEdit *edit, QKeySequence sequence) {
+            edit->setKeySequence(sequence);
+            emit edit->editingFinished();
+        };
+        auto *speed = reader->findChild<QLabel *>("readerSpeed");
+        const auto before = speed->text();
+        // The up arrow can change speed instead of stepping back.
+        assign(edit("key-faster"), QKeySequence(Qt::Key_Up));
+        QTest::keyClick(reader->text, Qt::Key_Up);
+        QVERIFY(speed->text() != before);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 0 of 4"));
+        // A pedal key for the next section.
+        assign(edit("key-section-next"), QKeySequence(Qt::Key_B));
+        QTest::keyClick(reader->text, Qt::Key_B);
+        QVERIFY2(positionLabel(window)->text().startsWith("Word 3 of 4"), qPrintable(positionLabel(window)->text()));
+        // A key belongs to one action: giving it to another moves it.
+        assign(edit("key-toggle"), QKeySequence(Qt::Key_B));
+        QVERIFY(edit("key-section-next")->keySequence().isEmpty());
+        QCOMPARE(QSettings().value("keys/toggle").toString(), QString("B"));
+        // Only one key per action; built-in keys that were not reassigned still work.
+        assign(edit("key-reset"), QKeySequence(Qt::Key_R, Qt::Key_S));
+        QCOMPARE(edit("key-reset")->keySequence(), QKeySequence(Qt::Key_R));
+        QTest::keyClick(reader->text, Qt::Key_Left);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 2 of 4"));
+        // Clearing a key gives the built-in one back.
+        edit("key-faster")->clear();
+        QTest::keyClick(reader->text, Qt::Key_Up);
+        QVERIFY(positionLabel(window)->text().startsWith("Word 1 of 4"));
+        QSettings().remove("keys");
+    }
+
     void readerKeysStepTheScript() {
         MainWindow window(scripts_.path());
         editor(window)->setPlainText("one two three four");
@@ -525,6 +564,9 @@ private slots:
             QTest::qWait(80);
             window.grab().save(directory + "/qt-editor.png");
             settings->grab().save(directory + "/qt-settings.png");
+            settings->findChild<QScrollArea *>()->ensureWidgetVisible(window.findChild<QWidget *>("key-reset"));
+            QTest::qWait(30);
+            settings->grab().save(directory + "/qt-settings-keys.png");
             window.showPrompter();
             for (const auto *theme : {"light", "dark"}) {
                 window.prompter()->setReaderTheme(theme);

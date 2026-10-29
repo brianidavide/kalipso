@@ -21,6 +21,7 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QJsonArray>
+#include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
@@ -372,6 +373,7 @@ MainWindow::MainWindow(const QString &libraryDirectory)
         seekWord(tracker_.position());
     });
     connect(prompter_, &ReaderWindow::toggleRequested, this, &MainWindow::toggleRunning);
+    connect(prompter_, &ReaderWindow::sectionRequested, this, &MainWindow::jumpSection);
     connect(prompter_, &ReaderWindow::speedRequested, this, &MainWindow::changeSpeed);
     connect(prompter_, &ReaderWindow::modeRequested, this, &MainWindow::setMode);
     connect(prompter_, &ReaderWindow::hidden, this, [this] {
@@ -884,6 +886,75 @@ void MainWindow::finishSession() {
 
 // --- Settings ---------------------------------------------------------------
 
+QWidget *MainWindow::makeKeySettings() {
+    auto *group = new SettingsSection(tr("Keys and pedals"));
+    // Action, settings key, label and the built-in keys (shown while no key is chosen).
+    const QList<std::tuple<ReaderAction, QString, QString, QList<int>>> actions{
+        {ReaderAction::Toggle, "toggle", tr("Start or pause"), {Qt::Key_Space}},
+        {ReaderAction::Next, "next", tr("Next word"), {Qt::Key_Right, Qt::Key_Down, Qt::Key_PageDown}},
+        {ReaderAction::Previous, "previous", tr("Previous word"), {Qt::Key_Left, Qt::Key_Up, Qt::Key_PageUp}},
+        {ReaderAction::NextSection, "section-next", tr("Next section"), {}},
+        {ReaderAction::PreviousSection, "section-previous", tr("Previous section"), {}},
+        {ReaderAction::Faster, "faster", tr("Faster"), {Qt::Key_Plus}},
+        {ReaderAction::Slower, "slower", tr("Slower"), {Qt::Key_Minus}},
+        {ReaderAction::Reset, "reset", tr("Back to the start"), {Qt::Key_Home}}};
+    QSettings settings;
+    QList<QKeySequenceEdit *> edits;
+    for (const auto &[action, id, label, builtIn] : actions) {
+        auto *edit = new QKeySequenceEdit(
+            QKeySequence::fromString(settings.value("keys/" + id).toString(), QKeySequence::PortableText));
+        edit->setObjectName("key-" + id);
+        edit->setProperty("keyId", id);
+        edit->setProperty("action", int(action));
+        edit->setClearButtonEnabled(true);
+        QStringList names;
+        for (const int key : builtIn)
+            names << QKeySequence(key).toString(QKeySequence::NativeText);
+        if (auto *line = edit->findChild<QLineEdit *>())
+            line->setPlaceholderText(names.isEmpty() ? tr("Press a key") : tr("Built in: %1").arg(names.join(", ")));
+        group->form->addRow(label, edit);
+        edits.append(edit);
+    }
+    auto *note = new QLabel(tr("Pedals and clickers usually send the arrows, Page Up/Down or Space, which work without "
+                               "any setup. Choose a key here to add one for an action, or to give a built-in key "
+                               "another action, for example the arrows to change speed. Escape always hides the "
+                               "reader."));
+    note->setWordWrap(true);
+    note->setProperty("role", "muted");
+    group->form->addRow(note);
+
+    const auto save = [this, edits] {
+        QSettings settings;
+        QHash<int, ReaderAction> keys;
+        for (auto *edit : edits) {
+            const auto sequence = edit->keySequence();
+            settings.setValue("keys/" + edit->property("keyId").toString(),
+                              sequence.toString(QKeySequence::PortableText));
+            if (!sequence.isEmpty())
+                keys.insert(sequence[0].toCombined(), ReaderAction(edit->property("action").toInt()));
+        }
+        prompter_->setCustomKeys(keys);
+    };
+    for (auto *edit : edits) {
+        connect(edit, &QKeySequenceEdit::editingFinished, this, [edit, edits, save] {
+            // One key per action, as pedals send single keys; a key belongs to one action.
+            auto sequence = edit->keySequence();
+            if (sequence.count() > 1)
+                edit->setKeySequence(sequence = QKeySequence(sequence[0]));
+            for (auto *other : edits)
+                if (other != edit && !sequence.isEmpty() && other->keySequence() == sequence)
+                    other->clear();
+            save();
+        });
+        connect(edit, &QKeySequenceEdit::keySequenceChanged, this, [save](const QKeySequence &sequence) {
+            if (sequence.isEmpty()) // The clear button.
+                save();
+        });
+    }
+    save();
+    return group;
+}
+
 QWidget *MainWindow::makeSettings() {
     auto *contents = new QWidget;
     auto *layout = new QVBoxLayout(contents);
@@ -891,6 +962,7 @@ QWidget *MainWindow::makeSettings() {
     layout->setSpacing(0);
     layout->addWidget(makeReadingSettings());
     layout->addWidget(makeSpeechSettings());
+    layout->addWidget(makeKeySettings());
     layout->addWidget(makeRemoteSettings());
     for (auto *form : contents->findChildren<QFormLayout *>())
         for (int row = 0; row < form->rowCount(); ++row) {

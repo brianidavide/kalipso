@@ -4,6 +4,7 @@
 #include "backdrop.h"
 #include "tracker.h"
 #include <QElapsedTimer>
+#include <QHash>
 #include <QPointer>
 #include <QTextEdit>
 #include <QTimer>
@@ -19,6 +20,8 @@ class DragHandle;
 
 enum class Mirror { None, Horizontal, Vertical, Both };
 enum class ReadingMode { Manual, Steady, Voice };
+// What keys, foot pedals and presentation clickers can do in the reader.
+enum class ReaderAction { Toggle, Next, Previous, Faster, Slower, Reset, PreviousSection, NextSection };
 
 // The script text inside the reader. Paints mirrored for beam-splitter rigs and
 // keeps the reading position on a fixed line.
@@ -97,8 +100,12 @@ public:
     void chooseBackgroundWindow() { backdrop_->chooseWindow(); }
     void stopWindowSharing() { backdrop_->stopWindowSharing(); }
 
+    // Keys chosen in Settings (key combination → action). They take precedence over the
+    // built-in keys, so a built-in key can also be given another action.
+    void setCustomKeys(const QHash<int, ReaderAction> &keys) { customKeys_ = keys; }
 signals:
     void step(int direction);
+    void sectionRequested(int direction);
     void toggleRequested();
     void resetRequested();
     void speedRequested(int delta);
@@ -121,6 +128,7 @@ private:
     void updatePrimary();
     void revealControls();
     void setControlsVisible(bool visible);
+    void trigger(ReaderAction action);
 
     StatusLabel *status_;
     QPushButton *primary_;
@@ -147,6 +155,7 @@ private:
     bool controlsVisible_ = true;
     QTimer idle_;
     QList<QWidget *> bars_;
+    QHash<int, ReaderAction> customKeys_;
     bool captureExcluded_ = false;
     bool placing_ = false;
     int position_ = 0, length_ = 0;

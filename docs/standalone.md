@@ -45,6 +45,8 @@ With the reader focused:
 | Home | Back to the start |
 | Escape | Finish editing, or hide the reader |
 
+**Settings → Keys and pedals** gives any action another key (for example the key a foot pedal sends), adds keys for the previous and next section, or gives a built-in key a different action, such as the arrows changing the speed. A key belongs to one action at a time; clearing it restores the built-in keys. Escape always hides the reader.
+
 Most Bluetooth foot pedals and presentation clickers send Page Up/Down or arrow keys, so they work without setup.
 
 ### Phone remote
