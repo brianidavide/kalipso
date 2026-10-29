@@ -33,7 +33,7 @@ console.log('reader: bounded long-script context and escaped editing PASS');
 const huge=new Tracker('one two three four');huge.seek(1);assert(huge.readingMarkup('#777','#fff',-1).includes('three four'));huge.seek(3);assert(!huge.readingMarkup('#777','#fff',-1).includes('one two'));
 
 // Cues and headings: shown, never spoken (mirrors tests/core_tests.cpp).
-import {cues, headings, sections, tokenize} from './tracker.mjs';
+import {cues, frontMatter, headings, sections, title, tokenize} from './tracker.mjs';
 const cued = '# Opening\nHello [smile] everyone\n[look at camera]\nThanks [unclosed\n## Q&A ##';
 assert.deepEqual(tokenize(cued).map(w => w.word), ['hello', 'everyone', 'thanks', 'unclosed']);
 assert.equal(cues(cued).length, 2);
@@ -74,4 +74,15 @@ assert.deepEqual([jump(1), jump(1), jump(1)], [1, 3, 3]); // Before gamma, befor
 assert.deepEqual([jump(-1), jump(-1), jump(-1)], [1, -1, -1]);
 sectioned.seek(2); assert.equal(jump(-1), -1); // Inside Two, back goes to One.
 assert.equal(new Tracker('no headings here').sectionTarget(1), -1);
-console.log('tracker: long-jump recovery, off-script state, character seeking and section jumps PASS');
+// YAML front matter: shown, never spoken, never a section; its title names the script.
+const withMeta = '---\ntitle: "Launch day"\n# a YAML comment\nspeaker: [me]\n---\n# Opening\nHello everyone';
+assert.deepEqual(frontMatter(withMeta), {start: 0, length: withMeta.indexOf('\n# Opening')});
+assert.deepEqual(new Tracker(withMeta).words.map(word => word.word), ['hello', 'everyone']);
+assert.deepEqual(sections(withMeta).map(section => section.title), ['Opening']);
+assert.equal(title(withMeta), 'Launch day');
+assert.equal(title('---\nauthor: me\n...\n\n# Q&A\nText'), 'Q&A');
+assert.equal(frontMatter('---\nnot closed\nHello'), null); // A lone rule is text.
+assert.equal(frontMatter('Intro\n---\nx\n---'), null);     // Only at the very start.
+assert.equal(title('# Keynote\nHello'), 'Keynote');
+assert(!new Tracker(withMeta).readingMarkup('#888', '#fff').includes('Launch'));
+console.log('tracker: long-jump recovery, off-script state, character seeking, section jumps and front matter PASS');

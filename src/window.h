@@ -48,6 +48,8 @@ private:
     void importScript();
     void followSlide(int number, const QString &notes);
     void exportScript();
+    void wrapSelection(const QString &before, const QString &after);
+    void toggleHeading();
     void deleteScript();
 
     // Reading
@@ -100,6 +102,7 @@ private:
     RemoteControl *remote_ = nullptr;
     class ImpressFollower *impress_ = nullptr;
     QAction *impressAction_ = nullptr;
+    QList<QAction *> formatActions_;
     ReadingMode mode_ = ReadingMode::Voice;
     QTimer steady_, countdown_;
     int countdownLeft_ = 0;

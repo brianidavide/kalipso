@@ -63,8 +63,7 @@ PlasmoidItem {
             ? tracker.readingMarkup(c.overlayMuted, c.overlayText)
                 .replace(/<span foreground=/g, "<font color=").replace(/<\/span>/g, "</font>")
             : i18n("Add your script to begin.")
-        const firstLine = tracker.text.split("\n").map(line => line.replace(/^\s*#+\s*/, "").trim()).find(line => line)
-        scriptTitle = firstLine || i18n("Kalipso")
+        scriptTitle = Tracking.title(tracker.text) || i18n("Kalipso")
         readCount = tracker.position + 1
         wordCount = tracker.words.length
         lost = tracker.lost

@@ -758,6 +758,30 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Following Impress · slide %1</source>
         <translation>Segue Impress · diapositiva %1</translation>
     </message>
+    <message>
+        <source>Format</source>
+        <translation>Formato</translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation>Grassetto</translation>
+    </message>
+    <message>
+        <source>Italic</source>
+        <translation>Corsivo</translation>
+    </message>
+    <message>
+        <source>Section heading</source>
+        <translation>Titolo di sezione</translation>
+    </message>
+    <message>
+        <source>Direction cue [ ]</source>
+        <translation>Segnale [ ]</translation>
+    </message>
+    <message>
+        <source>Count filler words (um, uh) in the session summary</source>
+        <translation>Conta le parole riempitive (ehm, uhm) nel resoconto della sessione</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>

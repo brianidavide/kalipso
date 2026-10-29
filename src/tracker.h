@@ -28,6 +28,11 @@ class ScriptTracker {
 public:
     static QVector<TextRange> cues(const QString &text);
     static QVector<TextRange> headings(const QString &text);
+    // YAML front matter: a first line "---" up to the next "---" or "..." line. Shown
+    // dimmed, never read aloud or matched. Length 0 when there is none.
+    static TextRange frontMatter(const QString &text);
+    // Front matter "title:", else the first non-empty line without "#".
+    static QString title(const QString &text);
     static QVector<Section> sections(const QString &text);
     // Speakable words, in order. Excludes cues and headings.
     static QVector<Word> tokenize(const QString &text);

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "tracker.h"
+#include <QRegularExpression>
 #include <algorithm>
 #include <limits>
 
@@ -84,6 +85,38 @@ int exactMatches(const QVector<Word> &spoken, const QVector<Word> &words, int st
 }
 } // namespace
 
+TextRange ScriptTracker::frontMatter(const QString &text) {
+    static const QRegularExpression open(QStringLiteral(R"(^---[ \t]*(\n|$))"));
+    static const QRegularExpression close(QStringLiteral(R"(\n(---|\.\.\.)[ \t]*(\n|$))"));
+    if (!open.match(text).hasMatch())
+        return {0, 0};
+    const auto match = close.match(text, 3);
+    return match.hasMatch() ? TextRange{0, int(match.capturedStart() + 1 + match.capturedLength(1))} : TextRange{0, 0};
+}
+
+QString ScriptTracker::title(const QString &text) {
+    const auto meta = frontMatter(text);
+    if (meta.length) {
+        static const QRegularExpression titleLine(QStringLiteral(R"(^title:[ \t]*(.+)$)"),
+                                                  QRegularExpression::MultilineOption);
+        if (const auto found = titleLine.match(text.left(meta.length)); found.hasMatch()) {
+            auto value = found.captured(1).trimmed();
+            if (value.size() >= 2 && (value.front() == u'"' || value.front() == u'\'') && value.back() == value.front())
+                value = value.mid(1, value.size() - 2);
+            return value;
+        }
+    }
+    for (auto line : text.mid(meta.length).split(u'\n')) {
+        line = line.trimmed();
+        while (line.startsWith(u'#'))
+            line.remove(0, 1);
+        line = line.trimmed();
+        if (!line.isEmpty())
+            return line;
+    }
+    return {};
+}
+
 QVector<TextRange> ScriptTracker::cues(const QString &text) {
     QVector<TextRange> ranges;
     int open = -1;
@@ -122,7 +155,10 @@ QVector<TextRange> ScriptTracker::headings(const QString &text) {
 
 QVector<Section> ScriptTracker::sections(const QString &text) {
     QVector<Section> result;
+    const int meta = frontMatter(text).length;
     for (const auto &range : headings(text)) {
+        if (range.start < meta) // A "#" comment in the front matter is not a section.
+            continue;
         auto title = text.mid(range.start, range.length).trimmed();
         while (title.startsWith(u'#'))
             title.remove(0, 1);
@@ -137,9 +173,15 @@ QVector<Section> ScriptTracker::sections(const QString &text) {
 
 QVector<Word> ScriptTracker::tokenize(const QString &text) {
     auto words = allWords(text);
-    if (!text.contains(u'[') && !text.contains(u'#'))
+    if (!text.contains(u'[') && !text.contains(u'#') && !text.startsWith(QLatin1String("---")))
         return words;
-    auto silent = cues(text) + headings(text);
+    const auto meta = frontMatter(text);
+    QVector<TextRange> silent;
+    if (meta.length)
+        silent.append(meta);
+    for (const auto &range : cues(text) + headings(text))
+        if (range.start >= meta.length) // Cues and headings inside the front matter are part of it.
+            silent.append(range);
     if (silent.isEmpty())
         return words;
     std::sort(silent.begin(), silent.end(), [](const auto &a, const auto &b) { return a.start < b.start; });

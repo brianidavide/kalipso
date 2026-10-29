@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "impress.h"
 #include "remote.h"
+#include "script_highlighter.h"
 #include "speech.h"
 #include "window.h"
 #include <QAbstractButton>
@@ -22,6 +23,8 @@
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTextBlock>
+#include <QTextDocument>
+#include <QTextLayout>
 #include <QToolButton>
 #include <QWheelEvent>
 #include <QtTest>
@@ -490,6 +493,67 @@ for event in [{"state": "slide", "slide": 2, "notes": ""},
         impress->stop();
         QProcess::execute(xdotool, {"key", "Escape"});
         QProcess::execute("pkill", {"-f", "--", "--accept=pipe,name=kalipso-"}); // The LibreOffice started here.
+    }
+
+    void formattingWrapsTheSelectionInMarkdown() {
+        MainWindow window(scripts_.path());
+        window.show();
+        window.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&window)); // Shortcuts need the active window.
+        auto *text = editor(window);
+        text->setPlainText("Say hello world now");
+        text->setFocus();
+        auto cursor = text->textCursor();
+        cursor.setPosition(3);
+        cursor.setPosition(10, QTextCursor::KeepAnchor); // " hello " with spaces at both edges.
+        text->setTextCursor(cursor);
+        QTest::keySequence(text, QKeySequence::Bold);
+        QCOMPARE(text->toPlainText(), QString("Say **hello** world now"));
+        QCOMPARE(text->textCursor().selectedText(), QString("hello")); // Still selected for more formatting.
+        window.findChild<QAction *>("formatItalic")->trigger();
+        QCOMPARE(text->toPlainText(), QString("Say ***hello*** world now"));
+        // An empty selection gets an empty pair with the caret inside.
+        cursor.movePosition(QTextCursor::End);
+        text->setTextCursor(cursor);
+        window.findChild<QAction *>("formatCue")->trigger();
+        QTest::keyClicks(text, "smile");
+        QCOMPARE(text->toPlainText(), QString("Say ***hello*** world now[smile]"));
+        // The heading toggles on the current line.
+        QTest::keySequence(text, QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_H));
+        QCOMPARE(text->toPlainText(), QString("# Say ***hello*** world now[smile]"));
+        window.findChild<QAction *>("formatHeading")->trigger();
+        QCOMPARE(text->toPlainText(), QString("Say ***hello*** world now[smile]"));
+        text->document()->undo(); // One undo step per formatting action.
+        QCOMPARE(text->toPlainText(), QString("# Say ***hello*** world now[smile]"));
+    }
+
+    void highlighterShowsMarkdownMetadataListsAndEmphasis() {
+        QTextDocument document;
+        document.documentLayout(); // As in an editor: without a layout, no change signals reach the highlighter.
+        ScriptHighlighter highlighter(&document);
+        const QColor cue(0x11, 0x22, 0x33), heading(0x44, 0x55, 0x66);
+        highlighter.setColors(cue, heading);
+        document.setPlainText("---\ntitle: Launch\n---\n- item\n***both*** **bold** *it*\n# Head");
+        QTest::qWait(20); // The front matter rehighlight is queued.
+        const auto formatAt = [&document](int blockNumber, int position) {
+            const auto block = document.findBlockByNumber(blockNumber);
+            for (const auto &range : block.layout()->formats())
+                if (position >= range.start && position < range.start + range.length)
+                    return range.format;
+            return QTextCharFormat();
+        };
+        QCOMPARE(formatAt(1, 0).foreground().color(), cue);                                 // Front matter is dimmed.
+        QCOMPARE(formatAt(3, 0).foreground().color(), cue);                                 // "-" list marker.
+        QVERIFY(!formatAt(3, 2).hasProperty(QTextFormat::ForegroundBrush));                 // The item text is not.
+        QVERIFY(formatAt(4, 3).fontWeight() == QFont::Bold && formatAt(4, 3).fontItalic()); // ***both***
+        QCOMPARE(formatAt(4, 9).foreground().color(), cue);                                 // Closing *** markers.
+        QVERIFY(formatAt(4, 13).fontWeight() == QFont::Bold && !formatAt(4, 13).fontItalic());
+        QVERIFY(formatAt(4, 21).fontItalic());
+        QCOMPARE(formatAt(5, 2).foreground().color(), heading);
+        // Without the closing "---", the first line is plain text again.
+        document.setPlainText("---\ntitle: Launch\n- item");
+        QTest::qWait(20);
+        QVERIFY(!formatAt(1, 0).hasProperty(QTextFormat::ForegroundBrush));
     }
 
     void readerKeysStepTheScript() {

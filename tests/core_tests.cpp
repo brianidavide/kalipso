@@ -114,6 +114,20 @@ private slots:
         ScriptTracker plain;
         plain.setScript("no headings here");
         QCOMPARE(plain.sectionTarget(1), -1);
+
+        // YAML front matter: shown, never spoken, never a section; its title names the script.
+        const QString withMeta =
+            "---\ntitle: \"Launch day\"\n# a YAML comment\nspeaker: [me]\n---\n# Opening\nHello everyone";
+        QCOMPARE(ScriptTracker::frontMatter(withMeta).length, int(withMeta.indexOf("\n# Opening")));
+        QStringList metaWords;
+        for (const auto &word : ScriptTracker::tokenize(withMeta))
+            metaWords << word.normalized;
+        QCOMPARE(metaWords, QStringList({"hello", "everyone"}));
+        QCOMPARE(ScriptTracker::sections(withMeta).size(), 1);
+        QCOMPARE(ScriptTracker::title(withMeta), QString("Launch day"));
+        QCOMPARE(ScriptTracker::title("---\nauthor: me\n...\n\n# Q&A\nText"), QString("Q&A"));
+        QCOMPARE(ScriptTracker::frontMatter("---\nnot closed\nHello").length, 0);
+        QCOMPARE(ScriptTracker::frontMatter("Intro\n---\nx\n---").length, 0);
     }
     void voiceSkipsCuesAndRecognizerTags() {
         ScriptTracker tracker;

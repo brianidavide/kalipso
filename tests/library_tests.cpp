@@ -368,6 +368,17 @@ private slots:
         QVERIFY2(report.contains("| Intro | 0:02 | 10 | 300 |"), qPrintable(report));
         QVERIFY2(report.contains("| Main / part | 0:07 | 10 | 86 |"), qPrintable(report)); // "|" kept out of cells.
         QVERIFY2(report.contains("- 0:07 after “…intro4 intro5 intro6 intro7 intro8 intro9”"), qPrintable(report));
+        QVERIFY(report.contains("- Filler words recognized: 0"));
+
+        // With filler counting turned off, nothing is counted and the report leaves it out.
+        SessionStats quiet;
+        quiet.setCountFillers(false);
+        quiet.start(-1, 0);
+        quiet.transcript("um so uh we start");
+        quiet.advance(9, 2000);
+        const auto summary = quiet.finish(4000);
+        QCOMPARE(summary.fillers, 0);
+        QVERIFY(!SessionStats::report(summary, script, "Launch", QDateTime::currentDateTime()).contains("Filler"));
     }
 };
 
