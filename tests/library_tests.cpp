@@ -132,6 +132,36 @@ private slots:
         QVERIFY(!QFile::exists(directory.filePath(id + ".txt")));
     }
 
+    void survivesDamagedIndexUnicodeEmptyAndReadOnlyStorage() {
+        QTemporaryDir directory;
+        QString unicode, empty;
+        {
+            ScriptLibrary library(directory.path());
+            unicode = library.create(QString::fromUtf8("# Bienvenue 👋\nتحدث ببطء. 自分のペースで。"));
+            empty = library.create(QString());
+            QVERIFY(!unicode.isEmpty() && !empty.isEmpty());
+            library.setPosition(unicode, 3);
+            QVERIFY(library.flush());
+        }
+        // A damaged index loses positions but never scripts.
+        QFile index(directory.filePath("library.json"));
+        QVERIFY(index.open(QIODevice::WriteOnly));
+        index.write("{\"broken\": [1, 2");
+        index.close();
+        ScriptLibrary reopened(directory.path());
+        QCOMPARE(reopened.load(unicode), QString::fromUtf8("# Bienvenue 👋\nتحدث ببطء. 自分のペースで。"));
+        QCOMPARE(reopened.entries().size(), 2);
+        QVERIFY(reopened.contains(empty));
+        QCOMPARE(reopened.load(empty), QString());
+        // Unwritable storage is reported, and the saved text stays as it was.
+        QFile::setPermissions(directory.path(), QFileDevice::ReadOwner | QFileDevice::ExeOwner);
+        const bool saved = reopened.save(unicode, "Changed");
+        QFile::setPermissions(directory.path(),
+                              QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        QVERIFY(!saved);
+        QVERIFY(reopened.load(unicode).startsWith(QString::fromUtf8("# Bienvenue 👋")));
+    }
+
     void rejectsPathsOutsideTheLibrary() {
         QTemporaryDir directory;
         ScriptLibrary library(directory.path());
