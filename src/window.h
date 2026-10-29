@@ -54,6 +54,7 @@ private:
     void pauseRunning();
     bool running() const;
     void refreshRunning();
+    QString statusText() const;
     void steadyTick();
     void changeSpeed(int delta);
     void startListening();
