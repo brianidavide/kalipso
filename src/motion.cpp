@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <cmath>
 #if defined(Q_OS_WIN)
+#define NOMINMAX // windows.h must not replace std::max.
 #include <windows.h>
 #elif defined(Q_OS_MACOS)
 #include <CoreFoundation/CoreFoundation.h>
