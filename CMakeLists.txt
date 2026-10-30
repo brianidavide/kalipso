@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 # Must precede project(): the oldest macOS the app and its helper run on.
 set(CMAKE_OSX_DEPLOYMENT_TARGET "14.4" CACHE STRING "Minimum macOS version (Qt 6.12 requires 14.4)")
-project(Kalipso VERSION 0.1.0 LANGUAGES C CXX)
+project(Kalipso VERSION 0.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -194,6 +194,7 @@ if(BUILD_TESTING)
     add_test(NAME speech_assets COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/speech_assets_test.py)
     add_test(NAME package_translations COMMAND ${Python3_EXECUTABLE}
                                                ${CMAKE_CURRENT_SOURCE_DIR}/tests/package_translations_test.py)
+    add_test(NAME version_scheme COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/version_test.py)
     # Real LibreOffice Impress slideshow; skipped (77) without LibreOffice, uno or a display.
     add_test(NAME impress_follow COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/impress_follow_test.py)
     set_tests_properties(impress_follow PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
