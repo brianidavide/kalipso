@@ -44,3 +44,35 @@ jobs:
             artifacts/packages/*.plasmoid
             artifacts/packages/*.zip
             artifacts/packages/*.kwinscript
+  arch:
+    # The Arch package (packaging/arch/kalipso-git) built from this commit and installed in a clean
+    # Arch Linux container: what someone on Arch or EndeavourOS gets.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Build, check and install the Arch package
+        run: |
+          docker run --rm -v "$PWD:/src:ro" -e COMMIT="$(git rev-parse HEAD)" archlinux:base-devel bash -euo pipefail -c '
+            pacman -Syu --noconfirm --needed git cmake ninja qt6-base qt6-svg qt6-tools pipewire python hicolor-icon-theme namcap >/dev/null
+            useradd -m builder
+            install -d -o builder /home/builder/pkg
+            cp /src/packaging/arch/kalipso-git/PKGBUILD /home/builder/pkg/
+            sed -i "s|^source=.*|source=(\"kalipso::git+file:///src#commit=$COMMIT\")|" /home/builder/pkg/PKGBUILD
+            chown -R builder /home/builder/pkg
+            su builder -c "git config --global --add safe.directory \"*\" && cd ~/pkg && makepkg --noconfirm"
+            namcap /home/builder/pkg/*.pkg.tar.zst || true
+            pacman -U --noconfirm /home/builder/pkg/*.pkg.tar.zst >/dev/null
+            for file in /usr/bin/kalipso /usr/bin/kalipso-engine /usr/bin/kalipso-voice-setup \
+                /usr/share/dbus-1/services/io.github.brianidavide.Kalipso.Engine.service \
+                /usr/share/applications/io.github.brianidavide.kalipso.desktop \
+                /usr/share/plasma/plasmoids/io.github.brianidavide.kalipso/metadata.json \
+                /usr/share/plasma/plasmoids/io.github.brianidavide.kalipso/contents/fonts/AtkinsonHyperlegibleNext-Regular.ttf \
+                /usr/share/gnome-shell/extensions/kalipso@brianidavide.github.io/metadata.json \
+                /usr/share/kwin/scripts/kalipso-companion/metadata.json; do
+              test -e "$file" || { echo "Missing $file"; exit 1; }
+            done
+            QT_QPA_PLATFORM=offscreen kalipso --version
+            kalipso-voice-setup --list-models
+          '

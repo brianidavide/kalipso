@@ -4,7 +4,7 @@ Voice following needs three things on your computer:
 
 | Component | What it does | How you get it |
 | --- | --- | --- |
-| `kalipso-engine` (the companion) | Captures the microphone and runs recognition for the widget and extension | Built from this repository by the installer below, or included in the `.deb` |
+| `kalipso-engine` (the companion) | Captures the microphone and runs recognition for the widget and extension | Included in the Kalipso packages, in the `kalipso-companion` download, or built from source |
 | A speech runtime | Moonshine (with its ONNX Runtime) **or** Vosk | Downloaded by the installer, or a library you already have |
 | A language model | Recognition for one language | Downloaded by the installer, or a model folder you already have |
 
@@ -14,7 +14,32 @@ Recognition stays on your computer: audio goes from PipeWire to the native libra
 
 ## Install
 
-You need a clone of this repository, a C++ compiler, CMake, Qt 6 and PipeWire:
+Choose the way that matches how you installed Kalipso. Each one asks for your language explicitly (it is
+never guessed from the desktop), downloads one speech runtime and one language model, checks them
+against pinned SHA-256 fingerprints and never opens the microphone. Moonshine is used where it has the
+language, Vosk otherwise (Italian uses Vosk); add `--backend vosk` or `--backend moonshine` to choose.
+
+**You installed a Kalipso package** (Arch, EndeavourOS, the `.deb`): the companion is already there.
+
+```sh
+kalipso-voice-setup --language it
+```
+
+**You use only the widget or the extension** (from the KDE Store or extensions.gnome.org): download
+`kalipso-companion-…-linux-x86_64.tar.gz` from the [releases page](https://github.com/brianidavide/kalipso/releases),
+then:
+
+```sh
+tar -xzf kalipso-companion-*-linux-x86_64.tar.gz
+cd kalipso-companion-*-linux-x86_64
+./install --language it
+```
+
+It installs the companion under `~/.local` and registers it with your desktop. It needs Python 3, Qt 6 and
+PipeWire, which current Plasma and GNOME desktops have.
+
+**From the source code** (a clone of this repository, a C++ compiler, CMake, Qt 6 and PipeWire): the
+installer builds the companion first.
 
 ```sh
 # Debian 13 / Ubuntu 24.04 or newer
@@ -24,26 +49,18 @@ sudo pacman -S --needed base-devel cmake git qt6-base pipewire pipewire-audio pk
 
 git clone https://github.com/brianidavide/kalipso.git
 cd kalipso
+python3 tools/install-local-engine.py --language it --download
 ```
 
-Then install **one** engine and language. The language is always explicit; it is never guessed from your desktop locale.
-
-```sh
-# Moonshine, English
-python3 tools/install-local-engine.py --backend moonshine --language en --download
-
-# Vosk, Italian
-python3 tools/install-local-engine.py --backend vosk --language it --download
-```
-
-The installer builds the companion, downloads the pinned runtime and model, verifies their SHA-256 hashes, installs them under `~/.local`, saves the engine's settings and registers the companion with D-Bus. It never opens the microphone. Run it again with the other engine to have both; each keeps its own settings. `--list-models` shows the catalog.
+Run it again with another language or engine to add it; each engine keeps its own settings. `--list-models`
+shows the catalog.
 
 | Engine | Version | Catalog languages | Platform |
 | --- | --- | --- | --- |
 | Moonshine (Tiny streaming) | 0.1.5 | en, de, es, ja, zh | Linux x86_64, glibc 2.34+ |
 | Vosk (small models) | 0.3.45 | en, de, es, ja, zh, it | Linux x86_64 |
 
-There is no Italian Moonshine model; use Vosk for Italian. Sources, hashes and model licenses are in [the catalog](../tools/data/speech-catalog.json). Downloads are cached in `~/.cache/kalipso-downloads` (`--cache` and `--prefix` change the locations).
+There is no Italian Moonshine model; Vosk is used for Italian. Sources, hashes and model licenses are in [the catalog](../tools/data/speech-catalog.json). Downloads are cached in `~/.cache/kalipso-downloads` (`--cache` and `--prefix` change the locations).
 
 ## Use it
 

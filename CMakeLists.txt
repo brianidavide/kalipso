@@ -52,6 +52,13 @@ if(UNIX AND NOT APPLE)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/io.github.brianidavide.Kalipso.Engine.service
     DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/services COMPONENT Engine)
   install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/kalipso-engine COMPONENT Engine)
+  # kalipso-voice-setup: downloads one speech runtime and language model for the installed companion.
+  set(KALIPSO_SETUP_DIR ${CMAKE_INSTALL_DATADIR}/kalipso/setup)
+  install(FILES tools/install-local-engine.py tools/speech_assets.py DESTINATION ${KALIPSO_SETUP_DIR}/tools COMPONENT Engine)
+  install(FILES tools/data/speech-catalog.json DESTINATION ${KALIPSO_SETUP_DIR}/tools/data COMPONENT Engine)
+  install(DIRECTORY third_party/native-notices DESTINATION ${KALIPSO_SETUP_DIR}/third_party COMPONENT Engine)
+  configure_file(packaging/kalipso-voice-setup.in kalipso-voice-setup @ONLY)
+  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/kalipso-voice-setup DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Engine)
 endif()
 
 # --- Standalone application -----------------------------------------------------

@@ -22,13 +22,17 @@ jobs:
       - name: Check the tag matches the version everywhere
         run: python3 tools/version.py check "$GITHUB_REF_NAME"
       - name: Package
-        run: cd build && cpack -G "DEB;TGZ"
+        run: |
+          (cd build && cpack -G "DEB;TGZ")
+          # The companion alone, for people who use only the Plasma widget or the GNOME extension.
+          packaging/companion/make-archive.sh build/kalipso-engine "${GITHUB_REF_NAME#v}" build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: kalipso-linux
           path: |
             build/kalipso_*.deb
             build/kalipso-*.tar.gz
+            build/kalipso-companion-*.tar.gz
   platforms:
     uses: ./.github/workflows/platforms.yml
   desktop:
@@ -36,6 +40,8 @@ jobs:
   publish:
     needs: [linux, platforms, desktop]
     runs-on: ubuntu-24.04
+    outputs:
+      public: ${{ steps.release.outputs.public }}
     permissions:
       contents: write
       id-token: write
@@ -59,6 +65,7 @@ jobs:
         with:
           subject-path: dist/*
       - name: Create the release
+        id: release
         run: |
           version=${GITHUB_REF_NAME#v}
           cat > notes.md <<EOF
@@ -74,6 +81,7 @@ jobs:
             extension are separate files.
           EOF
           if python3 tools/version.py public "$GITHUB_REF_NAME"; then
+            echo "public=true" >> "$GITHUB_OUTPUT"
             gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --latest --title "Kalipso $version" \
               --notes-file notes.md --generate-notes
           else
@@ -81,3 +89,11 @@ jobs:
             gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --title "Kalipso $version (internal)" \
               --notes-file notes.md --generate-notes
           fi
+  aur:
+    # Arch packages on AUR follow published versions only.
+    needs: publish
+    if: needs.publish.outputs.public == 'true'
+    uses: ./.github/workflows/aur.yml
+    with:
+      version: ${{ github.ref_name }}
+    secrets: inherit
