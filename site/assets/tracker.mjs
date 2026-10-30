@@ -239,9 +239,16 @@ export class Tracker {
     escaped(text) { return escape(text); }
 
     // Escaped Pango/Qt markup for text[from, to): cues in italics, headings in bold.
-    styled(from, to, collapse = true) {
-        let out = '', at = from;
-        const plain = value => escape(collapse ? value.replace(/\s+/g, ' ') : value);
+    // With `collapse`, runs of spaces and line breaks become one space, except after a section heading,
+    // which keeps its own line as in the app (`html`: a <br> for Qt rich text, otherwise a line break).
+    styled(from, to, collapse = true, html = false) {
+        let out = '', at = from, afterHeading = false;
+        const plain = value => {
+            if (!collapse)
+                return escape(value);
+            const text = value.replace(/\s+/g, ' ');
+            return escape(afterHeading ? text.replace(/^ /, '') : text);
+        };
         for (const range of silentRanges(this.text)) {
             const start = Math.max(range.start, from), end = Math.min(range.start + range.length, to);
             if (start >= end) continue;
@@ -250,7 +257,14 @@ export class Tracker {
                 continue;
             }
             const tag = this.text[range.start] === '[' ? 'i' : 'b';
-            out += plain(this.text.slice(at, start)) + `<${tag}>${plain(this.text.slice(start, end))}</${tag}>`;
+            const before = plain(this.text.slice(at, start));
+            // A heading that follows text in the excerpt starts its own line too.
+            const heading = collapse && tag === 'b' && start === range.start && (out || before.trim());
+            out += (heading ? before.replace(/ $/, '') + (html ? '<br>' : '\n') : before) +
+                `<${tag}>${plain(this.text.slice(start, end))}</${tag}>`;
+            afterHeading = collapse && tag === 'b' && end === range.start + range.length && end < to;
+            if (afterHeading)
+                out += html ? '<br>' : '\n';
             at = end;
         }
         return out + plain(this.text.slice(at, to));
@@ -272,9 +286,9 @@ export class Tracker {
         const mark = body => html
             ? `<span style="color:${here.text};background-color:${here.tint};text-decoration:underline">${body}</span>`
             : `<span foreground="${here.text}" background="${here.tint}" underline="single" underline_color="${here.line}">${body}</span>`;
-        return span(readColor, `${first ? '… ' : ''}${this.styled(start, Math.max(start, wordStart))}`) +
-            (wordStart < readEnd ? mark(this.styled(wordStart, readEnd)) : '') +
-            span(nextColor, `${this.styled(Math.max(start, readEnd), finish)}${last < this.words.length ? ' …' : ''}`);
+        return span(readColor, `${first ? '… ' : ''}${this.styled(start, Math.max(start, wordStart), true, html)}`) +
+            (wordStart < readEnd ? mark(this.styled(wordStart, readEnd, true, html)) : '') +
+            span(nextColor, `${this.styled(Math.max(start, readEnd), finish, true, html)}${last < this.words.length ? ' …' : ''}`);
     }
 
     markup(readColor = '#91999f', nextColor = '#f6f8fa') {

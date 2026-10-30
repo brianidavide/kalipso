@@ -100,3 +100,10 @@ console.log('tracker: long-jump recovery, off-script state, character seeking, s
  const amp=new Tracker('say a&b now');amp.seek(1);assert(amp.readingMarkup('#777','#fff',4,here).includes('>a</span><span foreground="#fff">&amp;b now'));
  console.log('current word marking: Pango and Qt rich text, escaped PASS');
 }
+// Section headings keep their own line in the excerpt, before and after.
+{
+ const t=new Tracker('# Slide 3\nThese are the numbers.\n\n# Slide 4\nNext.');t.seek(1);
+ assert.equal(t.readingMarkup('#7','#f',4),'<span foreground="#7"><b># Slide 3</b>\nThese are</span><span foreground="#f"> the numbers.\n<b># Slide 4</b>\nNext.</span>');
+ assert.equal(t.readingMarkup('#7','#f',4,null,true),'<font color="#7"><b># Slide 3</b><br>These are</font><font color="#f"> the numbers.<br><b># Slide 4</b><br>Next.</font>');
+ console.log('headings on their own line: Pango and Qt rich text PASS');
+}
