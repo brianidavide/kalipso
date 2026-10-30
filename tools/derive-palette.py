@@ -117,15 +117,18 @@ _, control = solve_lightness(TINT_C, tint, [paper, paper_deep, card], CONTROL, d
 _, muted = solve_lightness(TINT_C, tint, [paper, paper_deep, card], TEXT, darker=True)
 ink, ink_raised = color(0.215, TINT_C, tint), color(0.30, TINT_C, tint)
 night, night_raised = color(0.17, TINT_C, tint), color(0.215, TINT_C, tint)
+# The app's dark theme also needs a hover tone for controls; every role on night is solved against it too.
+night_hover = color(0.26, TINT_C, tint)
+DARK = [night, night_raised, night_hover]
 night_line = color(0.29, TINT_C, tint)
 night_text = color(0.955, TINT_C, tint)
-_, night_control = solve_lightness(TINT_C, tint, [night, night_raised], CONTROL, darker=False)
-_, night_muted = solve_lightness(TINT_C, tint, [night, night_raised], TEXT, darker=False)
+_, night_control = solve_lightness(TINT_C, tint, DARK, CONTROL, darker=False)
+_, night_muted = solve_lightness(TINT_C, tint, DARK, TEXT, darker=False)
 
 # --- 4 first: error red (needed to keep the accent away from it) ------------------------------
 ERROR_H, WARNING_H = 27.0, 70.0
 _, error = solve_lightness(0.2, ERROR_H, [paper, paper_deep, card], TEXT, darker=True)
-_, error_night = solve_lightness(0.2, ERROR_H, [night, night_raised], TEXT, darker=False)
+_, error_night = solve_lightness(0.2, ERROR_H, DARK, TEXT, darker=False)
 
 # --- 3. score every hue for the "you are here" accent ------------------------------------------
 reference_hues = [oklch_of(h)[2] for h in ACCENTS.values()]
@@ -133,7 +136,7 @@ rows = []
 for h in range(0, 360, 5):
     try:
         L_day, day = solve_lightness(0.25, h, [paper, paper_deep, card], TEXT, darker=True)
-        L_night, glow = solve_lightness(0.25, h, [night, night_raised], TEXT, darker=False)
+        L_night, glow = solve_lightness(0.25, h, DARK, TEXT, darker=False)
     except SystemExit:
         continue
     vivid = min(max_chroma(L_day, h), max_chroma(L_night, h))
@@ -159,7 +162,7 @@ palette = {
     'line': line, 'control': control, 'amber': accent, 'amberSoft': accent_soft,
     'night': night, 'nightRaised': night_raised, 'nightText': night_text, 'nightMuted': night_muted,
     'nightLine': night_line, 'nightControl': night_control, 'amberNight': accent_night,
-    'error': error, 'errorNight': error_night,
+    'error': error, 'errorNight': error_night, 'nightHover': night_hover,
 }
 
 tokens_path = ROOT / 'design/tokens.json'
@@ -168,6 +171,18 @@ for key in ('amber', 'amberSoft', 'amberNight'):
     tokens['site'].pop(key, None)
 renamed = {('accent' + k[5:] if k.startswith('amber') else k): v for k, v in palette.items()}
 tokens['site'].update(renamed)
+# The app's two themes take the same values by role: ink acts on paper, paper-white acts on night,
+# blue marks where you are (current word, marker, progress, focus, selection).
+app = {
+    'light': {'background': paper, 'text': ink, 'muted': muted, 'surface': card, 'hover': paper_deep,
+              'border': control, 'focus': accent, 'accent': accent, 'action': ink, 'actionHover': ink_raised,
+              'actionText': paper, 'selection': accent, 'selectionText': card, 'divider': line},
+    'dark': {'background': night, 'text': night_text, 'muted': night_muted, 'surface': night_raised,
+             'hover': night_hover, 'border': night_control, 'focus': accent_night, 'accent': accent_night,
+             'action': night_text, 'actionHover': color(0.86, TINT_C, tint), 'actionText': night,
+             'selection': accent_night, 'selectionText': night, 'divider': night_line},
+}
+tokens['palette'] = app
 tokens_path.write_text(json.dumps(tokens, indent=2, ensure_ascii=False) + '\n')
 
 # --- report -----------------------------------------------------------------------------------
@@ -189,7 +204,7 @@ def row(role, token, value, against):
     ratios = ', '.join(f'{contrast(value, b):.2f}:1 on {n}' for n, b in against)
     out.append(f'| {role} | {token} | `{value}` | {lch(value)} | {ratios} |')
 light = [('paper', paper), ('paper-deep', paper_deep), ('card', card)]
-dark = [('night', night), ('night-raised', night_raised)]
+dark = [('night', night), ('night-raised', night_raised), ('night-hover', night_hover)]
 row('Page', 'paper', paper, [('ink', ink)])
 row('Section band', 'paperDeep', paper_deep, [('ink', ink)])
 row('Text and filled action', 'ink', ink, light)
@@ -199,11 +214,16 @@ row('Decorative line', 'line', line, [('paper', paper)])
 row('"You are here"', 'accent', accent, light)
 row('Error', 'error', error, light)
 row('Reader and dark band', 'night', night, [('night-text', night_text)])
+row('Hover on night (app)', 'nightHover', night_hover, [('night-text', night_text)])
 row('Text on night', 'nightText', night_text, dark)
 row('Secondary text on night', 'nightMuted', night_muted, dark)
 row('Control border on night', 'nightControl', night_control, dark)
 row('"You are here" on night', 'accentNight', accent_night, dark)
 row('Error on night', 'errorNight', error_night, dark)
+out += ['', '## App themes', '', 'The app\'s light and dark themes (`palette` in tokens.json) use the same values by role:', '',
+        '| Role | Light | Dark |', '|---|---|---|']
+for role in app['light']:
+    out.append(f'| {role} | `{app["light"][role]}` | `{app["dark"][role]}` |')
 out += ['', '## The "you are here" hue', '',
         f'Every hue in 5° steps was given the lightness it needs for {TEXT:.2f}:1 text on paper and on night (4.5:1 plus 10%), then scored '
         f'(vividness / 0.2 + worst separation from error / 0.15). {len(tied)} hues scored within {TIE:.0%} of the best '

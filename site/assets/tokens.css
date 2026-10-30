@@ -96,7 +96,7 @@
   --native-padding: 20;
   --native-gap: 12;
   --native-radius: 18;
-  --native-button-radius: 8;
+  --native-button-radius: 10;
   --native-control-height: 36;
   --native-editor-height: 180;
   --native-primary-width: 160;
@@ -116,9 +116,9 @@
   --site-night: #110F0D;
   --site-night-raised: #1B1916;
   --site-night-text: #F2F0EC;
-  --site-night-muted: #8A8884;
+  --site-night-muted: #94928E;
   --site-night-line: #2D2B28;
-  --site-night-control: #6D6B68;
+  --site-night-control: #767470;
   --site-font-display: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
   --site-font-body: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', system-ui, sans-serif;
   --site-font-mono: 'Atkinson Hyperlegible Mono', ui-monospace, monospace;
@@ -142,35 +142,36 @@
   --site-control-height: 44px;
   --site-accent: #005EE1;
   --site-accent-soft: #E3EEFF;
-  --site-accent-night: #3B85FF;
+  --site-accent-night: #4D90FF;
   --site-error: #C82223;
-  --site-error-night: #F14F47;
+  --site-error-night: #FD5A50;
   --site-shadow-raised: 0 6px 18px #1b191626;
   --site-reveal: 560ms;
   --site-reveal-shift: 16px;
   --site-stagger: 70ms;
   --site-glide: 480ms;
   --site-ease-reveal: cubic-bezier(.16,1,.3,1);
+  --site-night-hover: #262421;
 }
 
 .reader[data-theme="light"] {
-  --color-overlay: #F7F8FA;
-  --color-overlay-text: #17191F;
-  --color-overlay-muted: #626875;
+  --color-overlay: #FCFAF6;
+  --color-overlay-text: #1B1916;
+  --color-overlay-muted: #686663;
   --color-overlay-surface: #FFFFFF;
-  --color-overlay-line: #EAF0FF;
-  --color-overlay-border: #747C8B;
-  --color-focus: #17191F;
-  --color-reading: #2447D3;
+  --color-overlay-line: #F4EFE9;
+  --color-overlay-border: #85837F;
+  --color-focus: #005EE1;
+  --color-reading: #005EE1;
 }
 
 .reader[data-theme="dark"] {
-  --color-overlay: #17191F;
-  --color-overlay-text: #F7F8FC;
-  --color-overlay-muted: #A7AFBF;
-  --color-overlay-surface: #242933;
-  --color-overlay-line: #363C48;
-  --color-overlay-border: #8F98A9;
-  --color-focus: #F7F8FC;
-  --color-reading: #C8D4FF;
+  --color-overlay: #110F0D;
+  --color-overlay-text: #F2F0EC;
+  --color-overlay-muted: #94928E;
+  --color-overlay-surface: #1B1916;
+  --color-overlay-line: #262421;
+  --color-overlay-border: #767470;
+  --color-focus: #4D90FF;
+  --color-reading: #4D90FF;
 }

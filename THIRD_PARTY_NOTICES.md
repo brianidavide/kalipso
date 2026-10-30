@@ -30,6 +30,9 @@ unmodified, under the zlib license; [provenance and license](third_party/puff/RE
 The remote-control QR code uses Project Nayuki's QR Code generator library v1.8.0, unmodified,
 under the MIT license; [provenance and license](third_party/qrcodegen/README.md).
 
+The app embeds Atkinson Hyperlegible Next as its interface and default reading font: static TrueType instances,
+unmodified, under the SIL Open Font License 1.1; [provenance and license](src/fonts/README.md).
+
 The website hosts its own copies of two fonts, subset to Latin and Latin Extended by Google Fonts and unmodified:
 Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono (© 2020–2024 their Project Authors), under the SIL Open
 Font License 1.1. The license texts are in

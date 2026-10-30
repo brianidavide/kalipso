@@ -810,6 +810,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Network</source>
         <translation>Rete</translation>
     </message>
+    <message>
+        <source>Close</source>
+        <translation>Chiudi</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>

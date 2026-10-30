@@ -14,7 +14,6 @@
 #include <QComboBox>
 #include <QDateTime>
 #include <QDialog>
-#include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
 #include <QFontDatabase>
@@ -234,6 +233,7 @@ ReadingMode modeFromKey(const QString &key) {
 
 MainWindow::MainWindow(const QString &libraryDirectory)
     : library_(libraryDirectory), speech_(this), prompter_(new ReaderWindow) {
+    Accessibility::useInterfaceFont();
     setWindowTitle(tr("Kalipso"));
     resize(1100, 760);
     setMinimumSize(320, 240);
@@ -311,10 +311,16 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     auto *dialogLayout = new QVBoxLayout(settings_);
     dialogLayout->setContentsMargins(0, 0, 0, Design::Metric::space4);
     dialogLayout->addWidget(makeSettings(), 1);
-    auto *close = new QDialogButtonBox(QDialogButtonBox::Close);
-    close->setContentsMargins(Design::Metric::space5, 0, Design::Metric::space5, 0);
-    connect(close, &QDialogButtonBox::rejected, settings_, &QDialog::close);
-    dialogLayout->addWidget(close);
+    // Our own Close button, with the app's close icon (the platform's standard one does not match).
+    auto *closeRow = new QHBoxLayout;
+    closeRow->setContentsMargins(Design::Metric::space5, 0, Design::Metric::space5, 0);
+    closeRow->addStretch();
+    auto *close = new AccessibleButton(tr("Close"));
+    close->setObjectName("closeSettings");
+    connect(close, &QPushButton::clicked, settings_, &QDialog::close);
+    closeRow->addWidget(close);
+    dialogLayout->addLayout(closeRow);
+    icons_.append({close, "close"});
     settings_->resize(620, 700);
     connect(settingsButton, &QPushButton::clicked, this, [this] {
         settings_->show();
@@ -481,7 +487,7 @@ void MainWindow::buildLibraryBar(QWidget *bar) {
     add->setObjectName("newScript");
     add->setAccessibleName(tr("New script"));
     add->setProperty("quiet", true);
-    auto *more = new QToolButton;
+    auto *more = new MenuButton;
     more->setObjectName("scriptActions");
     more->setText(tr("More"));
     more->setAccessibleName(tr("More script actions"));
@@ -565,9 +571,10 @@ void MainWindow::applyTheme() {
     const auto &palette = theme == "dark" ? Design::dark : Design::light;
     Accessibility::apply(this, palette);
     Accessibility::apply(settings_, palette);
-    editorHighlighter_->setColors(QColor(palette.muted), QColor(palette.accent));
+    editorHighlighter_->setColors(QColor(palette.muted), QColor(palette.text));
     for (const auto &[button, name] : icons_) {
         const bool primary = button->objectName() == QLatin1String("primaryAction");
+        button->setProperty("motion", Icons::motion(name));
         button->setIcon(Icons::icon(name, QColor(primary ? palette.actionText : palette.text), QColor(palette.muted)));
     }
 }

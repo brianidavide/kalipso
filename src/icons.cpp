@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "icons.h"
+#include <QHash>
 #include <QPainter>
 #include <QSvgRenderer>
 
@@ -16,6 +17,13 @@ QPixmap tinted(QSvgRenderer &renderer, int size, const QColor &color) {
     return QPixmap::fromImage(image);
 }
 } // namespace
+
+QString motion(const QString &name) {
+    static const QHash<QString, QString> motions{
+        {"previous", "back"}, {"next", "forward"}, {"play", "grow"},     {"pause", "grow"}, {"sections", "down"},
+        {"edit", "tilt"},     {"close", "shrink"}, {"settings", "turn"}, {"reader", "out"}, {"plus", "grow"}};
+    return motions.value(name);
+}
 
 QIcon icon(const QString &name, const QColor &color, const QColor &disabled) {
     QSvgRenderer renderer(QStringLiteral(":/icons/%1.svg").arg(name));

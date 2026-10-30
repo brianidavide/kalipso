@@ -23,11 +23,33 @@ Targets: text 4.95:1 and control borders 3.3:1, WCAG 2.2 AA plus a 10% margin fo
 | "You are here" | accent | `#005EE1` | L 0.522 C 0.213 h 260 | 5.46:1 on paper, 4.98:1 on paper-deep, 5.69:1 on card |
 | Error | error | `#C82223` | L 0.538 C 0.200 h 27 | 5.43:1 on paper, 4.95:1 on paper-deep, 5.66:1 on card |
 | Reader and dark band | night | `#110F0D` | L 0.170 C 0.005 h 67 | 16.80:1 on night-text |
-| Text on night | nightText | `#F2F0EC` | L 0.956 C 0.006 h 85 | 16.80:1 on night, 15.41:1 on night-raised |
-| Secondary text on night | nightMuted | `#8A8884` | L 0.627 C 0.006 h 85 | 5.41:1 on night, 4.96:1 on night-raised |
-| Control border on night | nightControl | `#6D6B68` | L 0.529 C 0.005 h 78 | 3.60:1 on night, 3.30:1 on night-raised |
-| "You are here" on night | accentNight | `#3B85FF` | L 0.635 C 0.196 h 260 | 5.45:1 on night, 5.00:1 on night-raised |
-| Error on night | errorNight | `#F14F47` | L 0.651 C 0.200 h 27 | 5.42:1 on night, 4.97:1 on night-raised |
+| Hover on night (app) | nightHover | `#262421` | L 0.261 C 0.006 h 78 | 13.60:1 on night-text |
+| Text on night | nightText | `#F2F0EC` | L 0.956 C 0.006 h 85 | 16.80:1 on night, 15.41:1 on night-raised, 13.60:1 on night-hover |
+| Secondary text on night | nightMuted | `#94928E` | L 0.660 C 0.006 h 85 | 6.16:1 on night, 5.65:1 on night-raised, 4.98:1 on night-hover |
+| Control border on night | nightControl | `#767470` | L 0.559 C 0.007 h 85 | 4.10:1 on night, 3.76:1 on night-raised, 3.32:1 on night-hover |
+| "You are here" on night | accentNight | `#4D90FF` | L 0.664 C 0.179 h 260 | 6.15:1 on night, 5.64:1 on night-raised, 4.97:1 on night-hover |
+| Error on night | errorNight | `#FD5A50` | L 0.684 C 0.200 h 27 | 6.15:1 on night, 5.64:1 on night-raised, 4.98:1 on night-hover |
+
+## App themes
+
+The app's light and dark themes (`palette` in tokens.json) use the same values by role:
+
+| Role | Light | Dark |
+|---|---|---|
+| background | `#FCFAF6` | `#110F0D` |
+| text | `#1B1916` | `#F2F0EC` |
+| muted | `#686663` | `#94928E` |
+| surface | `#FFFFFF` | `#1B1916` |
+| hover | `#F4EFE9` | `#262421` |
+| border | `#85837F` | `#767470` |
+| focus | `#005EE1` | `#4D90FF` |
+| accent | `#005EE1` | `#4D90FF` |
+| action | `#1B1916` | `#F2F0EC` |
+| actionHover | `#2F2D2A` | `#D3D1CD` |
+| actionText | `#FCFAF6` | `#110F0D` |
+| selection | `#005EE1` | `#4D90FF` |
+| selectionText | `#FFFFFF` | `#110F0D` |
+| divider | `#E3DFD8` | `#2D2B28` |
 
 ## The "you are here" hue
 
@@ -35,14 +57,14 @@ Every hue in 5° steps was given the lightness it needs for 4.95:1 text on paper
 
 | Hue | On paper | On night | Vividness (min chroma) | Worst distance from error, incl. colour-blind views | Distance from a reference accent |
 |---|---|---|---|---|---|
-| 290° | `#763CF2` | `#9070FF` | 0.204 | 0.273 | 32° |
-| 285° | `#6A40F5` | `#8574FF` | 0.199 | 0.272 | 27° |
-| 295° | `#8137ED` | `#9B6BFF` | 0.211 | 0.259 | 37° |
-| 280° | `#5E46F8` | `#7A78FF` | 0.196 | 0.271 | 22° |
-| 275° | `#4F4AFA` | `#6D7BFF` | 0.194 | 0.270 | 17° |
-| 260° ✓ | `#005EE1` | `#3B85FF` | 0.196 | 0.268 | 2° |
-| 265° | `#2254F9` | `#5082FF` | 0.194 | 0.268 | 7° |
-| 270° | `#3D4FFA` | `#607FFF` | 0.193 | 0.269 | 12° |
+| 295° | `#8137ED` | `#A37AFF` | 0.191 | 0.251 | 37° |
+| 290° | `#763CF2` | `#987EFF` | 0.185 | 0.254 | 32° |
+| 285° | `#6A40F5` | `#8E81FF` | 0.181 | 0.253 | 27° |
+| 280° | `#5E46F8` | `#8385FF` | 0.177 | 0.252 | 22° |
+| 260° ✓ | `#005EE1` | `#4D90FF` | 0.179 | 0.250 | 2° |
+| 265° | `#2254F9` | `#5D8DFF` | 0.177 | 0.251 | 7° |
+| 275° | `#4F4AFA` | `#7888FF` | 0.175 | 0.252 | 17° |
+| 270° | `#3D4FFA` | `#6C8AFF` | 0.175 | 0.251 | 12° |
 
 Excluded: hues within 50° of error red and within 35° of warning yellow-orange, so that position, error and warning are never confused. Distances are Euclidean in OKLab; colour-blind views use the Machado, Oliveira and Fernandes (2009) matrices at full severity.
 
