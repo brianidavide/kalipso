@@ -23,10 +23,9 @@ for(const engine of ['chromium','firefox','webkit']){
   if(route==='/'&&engine==='chromium')await page.screenshot({path:`${out}/site-${width}x${height}.png`});
  }
  await page.setViewportSize({width:820,height:1000});await page.goto(base);
- const video=page.locator('video');assert.equal(await video.evaluate(v=>v.paused&&v.controls&&!v.autoplay),true);
- await video.evaluate(v=>Promise.race([v.play(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Video did not start')),10000))]));
- await page.waitForFunction(()=>document.querySelector('video').currentTime>.1);
- await video.evaluate(v=>v.pause());assert.equal(await video.evaluate(v=>v.error),null);
+ // Scenes: four images that load when reached, each with a description.
+ const scenes=page.locator('.scenes img');assert.equal(await scenes.count(),4);
+ for(const image of await scenes.all()){await image.scrollIntoViewIfNeeded();assert.equal(await image.evaluate(i=>new Promise((done,fail)=>{if(i.complete&&i.naturalWidth)done(i.naturalWidth);i.addEventListener('load',()=>done(i.naturalWidth),{once:true});i.addEventListener('error',fail,{once:true})})),2160);assert.ok((await image.getAttribute('alt')).length>60)}
 
  const position=()=>page.locator('#reading-text').getAttribute('data-position');
  await page.locator('#next-word').click();assert.equal(await position(),'3');
@@ -75,8 +74,8 @@ for(const engine of ['chromium','firefox','webkit']){
  await page.emulateMedia({reducedMotion:'no-preference'});await page.goto(base);await page.addStyleTag({content:'@keyframes bad{to{opacity:.5}}h1{animation:bad 1s infinite!important}'});await page.waitForTimeout(80);assert.ok((await moving()).some(m=>m!=='pausable'));await page.reload();
  await page.setViewportSize({width:1440,height:1000});
  if(engine==='chromium'){
-  for(const id of ['headline','try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(900);await page.screenshot({path:`${out}/desktop-${id}.png`})}
-  await page.setViewportSize({width:390,height:844});for(const id of ['try','inside','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(900);await page.screenshot({path:`${out}/mobile-${id}.png`})}
+  for(const id of ['headline','try','in-use','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(900);await page.screenshot({path:`${out}/desktop-${id}.png`})}
+  await page.setViewportSize({width:390,height:844});for(const id of ['try','in-use','install','questions']){await page.locator('#'+id).scrollIntoViewIfNeeded();await page.waitForTimeout(900);await page.screenshot({path:`${out}/mobile-${id}.png`})}
  }
  assert.deepEqual(errors,[],engine+' page errors');assert.deepEqual(external,[],engine+' external requests');
  report.push({engine,viewportCases:cases,interactionChecks:28,negativeControls:5,errors,externalRequests:external.length});await browser.close();console.log(JSON.stringify(report.at(-1)));

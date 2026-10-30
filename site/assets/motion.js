@@ -27,13 +27,6 @@ for(const scene of document.querySelectorAll('[data-vignette]')){
  scene.closest('li')?.addEventListener('pointerenter',()=>{if(scene.classList.contains('play')&&!scene.getAnimations({subtree:true}).some(a=>a.playState==='running'))play(scene)});
 }
 
-// The recording plays once, muted, when it comes into view; its controls stay available.
-const video=document.querySelector('#watch video');
-if(video&&!reduce.matches){
- const videoWatcher=new IntersectionObserver(([entry])=>{if(entry.isIntersecting){videoWatcher.disconnect();video.muted=true;video.play().catch(()=>{})}},{threshold:.6});
- videoWatcher.observe(video);
-}
-
 // The reader in the first screen follows a voice: the marked word moves at a calm speaking pace, said
 // words fade, and the line being read stays on the second row, next to the marker.
 const live=document.querySelector('[data-live-reader]'),toggle=document.querySelector('[data-live-toggle]');

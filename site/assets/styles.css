@@ -6,7 +6,7 @@
 *,*::before,*::after{box-sizing:border-box}
 html{color-scheme:light;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:5rem}
 body{margin:0;background:var(--site-paper);color:var(--site-ink);font-family:var(--site-font-body);font-size:var(--site-text-body);line-height:1.6;font-feature-settings:"kern","liga"}
-img,video,svg{display:block;max-inline-size:100%}
+img,svg{display:block;max-inline-size:100%}
 ::selection{background:var(--site-accent-soft);color:var(--site-ink)}
 :focus-visible{outline:3px solid var(--site-accent);outline-offset:3px;border-radius:4px}
 h1,h2,h3{margin:0;text-wrap:balance}
@@ -209,10 +209,14 @@ textarea{display:block;inline-size:100%;min-block-size:9rem;padding:.75rem;borde
 .hint{margin-block-start:.5rem;font-size:var(--site-text-small);color:var(--r-muted)}
 @keyframes panel-in{from{transform:translateY(-.25rem)}}
 
-/* In the app. */
-.inside{padding-block:5rem}
-.walkthrough{margin:0}
-.walkthrough video{inline-size:100%;block-size:auto;border-radius:var(--site-radius-card);border:1px solid var(--site-line);background:var(--site-night);box-shadow:var(--site-shadow)}
+/* In real use: simulated desktops with real captures of Kalipso. */
+.in-use{padding-block:5rem}
+.scenes{display:grid;gap:2.5rem 2rem}
+.scenes figure{margin:0}
+.scenes img{inline-size:100%;block-size:auto;filter:drop-shadow(0 18px 28px #1b19161f)}
+.scenes figcaption{margin-block-start:1rem}
+.scenes figcaption strong{display:block;margin-block-end:.25rem;font-size:var(--site-text-body);color:var(--site-ink)}
+.scenes-note{margin-block-start:2rem;font-size:var(--site-text-small);color:var(--site-muted)}
 
 /* Private: the dark world tells, the light world does. */
 .private{padding-block:5rem;background:var(--site-night);color:var(--site-night-text)}
@@ -296,6 +300,7 @@ details code{font-size:.9em}
  .feature-grid{grid-template-columns:repeat(2,1fr)}
  .platforms{grid-template-columns:repeat(2,1fr)}
  .platforms article:first-child{grid-column:1/-1}
+ .scenes{grid-template-columns:1fr 1fr}
  .private-layout{grid-template-columns:1fr 1.2fr;align-items:start}
 }
 @media (min-width:64rem){

@@ -1,0 +1,154 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Simulated desktops for the website scenes. Each scene is a 1440×900 device on a transparent
+   background: a laptop (camera in the bezel or the notch) or a monitor (webcam on top). */
+*{box-sizing:border-box;margin:0}
+body{background:transparent;font-family:'Noto Sans',sans-serif}
+svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg .dot{fill:currentColor;stroke:none}
+
+.scene{position:relative;width:1440px;height:900px;margin-bottom:40px}
+.scene .screen{position:absolute;overflow:hidden;background:#000}
+/* Laptop: thin bezel all round, the camera in the top bezel. */
+.laptop{background:#0d0d0e;border-radius:30px;box-shadow:inset 0 0 0 2px #2a2a2d}
+.laptop .screen{inset:30px 22px 22px;border-radius:10px}
+.laptop::before{content:"";position:absolute;top:11px;left:50%;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;
+ background:radial-gradient(circle at 35% 35%,#3d5266,#0b0b0c 70%);box-shadow:0 0 0 2px #19191b}
+/* The Mac's camera sits in a notch cut into the screen. */
+.mac{border-radius:30px}
+.mac .screen{inset:16px 16px 18px}
+.mac::before{display:none}
+.notch{position:absolute;top:0;left:50%;width:196px;height:32px;margin-left:-98px;background:#000;border-radius:0 0 14px 14px;z-index:5}
+.notch i{position:absolute;top:11px;left:50%;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#3d5266,#0b0b0c 70%)}
+/* Monitor: even bezel, a webcam clipped on top. */
+.monitor{background:#121214;border-radius:22px;box-shadow:inset 0 0 0 2px #2c2c2f}
+.monitor .screen{inset:40px 18px 18px;border-radius:6px}
+.monitor::before{content:"";position:absolute;top:6px;left:50%;width:86px;height:24px;margin-left:-43px;border-radius:12px;
+ background:linear-gradient(#2b2b2e,#18181a);box-shadow:0 2px 6px #0008}
+.monitor::after{content:"";position:absolute;top:12px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;
+ background:radial-gradient(circle at 35% 35%,#4b6680,#0b0b0c 70%);box-shadow:0 0 0 2px #0d0d0e}
+
+.wallpaper{position:absolute;inset:0}
+.kalipso{position:absolute;left:50%;z-index:4;filter:drop-shadow(0 18px 34px #0007) drop-shadow(0 2px 6px #0005)}
+.kalipso.app{width:600px;margin-left:-300px} /* The real reader window has square corners. */
+.kalipso.widget{width:540px;margin-left:-270px}
+.kalipso.extension{width:600px;margin-left:-300px}
+
+.window{position:absolute;border-radius:12px;overflow:hidden;box-shadow:0 24px 60px #0006,0 0 0 1px #0003}
+.titlebar{display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;font-size:14px}
+.titlebar .title{flex:1;text-align:center}
+.caption{display:flex;gap:22px;font-style:normal;font-size:15px;opacity:.8}
+.caption i{font-style:normal}
+
+/* --- macOS call --- */
+.mac .wallpaper{background:radial-gradient(1200px 700px at 20% 110%,#e7a36b,transparent 60%),radial-gradient(900px 600px at 90% 0%,#6e8ec9,transparent 60%),linear-gradient(160deg,#c9b6e4,#f2c7a8)}
+.menubar{position:absolute;top:0;left:0;right:0;height:32px;display:flex;align-items:center;gap:18px;padding:0 18px;
+ background:#f6f3f4c4;backdrop-filter:blur(20px);font-size:14px;color:#1d1d1f;z-index:3}
+.menubar .spacer{flex:1}
+.menubar svg{width:18px;height:18px}
+.menubar .battery{width:26px}
+.call{left:96px;right:96px;top:384px;bottom:100px;background:#1c1c1f;color:#ececef}
+.lights{display:flex;gap:8px}
+.lights i{width:13px;height:13px;border-radius:50%;background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.call .titlebar{background:#2a2a2e;color:#d8d8dc}
+.tiles{position:absolute;inset:52px 16px 84px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{position:relative;border-radius:12px;display:grid;place-items:center}
+.t1{background:linear-gradient(135deg,#3b4a66,#26303f)}.t2{background:linear-gradient(135deg,#4a3d5c,#2b2436)}
+.t3{background:linear-gradient(135deg,#335a52,#21342f)}.t4{background:linear-gradient(135deg,#5a4733,#352a20)}
+.avatar{width:84px;height:84px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:600;background:#ffffff26;color:#fff}
+.name{position:absolute;left:14px;bottom:12px;padding:3px 10px;border-radius:8px;background:#0009;font-size:14px}
+.speaking{box-shadow:inset 0 0 0 3px #f2f2f4}
+.callbar{position:absolute;left:0;right:0;bottom:18px;display:flex;justify-content:center;gap:14px}
+.round{width:46px;height:46px;border-radius:50%;background:#3a3a3f;display:grid;place-items:center;color:#f2f2f4}
+.round svg{width:22px;height:22px}
+.leave{display:grid;place-items:center;padding:0 22px;border-radius:23px;background:#e5484d;color:#fff;font-style:normal;font-weight:600;font-size:15px}
+.dock{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;padding:9px 12px;border-radius:20px;background:#f6f3f466;backdrop-filter:blur(20px);box-shadow:0 0 0 1px #fff5}
+.dock i{width:52px;height:52px;border-radius:13px;background:linear-gradient(160deg,hsl(var(--h) 70% 62%),hsl(var(--h) 60% 42%))}
+.mac .kalipso.app{top:44px}
+
+/* --- Windows recording --- */
+.win .wallpaper{background:radial-gradient(900px 600px at 70% 30%,#7fb2ff,transparent 65%),radial-gradient(700px 500px at 20% 80%,#b9a7ff,transparent 60%),linear-gradient(135deg,#dfe9ff,#c7d6f5)}
+.recorder{left:150px;right:150px;top:388px;bottom:64px;background:#f9f9fb;color:#1b1b1f;border-radius:8px}
+.recorder .titlebar{background:#f3f3f5;justify-content:flex-start}
+.recorder .titlebar .title{text-align:left}
+.appicon{width:16px;height:16px;border-radius:50%;background:radial-gradient(#e5484d 45%,#fff 47%,#fff 60%,#e5484d 62%)}
+.preview{position:absolute;inset:40px 0 72px;background:#2a2622;overflow:hidden}
+.room{position:absolute;inset:0;background:linear-gradient(#d9cbb8,#c7b39a 70%,#8d7660 70%)}
+.room i{position:absolute;display:block}
+.shelf{left:8%;top:22%;width:26%;height:10px;background:#8a6b4f;box-shadow:0 -46px 0 -2px #b0503c,40px -40px 0 -1px #3f6d8e,74px -52px 0 0 #e1b85c}
+.plant{right:9%;top:38%;width:110px;height:180px;border-radius:50% 50% 8px 8px;background:radial-gradient(circle at 50% 30%,#4f8a4e,#2f5c33 70%)}
+.lamp{left:12%;top:44%;width:70px;height:120px;border-radius:40px 40px 4px 4px;background:linear-gradient(#f6e3b8,#e4c98b)}
+.person{left:50%;bottom:24%;width:240px;height:250px;margin-left:-120px;
+ background:radial-gradient(circle at 50% 24%,#9a7a62 0 50px,transparent 51px),radial-gradient(ellipse 120px 120px at 50% 100%,#3c4b63 99%,transparent)}
+.desk{left:0;right:0;bottom:0;height:30%;background:linear-gradient(#6e5643,#5a4636)}
+.rec{position:absolute;left:18px;top:16px;display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:14px;background:#000a;color:#fff;font-size:14px;font-weight:600}
+.rec i{width:10px;height:10px;border-radius:50%;background:#ff4a4a}
+.format{position:absolute;right:18px;top:16px;padding:5px 12px;border-radius:14px;background:#000a;color:#fff;font-size:13px}
+.recbar{position:absolute;left:0;right:0;bottom:0;height:72px;display:flex;align-items:center;justify-content:center;gap:24px;font-size:16px}
+.level{display:flex;gap:3px;align-items:flex-end;height:24px}
+.level i{width:5px;border-radius:2px;background:#2f9e5b}.level i:nth-child(1){height:30%}.level i:nth-child(2){height:60%}.level i:nth-child(3){height:90%}.level i:nth-child(4){height:70%}.level i:nth-child(5){height:45%}.level i:nth-child(6){height:20%;background:#cfd3d8}
+.stop{width:46px;height:46px;border-radius:50%;background:#e5484d;display:grid;place-items:center}
+.stop::after{content:"";width:16px;height:16px;border-radius:3px;background:#fff}
+.time{font-variant-numeric:tabular-nums;font-weight:600}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:center;background:#f3f4f7d9;backdrop-filter:blur(20px);border-top:1px solid #fff9;font-size:12px;color:#1b1b1f}
+.taskbar .apps{display:flex;gap:8px;align-items:center}
+.taskbar .apps i{width:34px;height:34px;border-radius:7px;background:linear-gradient(160deg,#9db4d6,#6c86ad)}
+.taskbar .apps i:nth-child(3){background:linear-gradient(160deg,#f2c66d,#d99b37)}.taskbar .apps i:nth-child(4){background:linear-gradient(160deg,#7cc79a,#3f8f60)}
+.taskbar .apps .active{background:radial-gradient(#e5484d 40%,#fff 42%,#fff 56%,#e5484d 58%);box-shadow:0 0 0 4px #ffffffb3}
+.taskbar .apps .search{width:auto;padding:0 40px 0 14px;border-radius:17px;background:#fff;color:#666;font-style:normal;line-height:34px;font-size:13px}
+.taskbar .clock{position:absolute;right:16px;text-align:right;line-height:1.35}
+.win .kalipso.app{top:52px}
+
+/* --- KDE Plasma presenting --- */
+.plasma .wallpaper{background:radial-gradient(1000px 600px at 15% 100%,#1f6f8b,transparent 60%),radial-gradient(900px 700px at 100% 0%,#3d3a7a,transparent 60%),linear-gradient(160deg,#16213a,#1d4a5c)}
+.presenter{left:130px;right:130px;top:370px;bottom:66px;background:#fcfcfc;color:#232629;border-radius:8px}
+.presenter .titlebar{background:#dee0e2;color:#232629;height:34px;font-size:13px}
+.console{position:absolute;inset:34px 0 0;background:#232629;display:flex;gap:22px;padding:24px}
+.slide{background:#fff;color:#1b1916;border-radius:6px;padding:22px 26px;box-shadow:0 4px 14px #0006}
+.slide h4{font-size:26px}
+.current{flex:1.7}
+.bars{display:flex;align-items:flex-end;gap:18px;height:120px;margin-top:16px}
+.bars i{flex:1;height:calc(var(--v) * 100%);border-radius:4px 4px 0 0;background:#3d7fd6}
+.bars i:last-child{background:#1f5fb6}
+.slide p{margin-top:12px;font-size:15px;color:#555}
+.side{flex:1;display:flex;flex-direction:column;gap:14px;color:#eff0f1}
+.next{transform-origin:top left;opacity:.9}
+.next h4{font-size:20px}
+.timer{font-size:40px;font-weight:300;font-variant-numeric:tabular-nums}
+.count{font-size:15px;opacity:.75}
+.panel{position:absolute;left:12px;right:12px;bottom:8px;height:46px;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:12px;background:#202326e6;color:#eff0f1;font-size:12px}
+.panel i{display:block}
+.launcher{width:30px;height:30px;border-radius:8px;background:conic-gradient(from 45deg,#3daee9,#1d99f3,#3daee9)}
+.task{width:34px;height:34px;border-radius:8px;background:linear-gradient(160deg,#5a6b7d,#3b4652)}
+.task.active{background:linear-gradient(160deg,#ffffff,#d6d9dc);box-shadow:0 3px 0 -1px #3daee9}
+.panel .spacer{flex:1}
+.tray{width:18px;height:18px;border-radius:5px;background:#eff0f155}
+.panel .clock{margin-left:10px;text-align:center;line-height:1.3}
+.plasma .kalipso.widget{top:22px}
+
+/* --- GNOME teaching --- */
+.gnome .wallpaper{background:radial-gradient(1100px 700px at 80% 100%,#2f6f63,transparent 60%),radial-gradient(800px 600px at 0% 0%,#3d5a8f,transparent 60%),linear-gradient(170deg,#1b2638,#22403f)}
+.topbar{position:absolute;top:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#000;color:#fff;font-size:14px;font-weight:600;z-index:3}
+.workspaces{display:flex;gap:5px;align-items:center;padding:6px 10px;border-radius:14px;background:#ffffff1f}
+.workspaces i{width:7px;height:7px;border-radius:4px;background:#ffffff80}.workspaces .on{width:28px;background:#fff}
+.topbar .clock{position:absolute;left:50%;transform:translateX(-50%)}
+.status{display:flex;gap:12px;align-items:center}
+.status svg{width:17px;height:17px}.status .battery{width:24px}
+.kalipso-indicator{color:#fff}
+.lesson{left:100px;right:100px;top:400px;bottom:18px;background:#fafafb;color:#242428;border-radius:14px}
+.headerbar{height:52px;display:flex;align-items:center;padding:0 16px;background:#ebebed;border-bottom:1px solid #d9d9dc}
+.headerbar .title{flex:1;text-align:center;display:flex;flex-direction:column;font-size:14px}
+.headerbar small{font-size:12px;color:#77767b}
+.headerbar .close{width:26px;height:26px;border-radius:50%;background:#dcdcdf;display:grid;place-items:center;font-size:12px}
+.classroom{position:absolute;inset:52px 0 0;display:flex}
+.stage{flex:1;margin:18px;border-radius:12px;background:#f2f7ee;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.leaf{width:250px;height:140px}
+.leaf .sun{fill:#f6c453;stroke:none}.leaf .blade{fill:#5e9f4f;stroke:#3f7a35;stroke-width:3}.leaf .vein{stroke:#e8f3df;stroke-width:3}
+.stage h4{font-size:26px;color:#2d4a26}
+.people{width:220px;padding:18px;border-left:1px solid #e3e3e6;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.people p{font-weight:700;color:#77767b;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+.people span{display:flex;align-items:center;gap:10px}
+.people span i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700;color:#fff;background:hsl(var(--h) 45% 48%)}
+.lessonbar{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:12px;padding:8px;border-radius:30px;background:#242428e6}
+.lessonbar .round{width:42px;height:42px;background:#3a3a40}
+.lessonbar .round svg{width:20px;height:20px}.lessonbar .on{background:#3584e4}
+.gnome .kalipso.extension{top:48px}
