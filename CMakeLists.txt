@@ -58,18 +58,23 @@ endif()
 add_library(kalipso_vendor STATIC third_party/puff/puff.c third_party/qrcodegen/qrcodegen.cpp)
 add_library(kalipso_app STATIC
   src/window.cpp src/reader.cpp src/backdrop.cpp src/library.cpp src/import.cpp src/remote.cpp
-  src/script_highlighter.cpp src/session_stats.cpp src/impress.cpp src/icons.cpp
+  src/script_highlighter.cpp src/session_stats.cpp src/impress.cpp src/icons.cpp src/motion.cpp
   src/platform/capture_exclusion.cpp)
 target_link_libraries(kalipso_app PUBLIC kalipso_speech Qt6::Widgets Qt6::Network Qt6::Svg PRIVATE kalipso_vendor)
 file(GLOB KALIPSO_ICONS CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/*.svg ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/generated/*.svg)
 qt_add_resources(kalipso_app "icons" PREFIX "/icons" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/icons FILES ${KALIPSO_ICONS})
+file(GLOB KALIPSO_FONTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/fonts/*.ttf)
+qt_add_resources(kalipso_app "fonts" PREFIX "/fonts" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/fonts FILES ${KALIPSO_FONTS})
 qt_add_resources(kalipso_app "impress" PREFIX "/impress" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/impress
   FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/impress/impress_follow.py)
 target_compile_definitions(kalipso_app PUBLIC KALIPSO_VERSION="${PROJECT_VERSION}")
 target_compile_options(kalipso_app PRIVATE ${KALIPSO_WARNINGS})
 if(TARGET kalipso_colors)
   target_link_libraries(kalipso_app PUBLIC kalipso_colors)
+endif()
+if(APPLE)
+  target_link_libraries(kalipso_app PUBLIC "-framework CoreFoundation")
 endif()
 if(WIN32)
   target_link_libraries(kalipso_app PUBLIC gdi32 user32)
@@ -153,10 +158,14 @@ if(BUILD_TESTING)
   add_executable(ui_tests tests/ui_tests.cpp)
   target_link_libraries(ui_tests PRIVATE kalipso_app Qt6::Test)
   add_test(NAME ui COMMAND ui_tests -o ui-results.txt,txt -o -,txt)
+  # The same check of icon motion with the system asking for reduced motion.
+  add_test(NAME ui_reduced_motion COMMAND ui_tests iconMotionFollowsTheSystemChoice)
   if(WIN32)
     set_tests_properties(ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=windows")
+    set_tests_properties(ui_reduced_motion PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=windows;KALIPSO_REDUCED_MOTION=1")
   else()
     set_tests_properties(ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    set_tests_properties(ui_reduced_motion PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;KALIPSO_REDUCED_MOTION=1")
   endif()
 
   # Frontend JavaScript: Node for logic, and the real QML (Plasma) and GJS (GNOME) engines.

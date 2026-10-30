@@ -37,6 +37,11 @@ for step, value in source['space'].items():
 header.append(f'inline constexpr int radius = {source["native"]["buttonRadius"]};')
 header.append(f'inline constexpr int control = {source["native"]["controlHeight"]};')
 header.append('}')
+# Motion durations in milliseconds, the same as the website's.
+header.append('namespace Duration {')
+for name in ('enter', 'exit', 'press', 'glide', 'reveal'):
+    header.append(f'inline constexpr int {name} = {int(source["site"][name].removesuffix("ms"))};')
+header.append('}')
 header += ['}', '']
 (ROOT / 'src').mkdir(exist_ok=True)
 # Control glyphs for style sheets (drop-down and spin arrows, check mark), one

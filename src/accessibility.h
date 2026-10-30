@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
 #include "design_tokens.h"
+#include "icons.h"
+#include "motion.h"
 #include <QAccessibleWidget>
 #include <QApplication>
 #include <QButtonGroup>
 #include <QEvent>
+#include <QFontDatabase>
 #include <QLabel>
 #include <QLayout>
 #include <QPalette>
 #include <QPushButton>
 #include <QStyleOptionButton>
 #include <QStylePainter>
+#include <QToolButton>
 #include <cmath>
 #include <functional>
 
@@ -44,6 +48,23 @@ inline QPalette palette(const Design::Palette &p) {
         result.setColor(group, QPalette::Dark, QColor(p.border));
     }
     return result;
+}
+// The interface and default reading font: Atkinson Hyperlegible Next, embedded (OFL), at the system's size.
+// Scripts it does not cover fall back to the system's fonts glyph by glyph. Safe to call more than once.
+inline void useInterfaceFont() {
+    static bool loaded = false;
+    if (loaded || !qobject_cast<QApplication *>(QCoreApplication::instance()))
+        return;
+    loaded = true;
+    int id = -1;
+    for (const char *style : {"Regular", "Italic", "SemiBold", "Bold", "BoldItalic"})
+        id = std::max(id, QFontDatabase::addApplicationFont(
+                              QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-%1.ttf").arg(QLatin1String(style))));
+    if (id < 0)
+        return; // Keep the system font if the files cannot be loaded.
+    QFont font = QApplication::font();
+    font.setFamilies({QStringLiteral("Atkinson Hyperlegible Next")});
+    QApplication::setFont(font);
 }
 inline QString themeName(const Design::Palette &p) {
     return QString(p.background) == Design::light.background ? QStringLiteral("light") : QStringLiteral("dark");
@@ -197,10 +218,12 @@ public:
 };
 
 // A push button whose label wraps instead of being cut off at large text sizes
-// or narrow widths, with an optional icon before the label.
+// or narrow widths, with an optional icon before the label. The icon moves by its
+// meaning on hover and keyboard focus ("motion" property); a press shrinks the button.
 class AccessibleButton : public QPushButton {
 public:
-    explicit AccessibleButton(const QString &text, QWidget *parent = nullptr) : QPushButton(text, parent) {
+    explicit AccessibleButton(const QString &text, QWidget *parent = nullptr)
+        : QPushButton(text, parent), motion_(new IconMotion(this)) {
         auto policy = sizePolicy();
         policy.setHorizontalPolicy(QSizePolicy::Preferred);
         policy.setHeightForWidth(true);
@@ -228,10 +251,13 @@ public:
         return QPushButton::event(event);
     }
     QSize minimumSizeHint() const override { return {std::min(120, sizeHint().width()), Design::Metric::control}; }
+    IconMotion *iconMotion() const { return motion_; }
 
 protected:
     void paintEvent(QPaintEvent *) override {
         QStylePainter painter(this);
+        if (isDown())
+            Motion::pressed(painter, rect());
         QStyleOptionButton option;
         initStyleOption(&option);
         option.text.clear();
@@ -249,7 +275,10 @@ protected:
         if (!icon().isNull()) {
             const auto mode = isEnabled() ? QIcon::Normal : QIcon::Disabled;
             const QRect target(QPoint(x, area.center().y() - iconSize().height() / 2 + 1), iconSize());
+            painter.save();
+            painter.setTransform(motion_->transform(target), true);
             icon().paint(&painter, target, Qt::AlignCenter, mode);
+            painter.restore();
             x += iconSpace();
         }
         if (textWidth > 0)
@@ -262,6 +291,64 @@ private:
     static constexpr int kPadding = 14;
     int iconSpace() const { return icon().isNull() ? 0 : iconSize().width() + (text().isEmpty() ? 0 : 8); }
     int textWidthFor(int width) const { return std::max(24, width - kPadding * 2 - iconSpace()); }
+    IconMotion *motion_;
+};
+
+// A drop-down button (sections, reading mode, more actions) drawn like AccessibleButton: the style
+// paints the frame, the button paints its icon, label and arrow, which move down on hover.
+class MenuButton : public QToolButton {
+public:
+    explicit MenuButton(QWidget *parent = nullptr) : QToolButton(parent), motion_(new IconMotion(this)) {
+        setPopupMode(QToolButton::InstantPopup);
+        setProperty("motion", "down");
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QStylePainter painter(this);
+        if (isDown())
+            Motion::pressed(painter, rect());
+        QStyleOptionToolButton option;
+        initStyleOption(&option);
+        QStyleOptionToolButton frame = option;
+        frame.text.clear();
+        frame.icon = QIcon();
+        frame.features &= ~(QStyleOptionToolButton::HasMenu | QStyleOptionToolButton::MenuButtonPopup);
+        painter.drawComplexControl(QStyle::CC_ToolButton, frame);
+
+        const QRect area = rect().adjusted(kPadding, 0, -kArrowSpace, 0);
+        const QTransform moved = motion_->transform(QRectF(area));
+        int x = area.left();
+        const bool showIcon = !icon().isNull() && toolButtonStyle() != Qt::ToolButtonTextOnly;
+        if (showIcon) {
+            const QRect target(QPoint(x, area.center().y() - iconSize().height() / 2 + 1), iconSize());
+            painter.save();
+            painter.setTransform(moved, true);
+            icon().paint(&painter, target, Qt::AlignCenter, isEnabled() ? QIcon::Normal : QIcon::Disabled);
+            painter.restore();
+            x += iconSize().width() + 8;
+        }
+        if (!(showIcon && toolButtonStyle() == Qt::ToolButtonIconOnly)) {
+            const QRect label(x, area.top(), std::max(0, area.right() - x + 1), area.height());
+            style()->drawItemText(
+                &painter, label, Qt::AlignVCenter | Qt::AlignLeft | Qt::TextShowMnemonic, option.palette, isEnabled(),
+                fontMetrics().elidedText(text(), Qt::ElideRight, label.width()), QPalette::ButtonText);
+        }
+        const QColor color =
+            option.palette.color(isEnabled() ? QPalette::Active : QPalette::Disabled, QPalette::ButtonText);
+        if (color != arrowColor_) {
+            arrow_ = Icons::icon("chevron-down", color);
+            arrowColor_ = color;
+        }
+        painter.setTransform(moved, true);
+        arrow_.paint(&painter, QRect(width() - 8 - 12, height() / 2 - 6, 12, 12));
+    }
+
+private:
+    static constexpr int kPadding = 14, kArrowSpace = 28;
+    IconMotion *motion_;
+    QIcon arrow_;
+    QColor arrowColor_;
 };
 
 class FlowLayout : public QLayout {

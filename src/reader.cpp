@@ -74,7 +74,7 @@ ReaderView::ReaderView(QWidget *parent)
     setAccessibleName(tr("Kalipso script"));
     // Edits are mirrored into the editor, which owns the undo history.
     document()->setUndoRedoEnabled(false);
-    scroll_->setDuration(220);
+    scroll_->setDuration(Design::Duration::glide / 2);
     scroll_->setEasingCurve(QEasingCurve::OutCubic);
 }
 
@@ -127,7 +127,7 @@ void ReaderView::scrollToCharacter(int character, bool animate) {
     const int target = std::clamp(center - int(viewport()->height() * readingLine_), verticalScrollBar()->minimum(),
                                   verticalScrollBar()->maximum());
     scroll_->stop();
-    if (!animate || std::abs(target - verticalScrollBar()->value()) > viewport()->height()) {
+    if (!animate || Motion::reduced() || std::abs(target - verticalScrollBar()->value()) > viewport()->height()) {
         verticalScrollBar()->setValue(target);
         return;
     }
@@ -228,6 +228,7 @@ void ReaderView::mouseReleaseEvent(QMouseEvent *event) {
 
 ReaderWindow::ReaderWindow(QWidget *parent)
     : QWidget(parent, Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint) {
+    Accessibility::useInterfaceFont();
     // Fixed title: the KWin script and the macOS color sampler identify the reader by it.
     setWindowTitle(QStringLiteral("Kalipso — reading"));
     setAccessibleName(tr("Kalipso reader"));
@@ -249,7 +250,7 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     bar->setSpacing(space1);
     handle_ = new DragHandle;
     handle_->title->setText(tr("Kalipso"));
-    sections_ = new QToolButton;
+    sections_ = new MenuButton;
     sections_->setText(tr("Sections"));
     sections_->setObjectName("readerSections");
     sections_->setAccessibleName(tr("Jump to section"));
@@ -314,7 +315,7 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     primary_->setProperty("primary", true);
     primary_->setToolTip(tr("Start or pause (Space)"));
     // The reading mode: one compact drop-down that fits a narrow reader.
-    modes_ = new QToolButton;
+    modes_ = new MenuButton;
     modes_->setObjectName("readerMode");
     modes_->setPopupMode(QToolButton::InstantPopup);
     modes_->setProperty("quiet", true);
@@ -368,6 +369,7 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     for (auto *bar : bars_) {
         auto *effect = new QGraphicsOpacityEffect(bar);
         effect->setOpacity(1.0);
+        new QPropertyAnimation(effect, "opacity", effect);
         bar->setGraphicsEffect(effect);
         bar->setMouseTracking(true);
         bar->installEventFilter(this);
@@ -424,14 +426,16 @@ void ReaderWindow::applyPalette(const Design::Palette &palette) {
     Accessibility::apply(this, palette);
     text->setPalette(Accessibility::palette(palette));
     text->setTextColor(QColor(palette.text));
-    text->highlighter()->setColors(QColor(palette.muted), QColor(palette.accent));
+    text->highlighter()->setColors(QColor(palette.muted), QColor(palette.text));
     text->setMarkerColor(QColor(palette.accent));
     text->setFadeColor(QColor(palette.background));
     countdown_->setStyleSheet(QString("color:%1; background:%2; border: 1px solid %3; border-radius:16px;")
                                   .arg(palette.text, palette.surface, palette.border));
-    for (const auto &[button, name] : icons_)
+    for (const auto &[button, name] : icons_) {
+        button->setProperty("motion", Icons::motion(name));
         if (!(button == edit_ && editing_))
             button->setIcon(Icons::icon(name, QColor(palette.text), QColor(palette.muted)));
+    }
     handle_->grip->setPixmap(Icons::icon("grip", QColor(palette.muted)).pixmap(18, 18));
     updatePrimary();
     highlight(position_, length_);
@@ -496,8 +500,21 @@ void ReaderWindow::revealControls() {
 
 void ReaderWindow::setControlsVisible(bool visible) {
     controlsVisible_ = visible;
-    for (auto *bar : bars_)
-        static_cast<QGraphicsOpacityEffect *>(bar->graphicsEffect())->setOpacity(visible ? 1.0 : 0.0);
+    for (auto *bar : bars_) {
+        auto *effect = static_cast<QGraphicsOpacityEffect *>(bar->graphicsEffect());
+        auto *fade = effect->findChild<QPropertyAnimation *>();
+        fade->stop();
+        if (Motion::reduced() || !isVisible()) {
+            effect->setOpacity(visible ? 1.0 : 0.0);
+            continue;
+        }
+        // Out slowly, so it does not pull the eye from the text; back quickly when wanted.
+        fade->setDuration(visible ? Design::Duration::enter : Design::Duration::glide);
+        fade->setEasingCurve(visible ? QEasingCurve::OutCubic : QEasingCurve::InOutCubic);
+        fade->setStartValue(effect->opacity());
+        fade->setEndValue(visible ? 1.0 : 0.0);
+        fade->start();
+    }
 }
 
 void ReaderWindow::setStatus(const QString &status) { status_->setText(status); }
@@ -509,6 +526,7 @@ void ReaderWindow::updatePrimary() {
     else
         primary_->setText(running_ ? tr("Pause listening") : tr("Start listening"));
     primary_->setIcon(Icons::icon(running_ ? "pause" : "play", QColor(colors_.actionText)));
+    primary_->setProperty("motion", Icons::motion("play"));
 }
 
 void ReaderWindow::setTitle(const QString &title) {
@@ -569,11 +587,14 @@ void ReaderWindow::highlight(int position, int length) {
     current.cursor = QTextCursor(text->document());
     current.cursor.setPosition(std::clamp(position, 0, limit));
     current.cursor.setPosition(std::clamp(position + length, 0, limit), QTextCursor::KeepAnchor);
-    // The current word: accent text on a soft tint, underlined; calmer than a solid block.
-    current.format.setBackground(QColor(colors_.hover));
-    current.format.setForeground(QColor(colors_.accent));
+    // The current word, as on the website: text on a tint of the "you are here" blue, underlined in it.
+    const QColor here(colors_.accent), base(colors_.background);
+    const auto mix = [](double a, double b) { return int(std::lround(a * 0.24 + b * 0.76)); };
+    current.format.setBackground(
+        QColor(mix(here.red(), base.red()), mix(here.green(), base.green()), mix(here.blue(), base.blue())));
+    current.format.setForeground(QColor(colors_.text));
     current.format.setFontUnderline(true);
-    current.format.setUnderlineColor(QColor(colors_.accent));
+    current.format.setUnderlineColor(here);
     text->setExtraSelections({read, current});
     if (!editing_)
         text->scrollToCharacter(position, isVisible());

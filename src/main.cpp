@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include "accessibility.h"
 #include "settings_migration.h"
 #include "window.h"
 #include <QApplication>
@@ -19,6 +20,7 @@ int main(int argc, char **argv) {
     app.setApplicationVersion(KALIPSO_VERSION);
     app.setDesktopFileName("io.github.brianidavide.kalipso");
     importLegacySettings("brianidavide", "kde-teleprompter");
+    Accessibility::useInterfaceFont();
 
     // Interface language: the saved choice, otherwise the system language.
     const auto language = QSettings().value("appearance/language").toString();

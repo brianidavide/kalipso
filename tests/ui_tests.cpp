@@ -9,6 +9,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
+#include <QFontInfo>
 #include <QFormLayout>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
@@ -191,6 +192,46 @@ private slots:
             QVERIFY(selections[1].format.fontUnderline());
         }
         QVERIFY(Accessibility::contrast(QColor("#777777"), Qt::white) < 4.5);
+    }
+
+    void interfaceFontIsEmbedded() {
+        Accessibility::useInterfaceFont();
+        QCOMPARE(QFontInfo(QApplication::font()).family(), QString("Atkinson Hyperlegible Next"));
+        QFont bold = QApplication::font();
+        bold.setBold(true);
+        QCOMPARE(QFontInfo(bold).family(), QString("Atkinson Hyperlegible Next"));
+    }
+
+    // Run twice by CTest: as the system is set, and with KALIPSO_REDUCED_MOTION=1.
+    void iconMotionFollowsTheSystemChoice() {
+        AccessibleButton button("Next");
+        button.setIcon(Icons::icon("next", Qt::black));
+        button.setProperty("motion", Icons::motion("next"));
+        button.show();
+        const QRectF icon(0, 0, 18, 18);
+        auto *motion = button.iconMotion();
+        QEnterEvent enter(QPointF(4, 4), QPointF(4, 4), QPointF(4, 4));
+        if (qEnvironmentVariableIsSet("KALIPSO_REDUCED_MOTION")) // The override must be honoured.
+            QCOMPARE(Motion::reduced(), qEnvironmentVariableIntValue("KALIPSO_REDUCED_MOTION") != 0);
+        QCoreApplication::sendEvent(&button, &enter);
+        if (Motion::reduced()) {
+            QTest::qWait(Design::Duration::enter + 100);
+            QCOMPARE(motion->progress(), 0.0);
+            QVERIFY(motion->transform(icon).isIdentity());
+            return;
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(motion->progress(), 1.0, 1000);
+        QCOMPARE(motion->transform(icon).dx(), 3.0);
+        button.setLayoutDirection(Qt::RightToLeft); // Forward follows the reading direction.
+        QCOMPARE(motion->transform(icon).dx(), -3.0);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(&button, &leave);
+        QTRY_COMPARE_WITH_TIMEOUT(motion->progress(), 0.0, 1000);
+        // Without a named movement nothing moves.
+        button.setProperty("motion", QString());
+        QCoreApplication::sendEvent(&button, &enter);
+        QTest::qWait(Design::Duration::enter + 100);
+        QCOMPARE(motion->progress(), 0.0);
     }
 
     void statusHasAnAccessibleRoleAndName() {
