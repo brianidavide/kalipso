@@ -36,9 +36,22 @@ PlasmoidItem {
     readonly property var n: Design.tokens.native
     readonly property var p: Design.tokens.palette[appearance === "window" ? windowTheme
         : appearance === "auto" ? Contrast.suggestedTheme(desktopPalette.window.toString()) : appearance]
-    readonly property var c: Object.assign({}, Design.tokens.color, {
+    readonly property var c: ({
         overlay: p.background, overlayText: p.text, overlayMuted: p.muted, overlaySurface: p.surface,
         overlayLine: p.hover, overlayBorder: p.border, focus: p.focus, reading: p.accent})
+    // The app's typeface, embedded in the package (see contents/fonts); the desktop font until it loads.
+    readonly property string uiFont: atkinson.status === FontLoader.Ready ? atkinson.font.family : Qt.application.font.family
+    FontLoader { id: atkinson; source: Qt.resolvedUrl("../fonts/AtkinsonHyperlegibleNext-Regular.ttf") }
+    FontLoader { source: Qt.resolvedUrl("../fonts/AtkinsonHyperlegibleNext-Italic.ttf") }
+    FontLoader { source: Qt.resolvedUrl("../fonts/AtkinsonHyperlegibleNext-SemiBold.ttf") }
+    FontLoader { source: Qt.resolvedUrl("../fonts/AtkinsonHyperlegibleNext-Bold.ttf") }
+    FontLoader { source: Qt.resolvedUrl("../fonts/AtkinsonHyperlegibleNext-BoldItalic.ttf") }
+    // How each icon moves on hover and keyboard focus, as in the app and on the website.
+    function motionOf(icon) {
+        return ({"go-next": "forward", "go-previous": "back", "go-first": "back", "media-playback-start": "grow",
+                 "media-playback-pause": "grow", "view-list-details": "down", "document-edit": "tilt",
+                 "configure": "grow", "dialog-ok": "grow"})[icon] || ""
+    }
 
     property var tracker: new Tracking.Tracker(config.script)
     property string markup: ""
@@ -60,8 +73,7 @@ PlasmoidItem {
 
     function refresh() {
         markup = tracker.words.length
-            ? tracker.readingMarkup(c.overlayMuted, c.overlayText)
-                .replace(/<span foreground=/g, "<font color=").replace(/<\/span>/g, "</font>")
+            ? tracker.readingMarkup(c.overlayMuted, c.overlayText, 4, {text: c.overlayText, tint: p.tint, line: p.accent}, true)
             : i18n("Add your script to begin.")
         scriptTitle = Tracking.title(tracker.text) || i18n("Kalipso")
         readCount = tracker.position + 1
@@ -193,7 +205,10 @@ PlasmoidItem {
         activeFocusOnTab: true
         onActiveFocusChanged: if (activeFocus) Qt.callLater(function() { root.revealRequested(control) })
         font.pointSize: Qt.application.font.pointSize
+        font.family: root.uiFont
         font.bold: primary || chosen
+        // A press shrinks the button slightly, as in the app.
+        scale: down ? 0.97 : 1
         implicitHeight: Math.max(root.n.controlHeight, contentItem.implicitHeight + 16)
         implicitWidth: Math.max(contentItem.implicitWidth + 24,
             primary ? Math.max(root.n.primaryWidth, metrics.advanceWidth(i18n("Start listening")) + 48) : 0)
@@ -203,11 +218,12 @@ PlasmoidItem {
         opacity: enabled ? 1 : 0.5 // Disabled controls stay readable but look unavailable.
         background: Rectangle {
             radius: root.n.buttonRadius
-            color: control.primary ? (control.down ? root.c.actionHover : root.c.action)
+            color: control.primary ? (control.down || control.hovered ? root.p.actionHover : root.p.action)
                 : control.hovered || control.down || control.chosen ? root.c.overlayLine
                 : control.quiet ? "transparent" : root.c.overlaySurface
-            border.width: control.activeFocus || control.chosen ? 2 : control.quiet ? 0 : 1
-            border.color: control.activeFocus ? root.c.focus : control.chosen ? root.c.reading : root.c.overlayBorder
+            // The focus ring shows for keyboard focus only, like :focus-visible on the website.
+            border.width: control.visualFocus || control.chosen ? 2 : control.quiet ? 0 : 1
+            border.color: control.visualFocus ? root.c.focus : control.chosen ? root.c.reading : root.c.overlayBorder
         }
         // Icon and label centred together; the label wraps when the button is narrow.
         contentItem: Item {
@@ -219,6 +235,7 @@ PlasmoidItem {
                 width: Math.min(implicitWidth, parent.width)
                 spacing: 6
                 Kirigami.Icon {
+                    id: glyph
                     visible: control.iconName !== ""
                     source: control.iconName
                     isMask: true
@@ -226,6 +243,30 @@ PlasmoidItem {
                     Layout.preferredWidth: 18
                     Layout.preferredHeight: 18
                     Layout.alignment: Qt.AlignVCenter
+                    // Moves by meaning while hovered or focused from the keyboard. Kirigami durations
+                    // follow the Plasma animation speed and are zero when animations are off.
+                    readonly property string motion: root.motionOf(control.iconName)
+                    readonly property real progress: control.hovered || control.visualFocus ? 1 : 0
+                    readonly property real ahead: control.mirrored ? -1 : 1
+                    transform: [
+                        Translate {
+                            x: glyph.progress * glyph.ahead * (glyph.motion === "forward" ? 3 : glyph.motion === "back" ? -3 : 0)
+                            y: glyph.progress * (glyph.motion === "down" ? 2 : 0)
+                            Behavior on x { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+                            Behavior on y { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+                        },
+                        Rotation {
+                            origin.x: 9; origin.y: 9
+                            angle: glyph.progress * (glyph.motion === "turn" ? 45 : glyph.motion === "tilt" ? -14 : 0)
+                            Behavior on angle { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+                        },
+                        Scale {
+                            origin.x: 9; origin.y: 9
+                            xScale: 1 + glyph.progress * (glyph.motion === "grow" ? 0.1 : 0)
+                            yScale: xScale
+                            Behavior on xScale { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+                        }
+                    ]
                 }
                 Text {
                     visible: control.text !== ""
@@ -253,6 +294,7 @@ PlasmoidItem {
     }
     // A small heading above a group of settings.
     component GroupLabel: Label {
+        font.family: root.uiFont
         color: root.c.overlayMuted
         font.pointSize: Qt.application.font.pointSize * 0.9
         font.bold: true
@@ -271,6 +313,7 @@ PlasmoidItem {
         background: Rectangle { color: root.c.overlay }
     }
     component Note: Label {
+        font.family: root.uiFont
         color: root.c.overlayMuted
         wrapMode: Text.Wrap
         Layout.fillWidth: true
@@ -350,6 +393,7 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     spacing: 8
                     Label {
+                        font.family: root.uiFont
                         text: root.scriptTitle
                         color: root.c.overlayMuted
                         elide: Text.ElideRight
@@ -369,6 +413,7 @@ PlasmoidItem {
                             Instantiator {
                                 model: root.sectionList
                                 delegate: MenuItem {
+                                    font.family: root.uiFont
                                     required property var modelData
                                     text: modelData.title
                                     onTriggered: root.jumpTo(modelData.start)
@@ -414,7 +459,7 @@ PlasmoidItem {
                     textFormat: Text.RichText
                     color: root.c.overlayText
                     font.pointSize: root.readerSize
-                    font.family: root.readerFont || Qt.application.font.family
+                    font.family: root.readerFont || root.uiFont
                     lineHeightMode: Text.ProportionalHeight
                     lineHeight: root.lineSpacing / 100
                     wrapMode: Text.Wrap
@@ -424,6 +469,7 @@ PlasmoidItem {
                     bottomPadding: 12
                     // Seconds left before steady scrolling starts, over the text.
                     Label {
+                        font.family: root.uiFont
                         objectName: "countdown"
                         visible: root.countdownLeft > 0
                         anchors.centerIn: parent
@@ -471,6 +517,7 @@ PlasmoidItem {
                         onClicked: root.seek(-1)
                     }
                     Label {
+                        font.family: root.uiFont
                         text: root.readCount + " / " + root.wordCount
                         color: root.c.overlayMuted
                         height: root.n.controlHeight
@@ -483,10 +530,11 @@ PlasmoidItem {
                     spacing: 8
                     Layout.fillWidth: true
                     ReaderButton { quiet: true; text: "−"; Accessible.name: i18n("Slower"); onClicked: root.changeSpeed(-10) }
-                    Label { text: i18n("%1 words/min", root.speed); color: root.c.overlayText; height: root.n.controlHeight; verticalAlignment: Text.AlignVCenter }
+                    Label { font.family: root.uiFont; text: i18n("%1 words/min", root.speed); color: root.c.overlayText; height: root.n.controlHeight; verticalAlignment: Text.AlignVCenter }
                     ReaderButton { quiet: true; text: "+"; Accessible.name: i18n("Faster"); onClicked: root.changeSpeed(10) }
                 }
                 Label {
+                    font.family: root.uiFont
                     objectName: "readingState"
                     color: root.c.reading
                     wrapMode: Text.Wrap
@@ -508,16 +556,17 @@ PlasmoidItem {
                     visible: root.pane === "edit"
                     Layout.fillWidth: true
                     spacing: root.n.gap
-                    Label { text: i18n("Script"); font.capitalization: Font.AllUppercase; color: root.c.overlayMuted }
+                    Label { font.family: root.uiFont; text: i18n("Script"); font.capitalization: Font.AllUppercase; color: root.c.overlayMuted }
                     ScrollView {
                         ScrollBar.vertical: ReaderScrollBar {}
                         Layout.fillWidth: true
                         Layout.preferredHeight: root.n.editorHeight
                         TextArea {
+                            font.family: root.uiFont
                             id: editor
                             objectName: "scriptEditor"
                             text: root.tracker.text
-                            color: root.c.ink
+                            color: Design.tokens.palette.light.text
                             font.pointSize: Qt.application.font.pointSize * 1.15
                             selectionColor: Design.tokens.palette.light.selection
                             selectedTextColor: Design.tokens.palette.light.selectionText
@@ -525,7 +574,7 @@ PlasmoidItem {
                             padding: root.n.gap
                             selectByMouse: true
                             background: Rectangle {
-                                color: root.c.surface
+                                color: Design.tokens.palette.light.surface
                                 radius: root.n.buttonRadius
                                 border.width: 2
                                 border.color: editor.activeFocus ? Design.tokens.palette.light.focus : Design.tokens.palette.light.border

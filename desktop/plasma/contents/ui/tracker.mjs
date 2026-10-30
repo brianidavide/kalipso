@@ -256,15 +256,25 @@ export class Tracker {
         return out + plain(this.text.slice(at, to));
     }
 
-    // A bounded excerpt keeps the reading position visible even in long scripts.
-    readingMarkup(readColor, nextColor, previousWords = 4) {
+    // A bounded excerpt keeps the reading position visible even in long scripts. With `here`
+    // ({text, tint, line}) the current word is marked as in the app: text on a tint, underlined in the
+    // "you are here" colour. `html` writes Qt rich text (Plasma) instead of Pango markup (GNOME); Qt
+    // underlines in the text colour, as it has no separate underline colour.
+    readingMarkup(readColor, nextColor, previousWords = 4, here = null, html = false) {
         const first = Math.max(0, this.position - previousWords), last = Math.min(this.words.length, this.position + 13);
         // From the beginning, include a leading heading or cue.
         const start = first === 0 ? 0 : this.words[first]?.start ?? this.text.length;
         const finish = last < this.words.length ? this.words[last].start : this.text.length;
-        const readEnd = this.position < 0 ? 0 : this.words[this.position].start + this.words[this.position].length;
-        return `<span foreground="${readColor}">${first ? '… ' : ''}${this.styled(start, Math.max(start, readEnd))}</span>` +
-            `<span foreground="${nextColor}">${this.styled(Math.max(start, readEnd), finish)}${last < this.words.length ? ' …' : ''}</span>`;
+        const word = this.words[this.position];
+        const readEnd = word ? word.start + word.length : 0;
+        const wordStart = here && word ? Math.max(start, word.start) : readEnd;
+        const span = (color, body) => html ? `<font color="${color}">${body}</font>` : `<span foreground="${color}">${body}</span>`;
+        const mark = body => html
+            ? `<span style="color:${here.text};background-color:${here.tint};text-decoration:underline">${body}</span>`
+            : `<span foreground="${here.text}" background="${here.tint}" underline="single" underline_color="${here.line}">${body}</span>`;
+        return span(readColor, `${first ? '… ' : ''}${this.styled(start, Math.max(start, wordStart))}`) +
+            (wordStart < readEnd ? mark(this.styled(wordStart, readEnd)) : '') +
+            span(nextColor, `${this.styled(Math.max(start, readEnd), finish)}${last < this.words.length ? ' …' : ''}`);
     }
 
     markup(readColor = '#91999f', nextColor = '#f6f8fa') {

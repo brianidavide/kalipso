@@ -1,4 +1,10 @@
 /* Generated from design/tokens.json. */
+.tp-light { background-color: #FCFAF6; color: #1B1916; border: 2px solid #85837F; }
+.tp-light .tp-muted { color: #686663; }
+.tp-light .tp-state { color: #005EE1; }
+.tp-light .tp-pane { border-top: 1px solid #E3DFD8; }
+.tp-light .tp-editor { background-color: #FFFFFF; color: #1B1916; border: 2px solid #85837F; }
+.tp-light .tp-editor:focus { border-color: #005EE1; }
 .tp-light .tp-button { font-size: 12pt; font-weight: 500; border-radius: 10px; padding: 8px 12px; min-height: 24px; background-color: #FFFFFF; color: #1B1916; border: 2px solid #85837F; }
 .tp-light .tp-button:hover, .tp-light .tp-button:active { background-color: #F4EFE9; }
 .tp-light .tp-button:focus { border-color: #005EE1; }
@@ -17,6 +23,12 @@
 .tp-light .tp-progress-fill { background-color: #005EE1; height: 3px; }
 .tp-light .tp-countdown { font-size: 52pt; font-weight: bold; color: #1B1916; background-color: #FFFFFF; border: 1px solid #85837F; border-radius: 12px; padding: 8px 24px; }
 
+.tp-dark { background-color: #110F0D; color: #F2F0EC; border: 2px solid #767470; }
+.tp-dark .tp-muted { color: #94928E; }
+.tp-dark .tp-state { color: #4D90FF; }
+.tp-dark .tp-pane { border-top: 1px solid #2D2B28; }
+.tp-dark .tp-editor { background-color: #1B1916; color: #F2F0EC; border: 2px solid #767470; }
+.tp-dark .tp-editor:focus { border-color: #4D90FF; }
 .tp-dark .tp-button { font-size: 12pt; font-weight: 500; border-radius: 10px; padding: 8px 12px; min-height: 24px; background-color: #1B1916; color: #F2F0EC; border: 2px solid #767470; }
 .tp-dark .tp-button:hover, .tp-dark .tp-button:active { background-color: #262421; }
 .tp-dark .tp-button:focus { border-color: #4D90FF; }
@@ -34,3 +46,6 @@
 .tp-dark .tp-progress { background-color: #2D2B28; height: 3px; }
 .tp-dark .tp-progress-fill { background-color: #4D90FF; height: 3px; }
 .tp-dark .tp-countdown { font-size: 52pt; font-weight: bold; color: #F2F0EC; background-color: #1B1916; border: 1px solid #767470; border-radius: 12px; padding: 8px 24px; }
+
+.tp-button-content { spacing: 6px; }
+.tp-button-icon { icon-size: 16px; }

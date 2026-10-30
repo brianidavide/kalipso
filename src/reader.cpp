@@ -588,13 +588,10 @@ void ReaderWindow::highlight(int position, int length) {
     current.cursor.setPosition(std::clamp(position, 0, limit));
     current.cursor.setPosition(std::clamp(position + length, 0, limit), QTextCursor::KeepAnchor);
     // The current word, as on the website: text on a tint of the "you are here" blue, underlined in it.
-    const QColor here(colors_.accent), base(colors_.background);
-    const auto mix = [](double a, double b) { return int(std::lround(a * 0.24 + b * 0.76)); };
-    current.format.setBackground(
-        QColor(mix(here.red(), base.red()), mix(here.green(), base.green()), mix(here.blue(), base.blue())));
+    current.format.setBackground(QColor(colors_.tint));
     current.format.setForeground(QColor(colors_.text));
     current.format.setFontUnderline(true);
-    current.format.setUnderlineColor(here);
+    current.format.setUnderlineColor(QColor(colors_.accent));
     text->setExtraSelections({read, current});
     if (!editing_)
         text->scrollToCharacter(position, isVisible());
