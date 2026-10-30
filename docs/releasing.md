@@ -37,7 +37,10 @@ metadata, the Plasma widget, the GNOME extension and the KWin script); CI fails 
 
 ## What is in a release
 
-- Linux: a `.deb` (Debian 13, Ubuntu 24.04 or newer) and a `.tar.gz`.
+- Linux: a `.deb` (Debian 13, Ubuntu 24.04 or newer) and a `.tar.gz`, both with the voice companion and
+  `kalipso-voice-setup`.
+- `kalipso-companion-vX.Y-linux-x86_64.tar.gz`: the companion alone, for people who use only the Plasma
+  widget or the GNOME extension; `./install --language it` sets up voice following under `~/.local`.
 - Windows x64: a portable `.zip` with the app and its Qt libraries.
 - macOS Apple Silicon: the app bundle in a `.tar.gz`, signed ad hoc only.
 - The Plasma widget (`.plasmoid`), the GNOME Shell extension (`.zip`) and the KWin script.
@@ -53,3 +56,12 @@ metadata, the Plasma widget, the GNOME extension and the KWin script); CI fails 
 - **A Windows installer** (issue #10): an installer adds little until the packages are signed.
 - **Store listings** (issues #20 and #21): the Plasma widget on the KDE Store and the extension on
   extensions.gnome.org are uploaded by hand by the maintainer.
+
+## Arch Linux (AUR)
+
+`packaging/arch/kalipso` (published versions) and `packaging/arch/kalipso-git` (the latest `main`) are the
+PKGBUILDs; CI builds `kalipso-git` from every change and installs it in an Arch container. The **AUR**
+workflow publishes them: the release workflow calls it for 0.1 and every X.0 (`kalipso` gets the version
+and the source fingerprint), and it can be run by hand from the Actions tab to update `kalipso-git`. It
+needs the repository secret `AUR_SSH_KEY`, the private SSH key of the AUR account that maintains the
+packages; without it the job only warns. The first push creates each package on AUR.
