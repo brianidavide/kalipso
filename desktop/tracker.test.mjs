@@ -86,3 +86,17 @@ assert.equal(frontMatter('Intro\n---\nx\n---'), null);     // Only at the very s
 assert.equal(title('# Keynote\nHello'), 'Keynote');
 assert(!new Tracker(withMeta).readingMarkup('#888', '#fff').includes('Launch'));
 console.log('tracker: long-jump recovery, off-script state, character seeking, section jumps and front matter PASS');
+// The current word can be marked like the app's: Pango for GNOME, Qt rich text for Plasma.
+{
+ const here={text:'#ffffff',tint:'#223344',line:'#4d90ff'},marked=new Tracker('one two three');marked.seek(1);
+ const pango=marked.readingMarkup('#777777','#ffffff',4,here);
+ assert(pango.includes('<span foreground="#ffffff" background="#223344" underline="single" underline_color="#4d90ff">two</span>'),pango);
+ assert(pango.startsWith('<span foreground="#777777">one </span>'),pango);
+ const qt=marked.readingMarkup('#777777','#ffffff',4,here,true);
+ assert(qt.includes('<span style="color:#ffffff;background-color:#223344;text-decoration:underline">two</span>')&&qt.startsWith('<font color="#777777">one </font>'),qt);
+ marked.seek(-1);assert(!marked.readingMarkup('#777777','#ffffff',4,here).includes('underline'));
+ // Without `here` the markup is unchanged: read words, then the rest. Markup in the word stays escaped.
+ marked.seek(1);assert.equal(marked.readingMarkup('#777','#fff'),'<span foreground="#777">one two</span><span foreground="#fff"> three</span>');
+ const amp=new Tracker('say a&b now');amp.seek(1);assert(amp.readingMarkup('#777','#fff',4,here).includes('>a</span><span foreground="#fff">&amp;b now'));
+ console.log('current word marking: Pango and Qt rich text, escaped PASS');
+}

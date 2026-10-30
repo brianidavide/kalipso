@@ -8,7 +8,7 @@ for(const [name,p] of Object.entries(tokens.palette)){
  for(const background of ['background','surface','hover'])for(const text of ['text','muted']){
   const ratio=contrastRatio(p[text],p[background]);assert.ok(ratio>=4.5,`${name} ${text}/${background}: ${ratio}`);pairs++;
  }
- for(const [text,background] of [['actionText','action'],['actionText','actionHover'],['selectionText','selection'],['accent','background']]){
+ for(const [text,background] of [['actionText','action'],['actionText','actionHover'],['selectionText','selection'],['accent','background'],['text','tint']]){
   const ratio=contrastRatio(p[text],p[background]);assert.ok(ratio>=4.5,`${name} ${text}/${background}: ${ratio}`);pairs++;
  }
  for(const background of ['background','surface','hover'])for(const indicator of ['focus','border']){

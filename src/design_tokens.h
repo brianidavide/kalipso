@@ -3,37 +3,9 @@
 // clang-format off
 #pragma once
 namespace Design {
-inline constexpr const char *paper = "#F7F8FA";
-inline constexpr const char *surface = "#FFFFFF";
-inline constexpr const char *ink = "#17191F";
-inline constexpr const char *muted = "#626875";
-inline constexpr const char *line = "#DDE0E7";
-inline constexpr const char *action = "#345CF5";
-inline constexpr const char *actionHover = "#2447D3";
-inline constexpr const char *actionSoft = "#EAF0FF";
-inline constexpr const char *brand = "#17191F";
-inline constexpr const char *brandText = "#17191F";
-inline constexpr const char *overlay = "#17191F";
-inline constexpr const char *overlayText = "#F7F8FC";
-inline constexpr const char *overlayMuted = "#A7AFBF";
-inline constexpr const char *overlayLine = "#363C48";
-inline constexpr const char *overlaySurface = "#242933";
-inline constexpr const char *reading = "#C8D4FF";
-inline constexpr const char *success = "#23754A";
-inline constexpr const char *successSoft = "#E6F4EB";
-inline constexpr const char *warning = "#8B590C";
-inline constexpr const char *warningSoft = "#FFF1D5";
-inline constexpr const char *error = "#B43C37";
-inline constexpr const char *errorSoft = "#FDEBE9";
-inline constexpr const char *focus = "#17191F";
-inline constexpr const char *scrim = "#10131C99";
-inline constexpr const char *controlBorder = "#747C8B";
-inline constexpr const char *overlayBorder = "#8F98A9";
-inline constexpr const char *overlayFocus = "#F7F8FC";
-inline constexpr const char *actionText = "#FFFFFF";
-struct Palette { const char *background; const char *text; const char *muted; const char *surface; const char *hover; const char *border; const char *focus; const char *accent; const char *action; const char *actionHover; const char *actionText; const char *selection; const char *selectionText; const char *divider; };
-inline constexpr Palette light = {"#FCFAF6","#1B1916","#686663","#FFFFFF","#F4EFE9","#85837F","#005EE1","#005EE1","#1B1916","#2F2D2A","#FCFAF6","#005EE1","#FFFFFF","#E3DFD8"};
-inline constexpr Palette dark = {"#110F0D","#F2F0EC","#94928E","#1B1916","#262421","#767470","#4D90FF","#4D90FF","#F2F0EC","#D3D1CD","#110F0D","#4D90FF","#110F0D","#2D2B28"};
+struct Palette { const char *background; const char *text; const char *muted; const char *surface; const char *hover; const char *border; const char *focus; const char *accent; const char *action; const char *actionHover; const char *actionText; const char *selection; const char *selectionText; const char *divider; const char *tint; };
+inline constexpr Palette light = {"#FCFAF6","#1B1916","#686663","#FFFFFF","#F4EFE9","#85837F","#005EE1","#005EE1","#1B1916","#2F2D2A","#FCFAF6","#005EE1","#FFFFFF","#E3DFD8","#C0D5F1"};
+inline constexpr Palette dark = {"#110F0D","#F2F0EC","#94928E","#1B1916","#262421","#767470","#4D90FF","#4D90FF","#F2F0EC","#D3D1CD","#110F0D","#4D90FF","#110F0D","#2D2B28","#1F2E47"};
 namespace Metric {
 inline constexpr int space1 = 4;
 inline constexpr int space2 = 8;

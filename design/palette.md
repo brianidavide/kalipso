@@ -29,6 +29,8 @@ Targets: text 4.95:1 and control borders 3.3:1, WCAG 2.2 AA plus a 10% margin fo
 | Control border on night | nightControl | `#767470` | L 0.559 C 0.007 h 85 | 4.10:1 on night, 3.76:1 on night-raised, 3.32:1 on night-hover |
 | "You are here" on night | accentNight | `#4D90FF` | L 0.664 C 0.179 h 260 | 6.15:1 on night, 5.64:1 on night-raised, 4.97:1 on night-hover |
 | Error on night | errorNight | `#FD5A50` | L 0.684 C 0.200 h 27 | 6.15:1 on night, 5.64:1 on night-raised, 4.98:1 on night-hover |
+| Current word tint | palette.light.tint | `#C0D5F1` | L 0.866 C 0.045 h 256 | 11.72:1 on ink |
+| Current word tint on night | palette.dark.tint | `#1F2E47` | L 0.301 C 0.050 h 260 | 11.98:1 on night-text |
 
 ## App themes
 
@@ -50,6 +52,7 @@ The app's light and dark themes (`palette` in tokens.json) use the same values b
 | selection | `#005EE1` | `#4D90FF` |
 | selectionText | `#FFFFFF` | `#110F0D` |
 | divider | `#E3DFD8` | `#2D2B28` |
+| tint | `#C0D5F1` | `#1F2E47` |
 
 ## The "you are here" hue
 

@@ -182,6 +182,12 @@ app = {
              'action': night_text, 'actionHover': color(0.86, TINT_C, tint), 'actionText': night,
              'selection': accent_night, 'selectionText': night, 'divider': night_line},
 }
+# The current word's tint, as on the website (color-mix in sRGB): 24% of the blue over the background.
+def mix(a, b, share):
+    a, b = a.lstrip('#'), b.lstrip('#')
+    return '#' + ''.join(f'{round(int(a[i:i + 2], 16) * share + int(b[i:i + 2], 16) * (1 - share)):02X}' for i in (0, 2, 4))
+for theme in app.values():
+    theme['tint'] = mix(theme['accent'], theme['background'], 0.24)
 tokens['palette'] = app
 tokens_path.write_text(json.dumps(tokens, indent=2, ensure_ascii=False) + '\n')
 
@@ -220,6 +226,8 @@ row('Secondary text on night', 'nightMuted', night_muted, dark)
 row('Control border on night', 'nightControl', night_control, dark)
 row('"You are here" on night', 'accentNight', accent_night, dark)
 row('Error on night', 'errorNight', error_night, dark)
+row('Current word tint', 'palette.light.tint', app['light']['tint'], [('ink', ink)])
+row('Current word tint on night', 'palette.dark.tint', app['dark']['tint'], [('night-text', night_text)])
 out += ['', '## App themes', '', 'The app\'s light and dark themes (`palette` in tokens.json) use the same values by role:', '',
         '| Role | Light | Dark |', '|---|---|---|']
 for role in app['light']:

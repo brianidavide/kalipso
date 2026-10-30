@@ -14,14 +14,22 @@ import {Tracker, sections, title} from './tracker.mjs';
 import {LocalEngine} from './local-engine.js';
 import {tokens as T} from './tokens.js';
 
-const C = {...T.color};
 const N = T.native;
 // Translated when used: translations are only available once the extension is loaded.
 const sample = () => _('A little preparation makes room for a better conversation. [smile]\n\nTake your time. Leave space for a pause. Your next words will be here when you are ready.');
 const SETUP_URL = 'https://github.com/brianidavide/kalipso/blob/main/docs/local-engine.md';
 const colorNote = () => _('Automatic samples colors around the reader. No images are saved.');
 const ROLES = {overlay: 'background', overlayText: 'text', overlayMuted: 'muted', overlaySurface: 'surface',
-    overlayLine: 'hover', overlayBorder: 'border', focus: 'focus', reading: 'accent'};
+    overlayLine: 'hover', overlayBorder: 'border', focus: 'focus', reading: 'accent', tint: 'tint'};
+// Colours used in markup; everything else is styled by stylesheet.css under .tp-dark or .tp-light.
+const paletteColors = theme => Object.fromEntries(Object.entries(ROLES).map(([role, key]) => [role, T.palette[theme][key]]));
+const C = paletteColors('dark');
+// How each icon moves on hover and keyboard focus, as in the app and on the website. GNOME Shell's
+// ease() follows the animation setting: with animations off nothing moves.
+const MOTIONS = {'go-next-symbolic': 'forward', 'go-previous-symbolic': 'back', 'go-first-symbolic': 'back',
+    'media-playback-start-symbolic': 'grow', 'media-playback-pause-symbolic': 'grow', 'document-edit-symbolic': 'tilt',
+    'applications-system-symbolic': 'turn', 'window-close-symbolic': 'shrink', 'object-select-symbolic': 'grow'};
+const ENTER = parseInt(T.site.enter), EXIT = parseInt(T.site.exit), PRESS = parseInt(T.site.press);
 
 // Script, reading position and preferences, saved as JSON in the user data folder.
 class SavedState {
@@ -103,7 +111,7 @@ class SavedState {
 
 export default class Kalipso extends Extension {
     enable() {
-        Object.assign(C, T.color);
+        Object.assign(C, paletteColors('dark'));
         this._appearance = 'dark';
         this._resolvedAppearance = 'dark';
         this._paletteChoice = new PaletteChoice();
@@ -111,7 +119,6 @@ export default class Kalipso extends Extension {
         this._colorBusy = false;
         this._colorPoint = 0;
         this._colorSamples = 0;
-        this._originalStyles = new WeakMap();
         this._buttons = [];
         this._rows = [];
         this._steadyTimer = 0;
@@ -238,7 +245,7 @@ export default class Kalipso extends Extension {
     }
 
     _note(text) {
-        const label = new St.Label({text, style: `font-size:${N.labelSize}pt;color:${C.overlayMuted};`});
+        const label = new St.Label({text, style_class: 'tp-muted', style: `font-size:${N.labelSize}pt;`});
         label.clutter_text.set_line_wrap(true);
         label.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
         return label;
@@ -247,8 +254,7 @@ export default class Kalipso extends Extension {
     _buildReader() {
         this.actor = new St.BoxLayout({
             orientation: Clutter.Orientation.VERTICAL, reactive: true, can_focus: false, style_class: 'tp-dark',
-            style: `background-color:${C.overlay};color:${C.overlayText};padding:${N.padding}px;spacing:${N.gap}px;` +
-                `border:2px solid ${C.overlayBorder};border-radius:${N.radius}px;`,
+            style: `padding:${N.padding}px;spacing:${N.gap}px;border-radius:${N.radius}px;`,
         });
 
         const header = this._row();
@@ -261,10 +267,12 @@ export default class Kalipso extends Extension {
         this.previousSection.accessible_name = _('Previous section');
         this.nextSection = this.button(_('Section ›'), () => this.jumpSection(1), 'quiet');
         this.nextSection.accessible_name = _('Next section');
-        this.editButton = this.button(_('Edit script'), () => this.showPane(this._pane === 'edit' ? '' : 'edit'), 'quiet');
-        this.settingsButton = this.button(_('Settings'), () => this.showPane(this._pane === 'settings' ? '' : 'settings'), 'quiet');
+        this.editButton = this.button(_('Edit script'), () => this.showPane(this._pane === 'edit' ? '' : 'edit'), 'quiet',
+            'document-edit-symbolic');
+        this.settingsButton = this.button(_('Settings'), () => this.showPane(this._pane === 'settings' ? '' : 'settings'), 'quiet',
+            'applications-system-symbolic');
         for (const child of [this.previousSection, this.nextSection, this.editButton, this.settingsButton,
-            this.button(_('Hide'), () => this.hide(), 'quiet')])
+            this.button(_('Hide'), () => this.hide(), 'quiet', 'window-close-symbolic')])
             header.add_child(child);
 
         this.progress = new St.Widget({style_class: 'tp-progress', x_expand: true, layout_manager: new Clutter.BinLayout()});
@@ -282,13 +290,13 @@ export default class Kalipso extends Extension {
         this.readerWrap.clip_to_allocation = true;
 
         this.transport = this._row();
-        this.primary = this.button(_('Next words'), () => this.primaryAction(), 'primary');
-        this.previous = this.button(_('Previous'), () => this.seek(this.tracker.position - 4), 'quiet');
-        this.reset = this.button(_('Reset'), () => this.seek(-1), 'quiet');
+        this.primary = this.button(_('Next words'), () => this.primaryAction(), 'primary', 'go-next-symbolic');
+        this.previous = this.button(_('Previous'), () => this.seek(this.tracker.position - 4), 'quiet', 'go-previous-symbolic');
+        this.reset = this.button(_('Reset'), () => this.seek(-1), 'quiet', 'go-first-symbolic');
         for (const child of [this.primary, this.previous, this.reset])
             this.transport.add_child(child);
         this.counter = new St.Label({x_expand: true, x_align: Clutter.ActorAlign.END, y_align: Clutter.ActorAlign.CENTER,
-            style: `font-size:${N.labelSize}pt;color:${C.overlayMuted};`});
+            style_class: 'tp-muted', style: `font-size:${N.labelSize}pt;`});
         this.transport.add_child(this.counter);
 
         this.speedRow = this._row();
@@ -297,7 +305,7 @@ export default class Kalipso extends Extension {
         this.speedRow.add_child(this.speedLabel);
         this.speedRow.add_child(this.button(_('Faster'), () => this.changeSpeed(10), 'quiet'));
 
-        this.stateLabel = new St.Label({accessible_role: Atk.Role.STATUSBAR, style: `font-size:${N.labelSize}pt;color:${C.reading};`});
+        this.stateLabel = new St.Label({accessible_role: Atk.Role.STATUSBAR, style_class: 'tp-state', style: `font-size:${N.labelSize}pt;`});
 
         this._buildEditPane();
         this._buildSettingsPane();
@@ -318,11 +326,11 @@ export default class Kalipso extends Extension {
     }
 
     _buildEditPane() {
-        this.editPane = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL,
-            style: `spacing:${N.gap}px;padding-top:${N.gap}px;border-top:1px solid ${C.overlayLine};`});
-        this.editPane.add_child(new St.Label({text: _('SCRIPT'), style: `font-size:${N.labelSize}pt;color:${C.overlayMuted};`}));
+        this.editPane = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, style_class: 'tp-pane',
+            style: `spacing:${N.gap}px;padding-top:${N.gap}px;`});
+        this.editPane.add_child(new St.Label({text: _('SCRIPT'), style_class: 'tp-muted', style: `font-size:${N.labelSize}pt;`}));
         this.editor = new St.Entry({accessible_name: _('Script'), text: sample(), can_focus: true, x_expand: true,
-            style: `background-color:${C.surface};color:${C.ink};border-radius:${N.buttonRadius}px;padding:${N.gap}px;` +
+            style_class: 'tp-editor', style: `border-radius:${N.buttonRadius}px;padding:${N.gap}px;` +
                 `font-size:${N.bodySize}pt;min-height:${N.padding * 4}px;`});
         this.editor.clutter_text.set_single_line_mode(false);
         this.editor.clutter_text.set_line_wrap(true);
@@ -344,8 +352,8 @@ export default class Kalipso extends Extension {
     }
 
     _buildSettingsPane() {
-        this.settingsPane = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL,
-            style: `spacing:${N.gap}px;padding-top:${N.gap}px;border-top:1px solid ${C.overlayLine};`});
+        this.settingsPane = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, style_class: 'tp-pane',
+            style: `spacing:${N.gap}px;padding-top:${N.gap}px;`});
         this.settingsPane.add_child(this._group(_('Reading mode')));
         const modeRow = this._row();
         this.modeButtons = [['manual', _('Manual')], ['steady', _('Steady speed')], ['voice', _('Follow my voice')]]
@@ -463,20 +471,56 @@ export default class Kalipso extends Extension {
         this.testApi.export(Gio.DBus.session, '/io/github/brianidavide/Kalipso/Reader');
     }
 
-    // kind: '' (outlined), 'primary' (the one main action) or 'quiet' (window actions).
-    button(label, action, kind = '') {
-        const button = new St.Button({label, can_focus: true, reactive: true,
+    // kind: '' (outlined), 'primary' (the one main action) or 'quiet' (window actions). An optional
+    // symbolic icon moves by its meaning on hover and keyboard focus; a press shrinks the button slightly.
+    button(label, action, kind = '', icon = '') {
+        const button = new St.Button({can_focus: true, reactive: true,
             style_class: kind ? `tp-button tp-${kind}` : 'tp-button'});
-        const text = button.child.clutter_text ?? button.child;
-        text.set_line_wrap(true);
-        text.set_ellipsize(Pango.EllipsizeMode.NONE);
+        const content = new St.BoxLayout({style_class: 'tp-button-content', x_align: Clutter.ActorAlign.CENTER});
+        const glyph = new St.Icon({icon_name: icon, style_class: 'tp-button-icon', visible: icon !== '',
+            y_align: Clutter.ActorAlign.CENTER});
+        glyph.set_pivot_point(0.5, 0.5);
+        const caption = new St.Label({text: label, y_align: Clutter.ActorAlign.CENTER});
+        caption.clutter_text.set_line_wrap(true);
+        caption.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
+        content.add_child(glyph);
+        content.add_child(caption);
+        button.set_child(content);
+        button.label_actor = caption;
+        // `label` keeps meaning the visible text, as for a plain St.Button.
+        Object.defineProperty(button, 'label', {get: () => caption.text, set: value => { caption.text = value; }});
+        button._glyph = glyph;
+        button.set_pivot_point(0.5, 0.5);
+        const move = () => this._moveIcon(button, button.hover || button.has_key_focus());
+        button.connect('notify::hover', move);
+        button.connect('key-focus-out', move);
+        button.connect('notify::pressed', () => button.ease({scale_x: button.pressed ? 0.97 : 1,
+            scale_y: button.pressed ? 0.97 : 1, duration: PRESS, mode: Clutter.AnimationMode.EASE_OUT_QUAD}));
         this._buttons.push(button);
-        button.connect('key-focus-in', () => this.reveal(button));
+        button.connect('key-focus-in', () => {
+            this.reveal(button);
+            move();
+        });
         button.connect('clicked', () => {
             button.grab_key_focus();
             action();
         });
         return button;
+    }
+
+    _moveIcon(button, on) {
+        const glyph = button._glyph, motion = MOTIONS[glyph.icon_name] ?? '', p = on ? 1 : 0;
+        if (!glyph.visible || !motion)
+            return;
+        const ahead = Clutter.get_default_text_direction() === Clutter.TextDirection.RTL ? -1 : 1;
+        glyph.ease({
+            translation_x: p * ahead * (motion === 'forward' ? 3 : motion === 'back' ? -3 : 0),
+            scale_x: 1 + p * (motion === 'grow' ? 0.1 : motion === 'shrink' ? -0.12 : 0),
+            scale_y: 1 + p * (motion === 'grow' ? 0.1 : motion === 'shrink' ? -0.12 : 0),
+            rotation_angle_z: p * (motion === 'turn' ? 45 : motion === 'tilt' ? -14 : 0),
+            duration: on ? ENTER : EXIT,
+            mode: on ? Clutter.AnimationMode.EASE_OUT_CUBIC : Clutter.AnimationMode.EASE_IN_CUBIC,
+        });
     }
 
     _onKey(event) {
@@ -626,24 +670,8 @@ export default class Kalipso extends Extension {
 
     applyAppearance(theme) {
         this._resolvedAppearance = theme;
-        const palette = T.palette[theme];
-        for (const [role, key] of Object.entries(ROLES))
-            C[role] = palette[key];
-        // Inline styles were written with the default palette; swap their colors.
-        const replace = new Map(Object.entries(ROLES).filter(([role]) => role !== 'focus')
-            .map(([role, key]) => [T.color[role].toLowerCase(), palette[key]]));
-        const visit = actor => {
-            if (actor.get_style) {
-                if (!this._originalStyles.has(actor))
-                    this._originalStyles.set(actor, actor.get_style() || '');
-                actor.set_style(this._originalStyles.get(actor).replace(/#[0-9a-f]{6}/gi, value => replace.get(value.toLowerCase()) || value));
-            }
-            for (const child of actor.get_children?.() || [])
-                visit(child);
-        };
-        visit(this.actor);
-        this.editor.set_style(`background-color:${palette.surface};color:${palette.text};border:2px solid ${palette.border};` +
-            `border-radius:${N.buttonRadius}px;padding:${N.gap}px;font-size:${N.bodySize}pt;min-height:${N.padding * 4}px;`);
+        Object.assign(C, paletteColors(theme));
+        // Colours come from stylesheet.css under .tp-dark or .tp-light; the excerpt is drawn again with C.
         this.actor.style_class = 'tp-' + theme;
         this.render();
     }
@@ -860,7 +888,8 @@ export default class Kalipso extends Extension {
             return;
         const scale = this.desktopSettings?.get_double('text-scaling-factor') ?? 1;
         this.reader.set_markup(this.tracker.words.length
-            ? this.tracker.readingMarkup(C.overlayMuted, C.overlayText, scale >= 1.8 ? -1 : scale >= 1.5 ? 0 : 4)
+            ? this.tracker.readingMarkup(C.overlayMuted, C.overlayText, scale >= 1.8 ? -1 : scale >= 1.5 ? 0 : 4,
+                {text: C.overlayText, tint: C.tint, line: C.reading})
             : `<span foreground="${C.overlayMuted}">Add your script to begin.</span>`);
         this.counter.set_text(`${this.tracker.position + 1} / ${this.tracker.words.length}`);
         const words = this.tracker.words.length;
@@ -871,6 +900,10 @@ export default class Kalipso extends Extension {
         this.primary.label = this._mode === 'manual' ? _('Next words')
             : this._mode === 'steady' ? (this._steadyTimer || this._countdownTimer ? _('Pause') : _('Start scrolling'))
             : listening ? _('Pause') : pending ? _('Cancel') : _('Start listening');
+        const running = this._mode === 'steady' ? Boolean(this._steadyTimer || this._countdownTimer) : listening;
+        this.primary._glyph.icon_name = this._mode === 'manual' ? 'go-next-symbolic'
+            : pending && !listening ? 'process-stop-symbolic'
+            : running ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
         const setEnabled = (button, enabled) => {
             button.reactive = enabled;
             button.can_focus = enabled;
@@ -888,7 +921,9 @@ export default class Kalipso extends Extension {
         this.settingsPane.visible = this._pane === 'settings';
         this.secondaryScroll.visible = Boolean(this._pane);
         this.editButton.label = this._pane === 'edit' ? _('Done editing') : _('Edit script');
+        this.editButton._glyph.icon_name = this._pane === 'edit' ? 'object-select-symbolic' : 'document-edit-symbolic';
         this.settingsButton.label = this._pane === 'settings' ? _('Done') : _('Settings');
+        this.settingsButton._glyph.icon_name = this._pane === 'settings' ? 'object-select-symbolic' : 'applications-system-symbolic';
         this.details.set_text(this._status);
         // The chosen option: accent border, tint and bold (:checked), and "checked" for assistive technology.
         const mark = (items, current) => {

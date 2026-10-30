@@ -61,7 +61,7 @@ jobs:
       - name: Verify design token generation
         run: |
           python3 tools/generate-design-tokens.py
-          git diff --exit-code -- design src/design_tokens.h src/icons/generated site/assets/tokens.css site/assets/tokens.json site/assets/mark.svg site/assets/tracker.mjs site/assets/unicode-tokens.mjs desktop/gnome/tokens.js desktop/gnome/stylesheet.css desktop/plasma/contents/ui/Tokens.js packaging/io.github.brianidavide.kalipso.svg
+          git diff --exit-code -- design src/design_tokens.h src/icons/generated site/assets/tokens.css site/assets/mark.svg site/assets/tracker.mjs site/assets/unicode-tokens.mjs desktop/gnome/tokens.js desktop/gnome/stylesheet.css desktop/plasma/contents/ui/Tokens.js packaging/io.github.brianidavide.kalipso.svg
       - name: Install to staging
         run: DESTDIR="$PWD/artifacts/stage" cmake --install build --prefix /usr
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -87,8 +87,11 @@ def translations(prefix, domain):
 
 def plasma_files():
     package = BASE / 'plasma'
+    # The widget draws its text in the app's typeface, embedded like the app (src/fonts, OFL).
+    fonts = [(path, 'contents/fonts/' + path.name) for path in sorted((ROOT / 'src/fonts').iterdir())
+             if path.suffix in {'.ttf', '.txt'}]
     return [(path, path.relative_to(package).as_posix()) for path in sorted(package.rglob('*'))
-            if path.is_file() and path.suffix in SOURCE_SUFFIXES]
+            if path.is_file() and path.suffix in SOURCE_SUFFIXES] + fonts
 
 
 def gnome_files():
