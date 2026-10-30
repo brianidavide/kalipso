@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Scenes for the website: simulated desktops and apps, drawn here, with real captures of Kalipso
+     (artifacts/scenes/*.png, made by capture-*.sh) placed under the camera. Rendered by render.mjs.
+     No logos or real app interfaces: the desktops are recognisable by layout, not by trademarks. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="scenes.css">
+</head>
+<body>
+
+<!-- 1. A video call on macOS: menu bar, notch with the camera, a call window, the dock. -->
+<section class="scene laptop mac" id="call-macos">
+ <div class="screen">
+  <div class="wallpaper"></div>
+  <header class="menubar"><b>Call</b><span>File</span><span>Edit</span><span>View</span><span>Window</span><span>Help</span>
+   <i class="spacer"></i><svg viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19" r="1.2" class="dot"/></svg>
+   <svg viewBox="0 0 30 24" class="battery"><rect x="2" y="7" width="22" height="11" rx="3"/><rect x="5" y="10" width="14" height="5" rx="1" class="dot"/><path d="M26 11v3"/></svg><span>Thu 30 Oct 10:42</span></header>
+  <div class="notch"><i></i></div>
+  <div class="window dark call">
+   <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span><span class="title">Weekly team call</span></div>
+   <div class="tiles">
+    <div class="tile t1"><span class="avatar">AR</span><span class="name">Anna</span></div>
+    <div class="tile t2"><span class="avatar">MB</span><span class="name">Marco</span></div>
+    <div class="tile t3"><span class="avatar">LS</span><span class="name">Lea</span></div>
+    <div class="tile t4 speaking"><span class="avatar">Y</span><span class="name">You</span></div>
+   </div>
+   <div class="callbar"><i class="round mic"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM6 11a6 6 0 0 0 12 0M12 17v4"/></svg></i><i class="round cam"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></i><i class="round share"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 14V8M9 10.5 12 7.5l3 3M8 20h8"/></svg></i><i class="leave">Leave</i></div>
+  </div>
+  <div class="dock"><i style="--h:212"></i><i style="--h:150"></i><i style="--h:30"></i><i style="--h:265"></i><i style="--h:340"></i><i style="--h:95"></i></div>
+  <img class="kalipso app" src="../../artifacts/scenes/app-call.png" alt="">
+ </div>
+</section>
+
+<!-- 2. Recording a video on Windows: a monitor with a webcam, taskbar, a recorder window. -->
+<section class="scene monitor win" id="recording-windows">
+ <div class="screen">
+  <div class="wallpaper"></div>
+  <div class="window light recorder">
+   <div class="titlebar"><span class="appicon"></span><span class="title">Recorder</span><span class="caption"><i>&#x2013;</i><i>&#x25A1;</i><i>&#x2715;</i></span></div>
+   <div class="preview">
+    <div class="room"><i class="shelf"></i><i class="plant"></i><i class="lamp"></i><i class="person"></i><i class="desk"></i></div>
+    <span class="rec"><i></i>REC 00:42</span>
+    <span class="format">1080p · 30 fps</span>
+   </div>
+   <div class="recbar"><span class="level"><i></i><i></i><i></i><i></i><i></i><i></i></span><i class="stop"></i><span class="time">00:42</span></div>
+  </div>
+  <footer class="taskbar"><span class="apps"><i class="search">Search</i><i></i><i></i><i></i><i class="active"></i></span><span class="clock">10:42<br>30/10/2026</span></footer>
+  <img class="kalipso app" src="../../artifacts/scenes/app-recording.png" alt="">
+ </div>
+</section>
+
+<!-- 3. Presenting slides on KDE Plasma: floating panel, a presenter console, the Kalipso widget. -->
+<section class="scene laptop plasma" id="slides-plasma">
+ <div class="screen">
+  <div class="wallpaper"></div>
+  <div class="window light presenter">
+   <div class="titlebar"><span class="title">Presenter console — quarterly-review.odp</span><span class="caption"><i>&#x2013;</i><i>&#x25A1;</i><i>&#x2715;</i></span></div>
+   <div class="console">
+    <div class="slide current"><h4>Q1 results</h4><div class="bars"><i style="--v:.42"></i><i style="--v:.55"></i><i style="--v:.68"></i><i style="--v:.96"></i></div><p>Sign-ups · +40%</p></div>
+    <div class="side"><div class="slide next"><h4>Next steps</h4><p>1 · 2 · 3</p></div><p class="timer">12:04</p><p class="count">Slide 3 of 12</p></div>
+   </div>
+  </div>
+  <footer class="panel"><i class="launcher"></i><i class="task active"></i><i class="task"></i><i class="task"></i><i class="spacer"></i><i class="tray"></i><i class="tray"></i><span class="clock">10:42<br>30/10/2026</span></footer>
+  <img class="kalipso widget" src="../../artifacts/scenes/plasma-slides.png" alt="">
+ </div>
+</section>
+
+<!-- 4. Teaching online on GNOME: top bar with the Kalipso indicator, a lesson app, the extension. -->
+<section class="scene laptop gnome" id="lesson-gnome">
+ <div class="screen">
+  <div class="wallpaper"></div>
+  <header class="topbar"><span class="workspaces"><i class="on"></i><i></i><i></i></span><span class="clock">Thu 30 Oct  10:42</span>
+   <span class="status"><svg viewBox="0 0 24 24" class="kalipso-indicator"><path d="M8 5.5v13l10-6.5z" class="dot"/></svg><svg viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/></svg><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6"/></svg><svg viewBox="0 0 30 24" class="battery"><rect x="2" y="7" width="22" height="11" rx="3"/><rect x="5" y="10" width="14" height="5" rx="1" class="dot"/><path d="M26 11v3"/></svg></span></header>
+  <div class="window light lesson">
+   <div class="headerbar"><span class="title"><b>Lesson 4 · Biology</b><small>Live · 24 students</small></span><span class="close">&#x2715;</span></div>
+   <div class="classroom">
+    <div class="stage"><svg viewBox="0 0 400 240" class="leaf"><circle cx="330" cy="54" r="30" class="sun"/><path d="M60 200C70 90 190 40 300 60 280 170 170 220 60 200Z" class="blade"/><path d="M60 200C140 150 210 110 290 66" class="vein"/></svg><h4>Photosynthesis</h4></div>
+    <aside class="people"><p>Students</p><span><i style="--h:20">EM</i>Emma</span><span><i style="--h:200">JO</i>Jonas</span><span><i style="--h:120">SA</i>Sara</span><span><i style="--h:300">LU</i>Luca</span><span><i style="--h:40">NO</i>Noor</span></aside>
+   </div>
+   <div class="lessonbar"><i class="round mic"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM6 11a6 6 0 0 0 12 0M12 17v4"/></svg></i><i class="round cam"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></i><i class="round share on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 14V8M9 10.5 12 7.5l3 3M8 20h8"/></svg></i></div>
+  </div>
+  <img class="kalipso extension" src="../../artifacts/scenes/gnome-lesson.png" alt="">
+ </div>
+</section>
+
+</body>
+</html>

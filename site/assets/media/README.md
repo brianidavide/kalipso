@@ -1,8 +1,14 @@
-# Product captures
+# Product media
 
-Actual captures of the Linux Qt application (X11, no window manager), using its `--demo` sample script on a clean profile set to steady speed, made with `tools/capture-site-media.sh`. Nothing is composited into them, and no microphone is opened.
+The "In real use" scenes: simulated desktops and apps, drawn for illustration (macOS, Windows, KDE Plasma
+and GNOME, without logos or real app interfaces), with real captures of Kalipso placed under the camera.
 
-- `native-editor.webp`: the editor window, also the video's poster. Lossless.
-- `native-walkthrough.mp4` / `.webm`: the same 15-second recording (H.264 and VP9): open the reader with Ctrl+Enter, start it with Space, three-second countdown, steady scrolling while the controls fade, pause (the time left shows), hide.
+- `scene-call-macos.webp`: a video call; the app's reader, dark, scrolling at a steady speed.
+- `scene-recording-windows.webp`: recording a video; the app's reader, light, scrolling at a steady speed.
+- `scene-slides-plasma.webp`: presenting slides; the Plasma widget, stepped by hand.
+- `scene-lesson-gnome.webp`: teaching online; the GNOME Shell extension, stepped by hand.
 
-They do not show macOS, Windows, GNOME Shell or Plasma. The page loads the video only when it comes into view, then plays it once, muted, unless the visitor asks for reduced motion; its controls stay available. Refresh these captures whenever the interface shown changes: `tools/capture-site-media.sh build/kalipso`.
+The captures are made from the current build with clean profiles and the scripts in
+`tools/scenes/scripts/`; no microphone is opened. The GNOME capture is at normal size (the nested shell
+does not scale reliably), the others at twice the size. Rebuild them whenever the interface shown
+changes: `tools/scenes/build.sh build/kalipso` (see that script for what it needs).
