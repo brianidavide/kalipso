@@ -21,6 +21,8 @@ jobs:
           python-version: ${{ steps.versions.outputs.python }}
       - name: Check source distribution
         run: python3 tools/check-repository.py
+      - name: Check the version is the same everywhere
+        run: python3 tools/version.py check
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build qt6-base-dev qt6-svg-dev qt6-l10n-tools qt6-tools-dev libpipewire-0.3-dev pkg-config pipewire-bin wireplumber gstreamer1.0-tools gstreamer1.0-pipewire gstreamer1.0-plugins-base desktop-file-utils appstream dbus-x11 libglib2.0-bin gjs qml6-module-qttest qml6-module-qtqml-workerscript qml6-module-qtquick-window qml6-module-qtquick qt6-declarative-dev-tools qt6-qpa-plugins xvfb xauth
       - uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0

@@ -4,7 +4,7 @@
     "Name": "Kalipso",
     "Description": "A teleprompter for your desktop: edit the script, read near your camera, scroll at a steady speed or follow your voice with local speech recognition. Development preview.",
     "Icon": "media-record",
-    "Version": "0.1.0",
+    "Version": "0.1",
     "License": "AGPL-3.0-or-later",
     "Authors": [
       {

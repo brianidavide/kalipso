@@ -25,7 +25,7 @@
   <url type="vcs-browser">https://github.com/brianidavide/kalipso</url>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="0.1.0" date="2026-10-29" type="development">
+    <release version="0.1" date="2026-10-29" type="development">
       <description><p>Development preview: script library, steady scrolling, mirroring, cues and sections, speaker-note import and local voice following.</p></description>
     </release>
   </releases>
