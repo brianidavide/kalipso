@@ -12,6 +12,8 @@
 #include <QLayout>
 #include <QPalette>
 #include <QPushButton>
+#include <QStyle>
+#include <QStyleFactory>
 #include <QStyleOptionButton>
 #include <QStylePainter>
 #include <QToolButton>
@@ -65,6 +67,16 @@ inline void useInterfaceFont() {
     QFont font = QApplication::font();
     font.setFamilies({QStringLiteral("Atkinson Hyperlegible Next")});
     QApplication::setFont(font);
+}
+// Kalipso draws its controls from the design tokens with style sheets, on top of Qt's Fusion style
+// everywhere. A desktop style would size and paint them its own way: under Breeze (KDE) the settings
+// fields stayed at a few letters wide and scroll bars turned black. Safe to call more than once.
+inline void useInterfaceStyle() {
+    if (!qobject_cast<QApplication *>(QCoreApplication::instance()) ||
+        QApplication::style()->name().compare(QLatin1String("fusion"), Qt::CaseInsensitive) == 0)
+        return;
+    if (auto *fusion = QStyleFactory::create(QStringLiteral("Fusion")))
+        QApplication::setStyle(fusion);
 }
 inline QString themeName(const Design::Palette &p) {
     return QString(p.background) == Design::light.background ? QStringLiteral("light") : QStringLiteral("dark");

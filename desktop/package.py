@@ -90,8 +90,10 @@ def plasma_files():
     # The widget draws its text in the app's typeface, embedded like the app (src/fonts, OFL).
     fonts = [(path, 'contents/fonts/' + path.name) for path in sorted((ROOT / 'src/fonts').iterdir())
              if path.suffix in {'.ttf', '.txt'}]
+    # Kalipso's icon, shown in a panel: the widget may be installed without the app and its icon.
+    icon = [(ROOT / 'packaging/io.github.brianidavide.kalipso.svg', 'contents/images/kalipso.svg')]
     return [(path, path.relative_to(package).as_posix()) for path in sorted(package.rglob('*'))
-            if path.is_file() and path.suffix in SOURCE_SUFFIXES] + fonts
+            if path.is_file() and path.suffix in SOURCE_SUFFIXES] + fonts + icon
 
 
 def gnome_files():

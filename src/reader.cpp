@@ -228,6 +228,7 @@ void ReaderView::mouseReleaseEvent(QMouseEvent *event) {
 
 ReaderWindow::ReaderWindow(QWidget *parent)
     : QWidget(parent, Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint) {
+    Accessibility::useInterfaceStyle();
     Accessibility::useInterfaceFont();
     // Fixed title: the KWin script and the macOS color sampler identify the reader by it.
     setWindowTitle(QStringLiteral("Kalipso — reading"));
@@ -379,6 +380,7 @@ ReaderWindow::ReaderWindow(QWidget *parent)
     auto *grip = new QSizeGrip(this);
     grip->setObjectName("readerResize");
     grip->setToolTip(tr("Drag to resize the reader"));
+    setMouseTracking(true); // The edges resize: see edgesAt().
 
     connect(previous, &QPushButton::clicked, this, [this] { emit step(-1); });
     connect(next, &QPushButton::clicked, this, [this] { emit step(1); });
@@ -612,7 +614,7 @@ void ReaderWindow::showOn(QScreen *screen) {
                 std::max(0, qRound((primary_->font().pointSizeF() - QApplication::font().pointSizeF()) * 12));
             resize(std::min(680, std::max(320, available.width() - 32)),
                    std::min(available.height() - 32, 360 + extra));
-            move(available.center().x() - width() / 2, available.top() + 16);
+            move(available.center().x() - width() / 2, available.top()); // Under the camera.
         }
         placing_ = false;
     }
@@ -711,6 +713,54 @@ void ReaderWindow::keyPressEvent(QKeyEvent *event) {
     case Qt::Key_Minus: emit speedRequested(-10); return;
     default: QWidget::keyPressEvent(event);
     }
+}
+
+// Without a title bar the window manager draws no borders, so the reader's own edges resize it.
+// The window system does the resizing, which also works on Wayland, where applications cannot
+// resize or move their windows themselves. Presses on the edges reach here because the bars and
+// the progress line do not use them.
+Qt::Edges ReaderWindow::edgesAt(const QPoint &point) const {
+    if (isMaximized() || isFullScreen())
+        return {};
+    constexpr int border = Design::Metric::space2;
+    Qt::Edges edges;
+    if (point.x() < border)
+        edges |= Qt::LeftEdge;
+    else if (point.x() >= width() - border)
+        edges |= Qt::RightEdge;
+    if (point.y() < border)
+        edges |= Qt::TopEdge;
+    else if (point.y() >= height() - border)
+        edges |= Qt::BottomEdge;
+    return edges;
+}
+
+void ReaderWindow::mouseMoveEvent(QMouseEvent *event) {
+    const auto edges = edgesAt(event->position().toPoint());
+    const bool horizontal = edges & (Qt::LeftEdge | Qt::RightEdge), vertical = edges & (Qt::TopEdge | Qt::BottomEdge);
+    if (horizontal && vertical)
+        setCursor(edges == (Qt::TopEdge | Qt::LeftEdge) || edges == (Qt::BottomEdge | Qt::RightEdge)
+                      ? Qt::SizeFDiagCursor
+                      : Qt::SizeBDiagCursor);
+    else if (horizontal || vertical)
+        setCursor(horizontal ? Qt::SizeHorCursor : Qt::SizeVerCursor);
+    else
+        unsetCursor();
+    QWidget::mouseMoveEvent(event);
+}
+
+void ReaderWindow::mousePressEvent(QMouseEvent *event) {
+    const auto edges = edgesAt(event->position().toPoint());
+    if (event->button() == Qt::LeftButton && edges && windowHandle() && windowHandle()->startSystemResize(edges)) {
+        event->accept();
+        return;
+    }
+    QWidget::mousePressEvent(event);
+}
+
+void ReaderWindow::leaveEvent(QEvent *event) {
+    unsetCursor();
+    QWidget::leaveEvent(event);
 }
 
 bool ReaderWindow::eventFilter(QObject *object, QEvent *event) {

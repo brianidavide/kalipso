@@ -17,6 +17,7 @@
 #include <QDialog>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -114,6 +115,10 @@ public:
         heading->setFont(font);
         layout->addWidget(heading);
         form->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        // Fields take the row's width (the combo boxes are only a letter wide on their own), whatever
+        // the desktop style would choose.
+        form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+        form->setFormAlignment(Qt::AlignLeft | Qt::AlignTop);
         form->setHorizontalSpacing(Design::Metric::space4);
         form->setVerticalSpacing(Design::Metric::space3);
         form->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -255,6 +260,7 @@ ReadingMode modeFromKey(const QString &key) {
 
 MainWindow::MainWindow(const QString &libraryDirectory)
     : library_(libraryDirectory), speech_(this), prompter_(new ReaderWindow) {
+    Accessibility::useInterfaceStyle();
     Accessibility::useInterfaceFont();
     setWindowTitle(tr("Kalipso"));
     resize(1100, 760);
@@ -344,11 +350,7 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     dialogLayout->addLayout(closeRow);
     icons_.append({close, "close"});
     settings_->resize(620, 700);
-    connect(settingsButton, &QPushButton::clicked, this, [this] {
-        settings_->show();
-        settings_->raise();
-        settings_->activateWindow();
-    });
+    connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(); });
     applyTheme();
 
     autosave_.setSingleShot(true);
@@ -418,6 +420,8 @@ MainWindow::MainWindow(const QString &libraryDirectory)
 
     connect(&speech_, &SpeechService::status, this, [this](const QString &message) {
         speechStatus_ = message;
+        // A message while not listening says why listening did not start or ended: the reader shows it.
+        speechError_ = speech_.active() ? QString() : message;
         audioStatus_->setText(message);
         refreshRunning();
     });
@@ -855,6 +859,7 @@ void MainWindow::setMode(ReadingMode mode) {
     if (running())
         pauseRunning();
     mode_ = mode;
+    speechError_.clear();
     QSettings().setValue("reading/mode", modeKey(mode));
     prompter_->setMode(mode);
     refreshRunning();
@@ -1023,10 +1028,11 @@ QString MainWindow::statusText() const {
         break;
     }
     case ReadingMode::Voice:
-        status = !active                   ? tr("Microphone off")
-                 : tracker_.lost()         ? tr("Off script · Kalipso catches up when you return to the text")
-                 : speechStatus_.isEmpty() ? tr("Listening")
-                                           : speechStatus_;
+        status = !active && !speechError_.isEmpty() ? speechError_
+                 : !active                          ? tr("Microphone off")
+                 : tracker_.lost()                  ? tr("Off script · Kalipso catches up when you return to the text")
+                 : speechStatus_.isEmpty()          ? tr("Listening")
+                                                    : speechStatus_;
         break;
     }
     return status;
@@ -1034,12 +1040,24 @@ QString MainWindow::statusText() const {
 
 void MainWindow::refreshRunning() { refreshReading(); }
 
+void MainWindow::showSettings(QWidget *field) {
+    settings_->show();
+    settings_->raise();
+    settings_->activateWindow();
+    if (!field)
+        return;
+    if (auto *scroll = settings_->findChild<QScrollArea *>("settingsScroll"))
+        scroll->ensureWidgetVisible(field, 0, Design::Metric::space8);
+    field->setFocus(Qt::OtherFocusReason);
+}
+
 void MainWindow::startListening() {
     saveSettings();
     systemCheck_.stop();
     installingSystem_ = false;
     waitForNewUtterance_ = false;
     speechStatus_.clear();
+    speechError_.clear();
     speech_.setScript(script_->toPlainText(), tracker_.position());
     SpeechRequest request;
     request.backend = backend_->currentData().toString();
@@ -1048,6 +1066,16 @@ void MainWindow::startListening() {
     request.microphone = request.backend == QLatin1String("system") ? QString() : microphone_->text();
     request.language = speechLanguage();
     request.architecture = architecture_->currentIndex() + 2;
+    // No language yet: say so in the reader too, and open Settings at the choice.
+    if (request.backend != QLatin1String("system") && !QFileInfo(request.model).isDir() &&
+        SpeechCatalog::downloadsSupported()) {
+        speechError_ = tr("Choose the language you speak in Settings: Kalipso downloads it once.");
+        audioStatus_->setText(speechError_);
+        refreshRunning();
+        prompter_->hide(); // It stays above other windows and would cover the choice.
+        showSettings(voiceLanguage_);
+        return;
+    }
     speech_.start(request);
     if (speech_.active()) {
         checkSystem_->setEnabled(false);
@@ -1156,8 +1184,9 @@ QWidget *MainWindow::makeSettings() {
     auto *layout = new QVBoxLayout(contents);
     layout->setContentsMargins(Design::Metric::space5, Design::Metric::space5, Design::Metric::space5, 0);
     layout->setSpacing(0);
-    layout->addWidget(makeReadingSettings());
+    // The language you speak first: voice following needs it before anything else.
     layout->addWidget(makeSpeechSettings());
+    layout->addWidget(makeReadingSettings());
     layout->addWidget(makeKeySettings());
     layout->addWidget(makeRemoteSettings());
     for (auto *form : contents->findChildren<QFormLayout *>())
@@ -1186,6 +1215,7 @@ QWidget *MainWindow::makeSettings() {
         section->setLabelWidth(labelWidth);
     layout->addStretch();
     auto *scroll = new QScrollArea;
+    scroll->setObjectName("settingsScroll");
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setWidget(contents);
@@ -1510,6 +1540,7 @@ QWidget *MainWindow::makeSpeechSettings() {
     auto *custom = new QFormLayout(customSpeech_);
     custom->setContentsMargins(0, 0, 0, 0);
     custom->setRowWrapPolicy(QFormLayout::WrapAllRows);
+    custom->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
     custom->addRow(tr("Native library"), speechLibrary_);
     custom->addRow(tr("Model folder"), modelPath_);
     auto *browse = new AccessibleButton(tr("Choose model folder…"));

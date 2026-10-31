@@ -72,6 +72,8 @@ private:
     void jumpSection(int direction);
     bool voiceCommand(const QString &utterance);
     void startListening();
+    // Opens Settings; with a field, scrolled to it and focused.
+    void showSettings(QWidget *field = nullptr);
     void finishSession();
 
     // Settings
@@ -118,6 +120,7 @@ private:
     int countdownLeft_ = 0;
     int wordsPerMinute_ = 140;
     QString speechStatus_;
+    QString speechError_; // Why listening did not start or stopped; shown in the reader until the next try.
     bool waitForNewUtterance_ = false;
 
     QComboBox *scripts_;

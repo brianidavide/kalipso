@@ -122,9 +122,13 @@ protected:
     void moveEvent(QMoveEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void leaveEvent(QEvent *event) override;
     bool eventFilter(QObject *object, QEvent *event) override;
 
 private:
+    Qt::Edges edgesAt(const QPoint &point) const;
     void applyPalette(const Design::Palette &palette);
     void saveGeometry();
     void updatePrimary();

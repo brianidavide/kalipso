@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "accessibility.h"
+#include "platform/kwin_placement.h"
 #include "settings_migration.h"
 #include "window.h"
 #include <QApplication>
@@ -20,6 +21,7 @@ int main(int argc, char **argv) {
     app.setApplicationVersion(KALIPSO_VERSION);
     app.setDesktopFileName("io.github.brianidavide.kalipso");
     importLegacySettings("brianidavide", "kde-teleprompter");
+    Accessibility::useInterfaceStyle();
     Accessibility::useInterfaceFont();
 
     // Interface language: the saved choice, otherwise the system language.
@@ -53,6 +55,10 @@ int main(int argc, char **argv) {
                                  QCoreApplication::translate("main", "Kalipso is already open."));
         return 0;
     }
+
+    // Plasma on Wayland: KWin places the reader under the camera and keeps it above other windows.
+    KWinPlacement::load();
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [] { KWinPlacement::unload(); });
 
     MainWindow window;
     if (parser.isSet("demo") || parser.isSet("screenshot"))
