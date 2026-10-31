@@ -886,6 +886,10 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Ready to listen in %1. Choose Follow my voice and start the reader.</source>
         <translation>Pronto ad ascoltarti in %1. Scegli Segui la mia voce e avvia il lettore.</translation>
     </message>
+    <message>
+        <source>Choose the language you speak in Settings: Kalipso downloads it once.</source>
+        <translation>Scegli nelle Impostazioni la lingua in cui parli: Kalipso la scarica una volta sola.</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>

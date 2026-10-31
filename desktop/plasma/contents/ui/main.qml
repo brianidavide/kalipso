@@ -4,6 +4,7 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 import "tracker.mjs" as Tracking
 import "Tokens.js" as Design
@@ -67,7 +68,13 @@ PlasmoidItem {
 
     implicitWidth: n.width
     implicitHeight: 360
-    preferredRepresentation: fullRepresentation
+    // On the desktop the reader is the widget. In a panel there is no room for it: Kalipso's icon
+    // opens it in a popup, which stays open while you click into the call or the slides.
+    readonly property bool inPanel: Plasmoid.formFactor === PlasmaCore.Types.Horizontal
+        || Plasmoid.formFactor === PlasmaCore.Types.Vertical
+    preferredRepresentation: inPanel ? compactRepresentation : fullRepresentation
+    hideOnWindowDeactivate: false
+    Plasmoid.icon: Qt.resolvedUrl("../images/kalipso.svg")
 
     SystemPalette { id: desktopPalette; colorGroup: SystemPalette.Active }
 

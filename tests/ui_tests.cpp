@@ -346,6 +346,59 @@ private slots:
         QCOMPARE(primary->text(), QString("Start scrolling"));
     }
 
+    void theReaderSaysWhyListeningDidNotStart() {
+        QSettings().setValue("speech/backend", "vosk");
+        QSettings().setValue("profiles/vosk/model", scripts_.path() + "/no-such-model");
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("one two three four");
+        window.showPrompter();
+        auto *reader = window.prompter();
+        auto *mode = reader->findChild<QToolButton *>("readerMode");
+        for (auto *action : mode->menu()->actions())
+            if (action->text() == "Follow my voice")
+                action->trigger();
+        auto *status = reader->findChild<QLabel *>("readerListeningStatus");
+        QCOMPARE(status->text(), QString("Microphone off"));
+        reader->findChild<QPushButton *>("readerListeningButton")->click();
+        // The reason, not just "Microphone off".
+        QVERIFY(status->text() != "Microphone off");
+        QCOMPARE(status->text(), window.findChild<QLabel *>("audioStatus")->text());
+        if (SpeechCatalog::downloadsSupported()) {
+            // No language yet: Settings opens at the choice.
+            QVERIFY(status->text().startsWith("Choose the language you speak"));
+            auto *settings = window.findChild<QDialog *>("settingsDialog");
+            QVERIFY(settings->isVisible());
+            QVERIFY(!reader->isVisible());
+            window.showPrompter();
+            QCOMPARE(settings->focusWidget(), window.findChild<QComboBox *>("voiceLanguage"));
+        }
+        // Choosing a reading mode again starts from a clean status.
+        for (auto *action : mode->menu()->actions())
+            if (action->text() == "Follow my voice")
+                action->trigger();
+        QCOMPARE(status->text(), QString("Microphone off"));
+    }
+
+    void theReaderResizesFromItsEdges() {
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText("one two three four");
+        window.showPrompter();
+        auto *reader = window.prompter();
+        QVERIFY(QTest::qWaitForWindowExposed(reader));
+        const int w = reader->width(), h = reader->height();
+        const QList<std::pair<QPoint, Qt::CursorShape>> spots{{{w - 2, h / 2}, Qt::SizeHorCursor},
+                                                              {{1, h / 2}, Qt::SizeHorCursor},
+                                                              {{w / 2, h - 2}, Qt::SizeVerCursor},
+                                                              {{w - 2, h - 2}, Qt::SizeFDiagCursor},
+                                                              {{1, h - 2}, Qt::SizeBDiagCursor}};
+        for (const auto &[point, shape] : spots) {
+            QTest::mouseMove(reader, point);
+            QCOMPARE(reader->cursor().shape(), shape);
+        }
+        QTest::mouseMove(reader, {12, h / 2}); // Beside the text, away from the edge: no resizing.
+        QCOMPARE(reader->cursor().shape(), Qt::ArrowCursor);
+    }
+
     void steadyScrollingAdvancesAndStopsAtTheEnd() {
         MainWindow window(scripts_.path());
         editor(window)->setPlainText("one two three");

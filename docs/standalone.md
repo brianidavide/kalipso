@@ -73,14 +73,14 @@ On **macOS** an app cannot reliably hide its own window: Apple documents the old
 
 On **Linux**, applications cannot hide their own windows from capture; the compositor decides. On **KDE Plasma 6.6 or later**, focus the reader, press Alt+F3 and choose **More Actions → Hide from Screencast**. Plasma 6.7 or later can make this permanent with a window rule (System Settings → Window Management → Window Rules) matching the window class `io.github.brianidavide.kalipso` and the title `Kalipso — reading`.
 
-The optional KWin script keeps the reader above other windows, places it near the camera (on Wayland only the compositor can position windows) and requests the same exclusion where KWin lets scripts set it:
+On **Plasma with Wayland** only KWin can place windows. While Kalipso runs it loads its KWin script
+into KWin (nothing to install or enable): the reader opens at the top of the screen, under the camera,
+stays above other windows and asks for the same exclusion where KWin lets scripts set it. The script is
+unloaded when Kalipso quits. On X11 the reader does this itself. Drag the reader by its title to move
+it, and by any edge to resize it.
 
-```sh
-python3 desktop/package.py
-kpackagetool6 --type KWin/Script --install artifacts/packages/kalipso-kwin.kwinscript
-```
-
-Then enable **Kalipso companion** in System Settings → Window Management → KWin Scripts.
+The same script is also packaged as **Kalipso companion** (System Settings → Window Management → KWin
+Scripts) for anyone who wants it enabled permanently; Kalipso then uses that one.
 
 ## Speech
 

@@ -71,7 +71,7 @@ endif()
 add_library(kalipso_app STATIC
   src/window.cpp src/reader.cpp src/backdrop.cpp src/library.cpp src/import.cpp src/remote.cpp
   src/script_highlighter.cpp src/session_stats.cpp src/impress.cpp src/icons.cpp src/motion.cpp
-  src/platform/capture_exclusion.cpp)
+  src/platform/capture_exclusion.cpp src/platform/kwin_placement.cpp)
 target_link_libraries(kalipso_app PUBLIC kalipso_downloads Qt6::Widgets Qt6::Network Qt6::Svg PRIVATE kalipso_vendor)
 file(GLOB KALIPSO_ICONS CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/*.svg ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/generated/*.svg)
@@ -80,6 +80,9 @@ file(GLOB KALIPSO_FONTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/fonts/
 qt_add_resources(kalipso_app "fonts" PREFIX "/fonts" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/fonts FILES ${KALIPSO_FONTS})
 qt_add_resources(kalipso_app "impress" PREFIX "/impress" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/impress
   FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/impress/impress_follow.py)
+# The KWin script that places the reader on Plasma with Wayland (src/platform/kwin_placement.h).
+qt_add_resources(kalipso_app "kwin" PREFIX "/kwin" BASE ${CMAKE_CURRENT_SOURCE_DIR}/packaging/kwin/contents/code
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/packaging/kwin/contents/code/main.js)
 target_compile_definitions(kalipso_app PUBLIC KALIPSO_VERSION="${PROJECT_VERSION}")
 target_compile_options(kalipso_app PRIVATE ${KALIPSO_WARNINGS})
 if(TARGET kalipso_colors)

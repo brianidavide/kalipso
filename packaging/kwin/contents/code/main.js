@@ -30,7 +30,7 @@ function apply(window) {
         const area = workspace.clientArea(KWin.PlacementArea, window);
         frame.width = Math.min(680, area.width - 32);
         frame.x = area.x + Math.round((area.width - frame.width) / 2);
-        frame.y = area.y + 16;
+        frame.y = area.y; // Right under the camera, or under a top panel.
     }
     window.frameGeometry = frame;
     window.frameGeometryChanged.connect(() => {
