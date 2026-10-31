@@ -68,8 +68,13 @@ jobs:
         run: |
           packaging/companion/make-archive.sh build/kalipso-engine 0.0 companion
           tar -xzf companion/kalipso-companion-v0.0-linux-x86_64.tar.gz -C companion
-          companion/kalipso-companion-v0.0-linux-x86_64/install --list-models
-          QT_QPA_PLATFORM=offscreen companion/kalipso-companion-v0.0-linux-x86_64/kalipso-engine --check || true
+          home="$PWD/companion/home"
+          env -u XDG_DATA_HOME HOME="$home" companion/kalipso-companion-v0.0-linux-x86_64/install
+          test -x "$home/.local/bin/kalipso-engine"
+          grep -qx "Exec=\"$home/.local/bin/kalipso-engine\" --serve" \
+            "$home/.local/share/dbus-1/services/io.github.brianidavide.Kalipso.Engine.service"
+          env -u XDG_DATA_HOME HOME="$home" "$home/.local/bin/kalipso-engine" --list-models | grep -q '^it  Italiano  vosk'
+          env -u XDG_DATA_HOME HOME="$home" "$home/.local/bin/kalipso-engine" --download --language xx && exit 1 || true
       - name: Install to staging
         run: DESTDIR="$PWD/artifacts/stage" cmake --install build --prefix /usr
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

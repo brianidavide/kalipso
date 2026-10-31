@@ -3,6 +3,7 @@
 #include "remote.h"
 #include "script_highlighter.h"
 #include "speech.h"
+#include "speech_download.h"
 #include "window.h"
 #include <QAbstractButton>
 #include <QAccessible>
@@ -16,6 +17,7 @@
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QProcess>
+#include <QScopeGuard>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSettings>
@@ -132,6 +134,47 @@ private slots:
         QCOMPARE(reopened.findChild<QLineEdit *>("speechModel")->text(), QString("vosk-model"));
     }
 
+    void voiceLanguagesUseInstalledModelsAndDownloadOnlyWhenChosen() {
+        // A Vosk runtime and the Italian model, where a download leaves them.
+        const auto root = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/kalipso";
+        const auto cleanup = qScopeGuard([root] { QDir(root).removeRecursively(); });
+        const auto model = root + "/models/vosk/vosk-model-small-it-0.22";
+        for (const auto &file :
+             {root + "/runtimes/vosk-0.3.45/vosk/libvosk.so", model + "/am/final.mdl", model + "/conf/mfcc.conf"}) {
+            QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
+            QFile touch(file);
+            QVERIFY(touch.open(QIODevice::WriteOnly));
+        }
+        QSettings().setValue("speech/backend", "moonshine"); // A profile without a model.
+        MainWindow window(scripts_.path());
+        auto *languages = window.findChild<QComboBox *>("voiceLanguage");
+        auto *engine = window.findChild<QComboBox *>("speechBackend");
+        auto *modelPath = window.findChild<QLineEdit *>("speechModel");
+        QVERIFY(languages && engine && modelPath);
+        // The installed model is used without asking, and the engine follows it.
+        QCOMPARE(engine->currentData().toString(), QString("vosk"));
+        QCOMPARE(modelPath->text(), model);
+        if (!SpeechCatalog::downloadsSupported()) {
+            QVERIFY(languages->currentText().contains("vosk-model-small-it-0.22"));
+            return;
+        }
+        QCOMPARE(languages->currentText(), QString("Italiano · ready"));
+        const int english = languages->findText("English · download", Qt::MatchStartsWith);
+        QVERIFY(english > 0);
+        QVERIFY(languages->itemText(english).endsWith(" MB"));
+        // Keys open the list instead of choosing, and downloading, at once.
+        window.show();
+        openSettings(window);
+        languages->setFocus();
+        const int before = languages->currentIndex();
+        for (const auto key : {Qt::Key_Down, Qt::Key_End, Qt::Key_E}) {
+            QTest::keyClick(languages, key);
+            QCOMPARE(languages->currentIndex(), before);
+            languages->hidePopup();
+        }
+        QVERIFY(!window.findChild<QWidget *>("speechDownloadProgress")->isVisible());
+    }
+
     void scriptsAndReadingPositionSurviveRestart() {
         QString id;
         {
@@ -246,7 +289,7 @@ private slots:
     void settingsFieldsHaveAccessibleNames() {
         MainWindow window(scripts_.path());
         for (const auto *name : {"speechBackend", "speechLanguage", "speechLibrary", "speechModel", "applicationTheme",
-                                 "readerTheme", "readerMirror", "readingLine", "installedSpeech", "scriptPicker"}) {
+                                 "readerTheme", "readerMirror", "readingLine", "voiceLanguage", "scriptPicker"}) {
             auto *field = window.findChild<QWidget *>(name);
             QVERIFY2(field, name);
             auto *interface = QAccessible::queryAccessibleInterface(field);

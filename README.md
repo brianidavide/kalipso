@@ -32,19 +32,18 @@ All three work without speech components (manual and steady modes). Voice follow
 
 ### Arch Linux and EndeavourOS
 
-The package builds the app, the voice companion, the Plasma widget, the GNOME Shell extension and the KWin
-script in one go:
+[`kalipso-git`](https://aur.archlinux.org/packages/kalipso-git) on AUR builds the app, the voice companion,
+the Plasma widget, the GNOME Shell extension and the KWin script in one go (`kalipso`, for published
+versions, arrives with the first one):
 
 ```sh
-git clone https://github.com/brianidavide/kalipso.git
-cd kalipso/packaging/arch/kalipso-git
-makepkg -si
-kalipso-voice-setup --language it    # once, for voice following: your language (it, en, de, es, ja, zh)
+yay -S kalipso-git
 ```
 
 Then open **Kalipso** from the application menu, or add the **Kalipso** widget to the desktop or panel
-(right click → Add or Manage Widgets). On AUR the packages will be `kalipso` (published versions) and
-`kalipso-git` (the latest changes).
+(right click → Add or Manage Widgets). For voice following, choose **Settings → Language you speak**:
+Kalipso downloads that language's speech model once (40 to 60 MB). Without an AUR helper:
+`git clone https://aur.archlinux.org/kalipso-git.git && cd kalipso-git && makepkg -si`.
 
 ### Debian 13 / Ubuntu 24.04 or newer
 
@@ -55,10 +54,10 @@ cd kalipso
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local"
 cmake --build build
 cmake --install build
-~/.local/bin/kalipso-voice-setup --language en    # once, for voice following
 ```
 
-Run `kalipso`, or try it with a sample script: `kalipso --demo --prompter`. To build a `.deb` instead, run
+Run `kalipso`, or try it with a sample script: `kalipso --demo --prompter`. For voice following, choose
+**Settings → Language you speak**. To build a `.deb` instead, run
 `cd build && cpack -G DEB`. Published versions will have the `.deb` ready on the releases page.
 
 ### Windows and macOS
@@ -74,8 +73,9 @@ the system; see [macOS and Windows builds](docs/system-speech.md), also for buil
 Install the widget from the KDE Store or the extension from extensions.gnome.org (when listed), or build
 them: `python3 desktop/package.py`, then follow [installing the widget or extension](desktop/README.md).
 For voice following they need the **companion**: download `kalipso-companion` from the
-[releases page](https://github.com/brianidavide/kalipso/releases), unpack it and run
-`./install --language it` (your language). See [voice following on Linux](docs/local-engine.md).
+[releases page](https://github.com/brianidavide/kalipso/releases), unpack it and run `./install`, then
+choose **Settings → Language you speak** in the widget or extension. See
+[voice following on Linux](docs/local-engine.md).
 
 ## Limitations
 

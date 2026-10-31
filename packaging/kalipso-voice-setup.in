@@ -1,3 +1,0 @@
-#!/bin/sh
-# Downloads one speech runtime and one language model for Kalipso's companion. Example: kalipso-voice-setup --language it
-exec python3 "@CMAKE_INSTALL_FULL_DATADIR@/kalipso/setup/tools/install-local-engine.py" --system --download "$@"

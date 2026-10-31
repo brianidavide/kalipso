@@ -5,25 +5,43 @@ Voice following needs three things on your computer:
 | Component | What it does | How you get it |
 | --- | --- | --- |
 | `kalipso-engine` (the companion) | Captures the microphone and runs recognition for the widget and extension | Included in the Kalipso packages, in the `kalipso-companion` download, or built from source |
-| A speech runtime | Moonshine (with its ONNX Runtime) **or** Vosk | Downloaded by the installer, or a library you already have |
-| A language model | Recognition for one language | Downloaded by the installer, or a model folder you already have |
+| A speech runtime | Moonshine (with its ONNX Runtime) **or** Vosk | Downloaded by Kalipso when you choose a language, or a library you already have |
+| A language model | Recognition for one language | Downloaded by Kalipso when you choose a language, or a model folder you already have |
 
-The standalone app runs recognition itself but uses the same runtimes and models, and lists the ones installed here automatically.
+The standalone app runs recognition itself but uses the same runtimes and models: a language downloaded in
+the app is ready in the widget and extension, and the other way round.
 
 Recognition stays on your computer: audio goes from PipeWire to the native library and nowhere else. Only the selected model is loaded, and only while you are listening.
 
-## Install
+## Choose your language
 
-Choose the way that matches how you installed Kalipso. Each one asks for your language explicitly (it is
-never guessed from the desktop), downloads one speech runtime and one language model, checks them
-against pinned SHA-256 fingerprints and never opens the microphone. Moonshine is used where it has the
-language, Vosk otherwise (Italian uses Vosk); add `--backend vosk` or `--backend moonshine` to choose.
+In Kalipso, the Plasma widget or the GNOME extension, open **Settings → Language you speak** and choose
+yours. The first time, Kalipso downloads its speech model (40 to 60 MB, with the engine's runtime if it is
+not there yet), shows the progress with **Cancel download**, checks every file against the SHA-256
+fingerprint pinned in [the catalog](../tools/data/speech-catalog.json) and keeps nothing that does not
+match. Then **Follow my voice** and **Start listening**. Choosing a language never opens the microphone,
+and nothing you say is sent anywhere. Downloads go to `~/.local/share/kalipso`; they use the system proxy
+settings.
 
-**You installed a Kalipso package** (Arch, EndeavourOS, the `.deb`): the companion is already there.
+| Engine | Version | Languages | Platform |
+| --- | --- | --- | --- |
+| Moonshine (Tiny streaming) | 0.1.5 | en, de, es, ja, zh | Linux x86_64, glibc 2.34+ |
+| Vosk (small models) | 0.3.45 | en, de, es, ja, zh, it | Linux x86_64 |
+
+Kalipso picks the engine that follows the language best: Moonshine where it has the language, Vosk
+otherwise (Italian uses Vosk, as there is no Italian Moonshine model).
+
+The same from a terminal, for example over SSH or in a script:
 
 ```sh
-kalipso-voice-setup --language it
+kalipso-voice-setup --language it            # installed packages; ~/.local/bin/kalipso-engine --download --language it otherwise
+kalipso-voice-setup --list-models            # the languages, and which are installed
+kalipso-voice-setup --language en --backend vosk   # another engine than the usual one
 ```
+
+## Get the companion
+
+**You installed a Kalipso package** (AUR `kalipso-git`, the `.deb`): the companion is already there.
 
 **You use only the widget or the extension** (from the KDE Store or extensions.gnome.org): download
 `kalipso-companion-…-linux-x86_64.tar.gz` from the [releases page](https://github.com/brianidavide/kalipso/releases),
@@ -32,14 +50,14 @@ then:
 ```sh
 tar -xzf kalipso-companion-*-linux-x86_64.tar.gz
 cd kalipso-companion-*-linux-x86_64
-./install --language it
+./install
 ```
 
-It installs the companion under `~/.local` and registers it with your desktop. It needs Python 3, Qt 6 and
-PipeWire, which current Plasma and GNOME desktops have.
+It copies the companion to `~/.local/bin` and registers it with your desktop. It needs Qt 6 and PipeWire,
+which current Plasma and GNOME desktops have. If the widget says the companion is missing right after
+installing, log out and back in so D-Bus discovers it.
 
-**From the source code** (a clone of this repository, a C++ compiler, CMake, Qt 6 and PipeWire): the
-installer builds the companion first.
+**From the source code** (a clone of this repository, a C++ compiler, CMake, Qt 6 and PipeWire):
 
 ```sh
 # Debian 13 / Ubuntu 24.04 or newer
@@ -49,24 +67,16 @@ sudo pacman -S --needed base-devel cmake git qt6-base pipewire pipewire-audio pk
 
 git clone https://github.com/brianidavide/kalipso.git
 cd kalipso
-python3 tools/install-local-engine.py --language it --download
+python3 tools/install-local-engine.py --language it
 ```
 
-Run it again with another language or engine to add it; each engine keeps its own settings. `--list-models`
-shows the catalog.
-
-| Engine | Version | Catalog languages | Platform |
-| --- | --- | --- | --- |
-| Moonshine (Tiny streaming) | 0.1.5 | en, de, es, ja, zh | Linux x86_64, glibc 2.34+ |
-| Vosk (small models) | 0.3.45 | en, de, es, ja, zh, it | Linux x86_64 |
-
-There is no Italian Moonshine model; Vosk is used for Italian. Sources, hashes and model licenses are in [the catalog](../tools/data/speech-catalog.json). Downloads are cached in `~/.cache/kalipso-downloads` (`--cache` and `--prefix` change the locations).
+It builds the companion, installs it under `~/.local` with its D-Bus service and downloads the language.
 
 ## Use it
 
-In the widget or extension: **Settings → Follow my voice**, choose **Moonshine** or **Vosk**, then **Start listening**. Pause releases the microphone and keeps your place. Stop listening before switching engine; only one frontend can listen at a time.
+In the widget or extension: **Settings → Follow my voice**, then **Start listening**. Pause releases the microphone and keeps your place. Stop listening before changing the language; only one frontend can listen at a time.
 
-If the widget says the companion is missing right after installing, log out and back in so D-Bus discovers it. To see what is happening, run `~/.local/bin/kalipso-engine --serve` in a terminal and start listening.
+To see what is happening, run `~/.local/bin/kalipso-engine --serve` (or `kalipso-engine --serve`) in a terminal and start listening.
 
 ## Your own runtime or model
 
@@ -78,6 +88,9 @@ python3 tools/install-local-engine.py --backend moonshine --language de \
   --library /path/to/moonshine_voice/libmoonshine.so \
   --model /path/to/tiny-streaming-model --architecture 2
 ```
+
+In the app, **Settings → Language you speak → Other model installed by hand…** asks for the same folder
+and library.
 
 - A Vosk model folder contains `am/final.mdl` and `conf/mfcc.conf`. Arch packages the runtime as [`vosk-api`](https://archlinux.org/packages/extra/x86_64/vosk-api/).
 - A Moonshine model is a complete *streaming* model folder (tokenizer, frontend, encoder, adapter, decoder and `streaming_config.json`); keep the ONNX Runtime library next to `libmoonshine`. Architectures: 2 Tiny, 3 Base, 4 Small, 5 Medium. Only Tiny is in the catalog and has been exercised here.
@@ -121,7 +134,6 @@ rm ~/.local/share/dbus-1/services/io.github.brianidavide.Kalipso.Engine.service
 rm -r ~/.local/share/licenses/kalipso-engine
 rm -r ~/.config/Kalipso                       # engine settings
 rm -r ~/.local/share/kalipso/runtimes ~/.local/share/kalipso/models   # downloaded speech files
-rm -r ~/.cache/kalipso-downloads              # download cache
 ```
 
 `~/.local/share/kalipso/gnome-extension.json` holds the GNOME extension's script; keep it if you want your script back later. Libraries and models you supplied yourself are not touched.

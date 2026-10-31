@@ -8,6 +8,7 @@
 #include "remote.h"
 #include "script_highlighter.h"
 #include "speech_assets.h"
+#include "speech_download.h"
 #include <QApplication>
 #include <QCheckBox>
 #include <QCloseEvent>
@@ -26,6 +27,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QProgressBar>
 #include <QRegularExpression>
 #include <QResizeEvent>
 #include <QSaveFile>
@@ -55,6 +57,26 @@ public:
 protected:
     void wheelEvent(QWheelEvent *event) override { event->ignore(); }
 };
+
+// Choosing here can start a download: keys open the list, and Enter chooses, instead of the
+// arrow keys or typing changing the choice at once.
+class ConfirmedComboBox : public SettingsComboBox {
+protected:
+    void keyPressEvent(QKeyEvent *event) override {
+        const bool browse = event->key() == Qt::Key_Up || event->key() == Qt::Key_Down ||
+                            event->key() == Qt::Key_PageUp || event->key() == Qt::Key_PageDown ||
+                            event->key() == Qt::Key_Home || event->key() == Qt::Key_End;
+        const bool typing = !event->text().trimmed().isEmpty() &&
+                            !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
+        if (browse || typing) {
+            showPopup();
+            return;
+        }
+        SettingsComboBox::keyPressEvent(event);
+    }
+};
+
+QString megabytes(qint64 bytes) { return QString::number((bytes + 524288) >> 20); }
 
 // Shows a useful width of the script title but can still shrink on narrow windows.
 class ScriptPicker : public SettingsComboBox {
@@ -408,7 +430,8 @@ MainWindow::MainWindow(const QString &libraryDirectory)
             [this] { session_.start(tracker_.position(), QDateTime::currentMSecsSinceEpoch()); });
     connect(&speech_, &SpeechService::stopped, this, [this] {
         finishSession();
-        backend_->setEnabled(true);
+        backend_->setEnabled(!download_->active());
+        voiceLanguage_->setEnabled(!download_->active());
         language_->setEnabled(true);
         checkSystem_->setEnabled(true);
         refreshRunning();
@@ -1030,6 +1053,7 @@ void MainWindow::startListening() {
         checkSystem_->setEnabled(false);
         installSystem_->setEnabled(false);
         backend_->setEnabled(false);
+        voiceLanguage_->setEnabled(false);
         language_->setEnabled(false);
     }
     refreshRunning();
@@ -1421,12 +1445,15 @@ QWidget *MainWindow::makeSpeechSettings() {
     QSettings settings;
     auto *group = new SettingsSection(tr("Speech"));
     auto *form = group->form;
+    const bool downloads = SpeechCatalog::downloadsSupported();
     backend_ = new SettingsComboBox;
     backend_->setObjectName("speechBackend");
     if (SystemSpeechClient::platformSupported())
         backend_->addItem(tr("System · on-device"), "system");
     backend_->addItem("Moonshine", "moonshine");
     backend_->addItem("Vosk", "vosk");
+    voiceLanguage_ = new ConfirmedComboBox;
+    voiceLanguage_->setObjectName("voiceLanguage");
     language_ = new SettingsComboBox;
     language_->setObjectName("speechLanguage");
     language_->setEditable(true);
@@ -1436,8 +1463,6 @@ QWidget *MainWindow::makeSpeechSettings() {
         {"Français", "fr-FR"},     {"日本語", "ja-JP"},   {"中文", "zh-CN"}};
     for (const auto &[label, code] : languages)
         language_->addItem(label, code);
-    installed_ = new SettingsComboBox;
-    installed_->setObjectName("installedSpeech");
     speechLibrary_ = new QLineEdit;
     speechLibrary_->setObjectName("speechLibrary");
     modelPath_ = new QLineEdit;
@@ -1447,8 +1472,39 @@ QWidget *MainWindow::makeSpeechSettings() {
     microphone_ = new QLineEdit(settings.value("speech/microphone").toString());
     microphone_->setPlaceholderText(tr("Default microphone"));
 
+    // The download of the chosen language: progress, what is happening, and Cancel or Try again.
+    download_ = new SpeechDownload(this);
+    auto *downloadBox = new QWidget;
+    auto *downloadLayout = new QVBoxLayout(downloadBox);
+    downloadLayout->setContentsMargins(0, 0, 0, 0);
+    downloadLayout->setSpacing(Design::Metric::space2);
+    downloadProgress_ = new QProgressBar;
+    downloadProgress_->setObjectName("speechDownloadProgress");
+    downloadProgress_->setRange(0, 1000);
+    downloadProgress_->setTextVisible(false);
+    downloadProgress_->setAccessibleName(tr("Download progress"));
+    downloadStatus_ = new StatusLabel(QString());
+    downloadStatus_->setObjectName("speechDownloadStatus");
+    downloadAction_ = new AccessibleButton(QString());
+    downloadAction_->setObjectName("speechDownloadAction");
+    auto *actionRow = new QHBoxLayout;
+    actionRow->setContentsMargins(0, 0, 0, 0);
+    actionRow->addWidget(downloadAction_);
+    actionRow->addStretch();
+    downloadLayout->addWidget(downloadProgress_);
+    downloadLayout->addWidget(downloadStatus_);
+    downloadLayout->addLayout(actionRow);
+    auto *downloadNote =
+        note(downloads ? tr("Choosing a language downloads its speech model once, from the model's publisher, and "
+                            "checks it against a fingerprint. Recognition then runs on this computer: nothing you "
+                            "say is sent.")
+                       : tr("Moonshine and Vosk need a runtime and a model installed by hand: choose Other model "
+                            "installed by hand."));
+
     form->addRow(tr("Speech engine"), backend_);
-    form->addRow(tr("Installed language model"), installed_);
+    form->addRow(tr("Language you speak"), voiceLanguage_);
+    form->addRow(downloadBox);
+    form->addRow(downloadNote);
     // Library and model paths are only needed for models installed by hand.
     customSpeech_ = new QWidget;
     auto *custom = new QFormLayout(customSpeech_);
@@ -1503,20 +1559,27 @@ QWidget *MainWindow::makeSpeechSettings() {
         QSettings().setValue("speech/countFillers", checked);
     });
     form->addRow(fillers);
-    form->addRow(note(tr("Recognition stays on this device. Moonshine and Vosk need a native runtime and a language "
-                         "model: install them with tools/install-local-engine.py and they appear above. System "
-                         "speech uses the default microphone. Kalipso never switches to a cloud service.")));
+    form->addRow(note(SystemSpeechClient::platformSupported()
+                          ? tr("Recognition stays on this computer, and Kalipso never switches to a cloud service. "
+                               "System speech uses the default microphone.")
+                          : tr("Recognition stays on this computer, and Kalipso never switches to a cloud service.")));
 
-    const auto updateFields = [this, form, systemActions] {
+    updateSpeechFields_ = [this, form, systemActions, downloadBox, downloadNote] {
         const auto backend = backend_->currentData().toString();
         const bool system = backend == QLatin1String("system");
-        const bool custom = installed_->currentData().toString().isEmpty();
-        form->setRowVisible(installed_, !system);
-        customSpeech_->setVisible(!system && custom);
+        const bool custom = voiceLanguage_->currentData().toMap().value("kind").toString() == QLatin1String("custom");
+        form->setRowVisible(backend_, SystemSpeechClient::platformSupported() || custom);
+        form->setRowVisible(voiceLanguage_, !system);
+        downloadProgress_->setVisible(download_->active());
+        downloadAction_->setVisible(!downloadAction_->text().isEmpty());
+        form->setRowVisible(downloadBox, !system && (download_->active() || !downloadStatus_->text().isEmpty()));
+        form->setRowVisible(downloadNote, !system);
+        form->setRowVisible(customSpeech_, !system && custom);
+        form->setRowVisible(language_, system || custom);
         form->setRowVisible(microphone_, !system);
         form->setRowVisible(architecture_, backend == QLatin1String("moonshine") && custom);
-        systemActions->setVisible(system);
-        systemStatus_->setVisible(system);
+        form->setRowVisible(systemActions, system);
+        form->setRowVisible(systemStatus_, system);
     };
     const auto initial = settings
                              .value("speech/backend", settings.contains("speech/model")         ? "vosk"
@@ -1526,35 +1589,123 @@ QWidget *MainWindow::makeSpeechSettings() {
     backend_->setCurrentIndex(std::max(0, backend_->findData(initial)));
     profile_ = backend_->currentData().toString();
     loadSpeechProfile();
-    refreshInstalledSpeech();
-    updateFields();
+    refreshVoiceLanguages();
+    // A new profile listens with a model installed before (from a terminal, or by the Plasma widget),
+    // in the interface language if there is one.
+    const auto installed = installedSpeech();
+    if (profile_ != QLatin1String("system") && modelPath_->text().isEmpty() && !installed.isEmpty()) {
+        const auto preferred = SpeechCatalog::installedFor(QLocale().name().left(2));
+        useInstalledSpeech(preferred.backend.isEmpty() ? installed.first() : preferred, false);
+    }
+    updateSpeechFields_();
 
-    connect(backend_, &QComboBox::currentIndexChanged, this, [this, updateFields] {
+    connect(backend_, &QComboBox::currentIndexChanged, this, [this] {
         systemCheck_.stop();
         installingSystem_ = false;
         saveSpeechProfile();
         profile_ = backend_->currentData().toString();
         loadSpeechProfile();
-        refreshInstalledSpeech();
-        updateFields();
+        refreshVoiceLanguages();
+        updateSpeechFields_();
         systemStatus_->setText(tr("Choose a language and check its availability."));
         checkSystem_->setEnabled(true);
         installSystem_->setEnabled(false);
     });
-    connect(installed_, &QComboBox::activated, this, [this, updateFields] {
-        const auto model = installed_->currentData().toString();
-        for (const auto &item : installedSpeech())
-            if (item.model == model) {
-                speechLibrary_->setText(item.library);
-                modelPath_->setText(item.model);
-                architecture_->setCurrentIndex(0); // The catalog installs Tiny streaming models.
-                if (!item.language.isEmpty()) {
-                    const QSignalBlocker block(language_);
-                    language_->setEditText(item.language);
-                }
-            }
-        saveSpeechProfile();
-        updateFields();
+    connect(voiceLanguage_, &QComboBox::activated, this, [this] {
+        const auto choice = voiceLanguage_->currentData().toMap();
+        const auto kind = choice.value("kind").toString();
+        if (kind == QLatin1String("catalog")) {
+            const auto code = choice.value("code").toString();
+            const auto found = SpeechCatalog::installedFor(code);
+            if (found.backend.isEmpty())
+                downloadLanguage(code);
+            else
+                useInstalledSpeech(found);
+        } else if (kind == QLatin1String("installed")) {
+            for (const auto &item : installedSpeech())
+                if (item.model == choice.value("model").toString())
+                    useInstalledSpeech(item, false);
+        } else if (kind == QLatin1String("custom")) {
+            downloadStatus_->clear();
+            downloadAction_->setText({});
+        }
+        updateSpeechFields_();
+    });
+    connect(download_, &SpeechDownload::progress, this, [this](qint64 received, qint64 total) {
+        downloadProgress_->setValue(total > 0 ? int(received * 1000 / total) : 0);
+        // The words keep up with the bar, at most once a second so a screen reader is not interrupted.
+        if (downloadShown_.isValid() && downloadShown_.elapsed() < 1000 && received < total)
+            return;
+        downloadShown_.start();
+        downloadStatus_->setText(
+            tr("Downloading %1: %2 of %3 MB")
+                .arg(SpeechCatalog::languageName(downloadCode_), megabytes(received), megabytes(total)));
+    });
+    connect(download_, &SpeechDownload::unpackingStarted, this, [this] {
+        downloadShown_.invalidate();
+        downloadStatus_->setText(tr("Checking and unpacking %1…").arg(SpeechCatalog::languageName(downloadCode_)));
+    });
+    const auto downloadEnded = [this] {
+        const bool focus = downloadAction_->hasFocus();
+        voiceLanguage_->setEnabled(!speech_.active());
+        backend_->setEnabled(!speech_.active());
+        if (focus)
+            voiceLanguage_->setFocus();
+    };
+    connect(download_, &SpeechDownload::finished, this, [this, downloadEnded](const InstalledSpeech &speech) {
+        downloadAction_->setText({});
+        downloadEnded();
+        useInstalledSpeech(speech);
+    });
+    connect(download_, &SpeechDownload::failed, this, [this, downloadEnded](SpeechDownload::Error error) {
+        const auto name = SpeechCatalog::languageName(downloadCode_);
+        QString message;
+        bool retry = true;
+        switch (error) {
+        case SpeechDownload::Error::Network:
+            message = tr("Couldn't download %1. Check the internet connection and try again.").arg(name);
+            break;
+        case SpeechDownload::Error::Fingerprint:
+            message = tr("The %1 download didn't match its fingerprint, so it was deleted. Try again later.").arg(name);
+            break;
+        case SpeechDownload::Error::Archive:
+            message = tr("The %1 model couldn't be unpacked. Try again later.").arg(name);
+            break;
+        case SpeechDownload::Error::Disk:
+            message =
+                tr("Couldn't save %1: there isn't enough free space, or the data folder can't be written.").arg(name);
+            break;
+        case SpeechDownload::Error::Unsupported:
+            message = tr("Kalipso downloads speech models on Linux for x86_64 computers. Choose Other model "
+                         "installed by hand.");
+            retry = false;
+            break;
+        case SpeechDownload::Error::Cancelled:
+        case SpeechDownload::Error::None:
+            message = tr("Download cancelled. Nothing was changed.");
+            retry = false;
+            break;
+        }
+        downloadStatus_->setText(message);
+        downloadAction_->setText(retry ? tr("Try again") : QString());
+        downloadEnded();
+        refreshVoiceLanguages(); // Back to the language in use.
+        updateSpeechFields_();
+        if (retry && voiceLanguage_->hasFocus())
+            downloadAction_->setFocus();
+    });
+    connect(downloadAction_, &QPushButton::clicked, this, [this] {
+        if (download_->active())
+            download_->cancel();
+        else if (!downloadCode_.isEmpty())
+            downloadLanguage(downloadCode_);
+    });
+    connect(&systemCheck_, &SystemSpeechClient::capabilities, this, [this](const QJsonObject &result) {
+        systemStatus_->setText(result.value("message").toString());
+        installSystem_->setEnabled(result.value("supported").toBool() && !result.value("installed").toBool());
+        for (const auto &locale : result.value("locales").toArray())
+            if (language_->findData(locale.toString()) < 0)
+                language_->addItem(locale.toString(), locale.toString());
     });
     connect(language_, &QComboBox::currentTextChanged, this, [this] {
         systemCheck_.stop();
@@ -1573,13 +1724,6 @@ QWidget *MainWindow::makeSpeechSettings() {
         checkSystem_->setEnabled(false);
         systemCheck_.install(speechLanguage());
     });
-    connect(&systemCheck_, &SystemSpeechClient::capabilities, this, [this](const QJsonObject &result) {
-        systemStatus_->setText(result.value("message").toString());
-        installSystem_->setEnabled(result.value("supported").toBool() && !result.value("installed").toBool());
-        for (const auto &locale : result.value("locales").toArray())
-            if (language_->findData(locale.toString()) < 0)
-                language_->addItem(locale.toString(), locale.toString());
-    });
     connect(&systemCheck_, &SystemSpeechClient::message, systemStatus_, &QLabel::setText);
     connect(&systemCheck_, &SystemSpeechClient::failed, this, [this](const QString &message) {
         installingSystem_ = false;
@@ -1596,27 +1740,78 @@ QWidget *MainWindow::makeSpeechSettings() {
     return group;
 }
 
-void MainWindow::refreshInstalledSpeech() {
-    const QSignalBlocker block(installed_);
-    installed_->clear();
-    const auto backend = backend_->currentData().toString();
-    for (const auto &item : installedSpeech())
-        if (item.backend == backend)
-            installed_->addItem(item.label(), item.model);
-    installed_->addItem(tr("Other model installed by hand…"), QString());
-    // A configured profile selects its model; a fresh profile uses the first install.
-    int index = installed_->findData(modelPath_->text());
-    if (index < 0 && modelPath_->text().isEmpty() && installed_->count() > 1) {
-        index = 0;
-        for (const auto &item : installedSpeech())
-            if (item.model == installed_->itemData(0).toString()) {
-                speechLibrary_->setText(item.library);
-                modelPath_->setText(item.model);
-                if (language_->currentText().isEmpty() || language_->currentIndex() == 0)
-                    language_->setEditText(item.language);
-            }
+void MainWindow::refreshVoiceLanguages() {
+    const QSignalBlocker block(voiceLanguage_);
+    voiceLanguage_->clear();
+    const bool downloads = SpeechCatalog::downloadsSupported();
+    const auto installed = installedSpeech();
+    const auto current = modelPath_->text();
+    // Nothing chosen yet: "Choose…" where Kalipso downloads, the hand-installed fields elsewhere.
+    int selected = current.isEmpty() && downloads ? 0 : -1;
+    voiceLanguage_->addItem(tr("Choose…"), QVariantMap{{"kind", "none"}});
+    const auto catalog = downloads ? SpeechCatalog::languages() : QStringList();
+    for (const auto &code : catalog) {
+        const auto name = SpeechCatalog::languageName(code);
+        const auto ready = SpeechCatalog::installedFor(code);
+        const auto bytes =
+            SpeechCatalog::plan(SpeechCatalog::downloadBackend(code), code, SpeechCatalog::writableRoot()).bytes();
+        voiceLanguage_->addItem(ready.backend.isEmpty() ? tr("%1 · download %2 MB").arg(name, megabytes(bytes))
+                                                        : tr("%1 · ready").arg(name),
+                                QVariantMap{{"kind", "catalog"}, {"code", code}});
+        for (const auto &item : installed)
+            if (item.model == current && item.language == code)
+                selected = voiceLanguage_->count() - 1;
     }
-    installed_->setCurrentIndex(index >= 0 ? index : installed_->count() - 1);
+    // Models installed by hand, in other languages or where Kalipso does not download.
+    for (const auto &item : installed) {
+        if (catalog.contains(item.language))
+            continue;
+        voiceLanguage_->addItem(item.label(), QVariantMap{{"kind", "installed"}, {"model", item.model}});
+        if (item.model == current)
+            selected = voiceLanguage_->count() - 1;
+    }
+    voiceLanguage_->addItem(tr("Other model installed by hand…"), QVariantMap{{"kind", "custom"}});
+    voiceLanguage_->setCurrentIndex(selected >= 0 ? selected : voiceLanguage_->count() - 1);
+}
+
+void MainWindow::useInstalledSpeech(const InstalledSpeech &speech, bool announce) {
+    if (backend_->currentData().toString() != speech.backend) {
+        saveSpeechProfile();
+        const QSignalBlocker block(backend_);
+        backend_->setCurrentIndex(backend_->findData(speech.backend));
+        profile_ = speech.backend;
+        loadSpeechProfile();
+    }
+    speechLibrary_->setText(speech.library);
+    modelPath_->setText(speech.model);
+    architecture_->setCurrentIndex(0); // The catalog installs Tiny streaming models.
+    {
+        const QSignalBlocker block(language_);
+        language_->setEditText(speech.language);
+    }
+    saveSettings();
+    refreshVoiceLanguages();
+    downloadAction_->setText({});
+    downloadStatus_->setText(announce ? tr("Ready to listen in %1. Choose Follow my voice and start the reader.")
+                                            .arg(SpeechCatalog::languageName(speech.language))
+                                      : QString());
+    if (updateSpeechFields_)
+        updateSpeechFields_();
+}
+
+void MainWindow::downloadLanguage(const QString &code) {
+    downloadCode_ = code;
+    downloadShown_.invalidate();
+    const bool focus = voiceLanguage_->hasFocus() || downloadAction_->hasFocus();
+    downloadProgress_->setValue(0);
+    downloadStatus_->setText(tr("Downloading %1…").arg(SpeechCatalog::languageName(code)));
+    downloadAction_->setText(tr("Cancel download"));
+    voiceLanguage_->setEnabled(false);
+    backend_->setEnabled(false);
+    download_->start(SpeechCatalog::downloadBackend(code), code);
+    updateSpeechFields_();
+    if (focus)
+        downloadAction_->setFocus(); // The list is disabled while downloading; Cancel takes its place.
 }
 
 QWidget *MainWindow::makeRemoteSettings() {

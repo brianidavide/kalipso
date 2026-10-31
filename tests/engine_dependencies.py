@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='kalipso-migration-test-') as directory:
     print('PASS: legacy profiles imported once without overwriting Kalipso settings')
 
 with tempfile.TemporaryDirectory(prefix='kalipso-engine-test-') as directory:
-    env = dict(os.environ, XDG_CONFIG_HOME=directory)
+    env = dict(os.environ, XDG_CONFIG_HOME=directory, XDG_DATA_HOME=directory+'/data')
     check = subprocess.run([binary, '--configure', '--backend', 'vosk', '--library', directory+'/missing.so', '--model', directory+'/missing-model'], env=env, text=True, capture_output=True)
     assert check.returncode == 1, check
     dependencies = json.loads(check.stdout)
@@ -69,8 +69,33 @@ with tempfile.TemporaryDirectory(prefix='kalipso-engine-test-') as directory:
         restored=json.loads(ast.literal_eval(call('GetDependencies'))[0])
         assert restored['model']==directory+'/missing-model'
         assert restored['library']==directory+'/missing.so'
+        # Languages: an installed model is used at once, without downloading.
+        data = Path(directory)/'data/kalipso'
+        (data/'runtimes/vosk-0.3.45/vosk').mkdir(parents=True)
+        (data/'runtimes/vosk-0.3.45/vosk/libvosk.so').write_bytes(b'')
+        model = data/'models/vosk/vosk-model-small-it-0.22'
+        for name in ['am/final.mdl', 'conf/mfcc.conf']:
+            (model/name).parent.mkdir(parents=True, exist_ok=True)
+            (model/name).write_bytes(b'x')
+        languages = json.loads(ast.literal_eval(call('GetLanguages'))[0])
+        found = {item['code']: item for item in languages['languages']}
+        assert sorted(found) == ['de', 'en', 'es', 'it', 'ja', 'zh'], found
+        assert found['it']['ready'] and found['it']['backend'] == 'vosk' and found['it']['name'] == 'Italiano'
+        assert not found['en']['ready'] and found['en']['backend'] == 'moonshine' and found['en']['bytes'] > 0
+        assert languages['install']['stage'] == 'idle' and not languages['install']['active']
+        assert call('InstallLanguage', 'it') == '(true,)'
+        chosen = json.loads(ast.literal_eval(call('GetDependencies'))[0])
+        assert chosen['backend'] == 'vosk' and chosen['model'] == str(model) and chosen['language'] == 'it', chosen
+        install = json.loads(ast.literal_eval(call('GetLanguages'))[0])['install']
+        assert install['stage'] == 'done' and install['language'] == 'it' and not install['active'], install
+        try:call('InstallLanguage', 'xx')
+        except RuntimeError as error:assert 'InvalidArgs' in str(error)
+        else:raise AssertionError('Unknown language accepted')
+        call('CancelInstall')
+        assert not json.loads(ast.literal_eval(call('GetLanguages'))[0])['install']['active']
         call('Stop')
         assert not json.loads(ast.literal_eval(call('GetState'))[0])['active']
         print('PASS: backend selection, profile isolation, invalid selection rejected, missing dependencies, no capture')
+        print('PASS: catalog languages listed with their state; an installed language is used without downloading')
     finally:
         child.terminate();child.wait(timeout=10)

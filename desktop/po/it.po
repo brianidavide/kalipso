@@ -4,15 +4,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kalipso-desktop\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 17:17+0000\n"
+"POT-Creation-Date: 2026-10-31 13:24+0000\n"
 "Language: it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Choose a speech engine to check its setup."
-msgstr "Scegli un motore vocale per verificarne la configurazione."
+msgid "Choose the language you speak."
+msgstr "Scegli la lingua in cui parli."
 
 msgid ""
 "Local speech is unavailable. Open Local speech setup to install the "
@@ -20,6 +20,12 @@ msgid ""
 msgstr ""
 "La voce locale non è disponibile. Apri Configura la voce locale per "
 "installare il companion e un modello linguistico."
+
+msgid "your language"
+msgstr "la tua lingua"
+
+msgid "Ready to listen in %1, with %2."
+msgstr "Pronto ad ascoltarti in %1, con %2."
 
 msgid "Checking local speech components"
 msgstr "Verifica dei componenti vocali locali"
@@ -52,6 +58,54 @@ msgstr "Aggiungi il copione per iniziare."
 
 msgid "Kalipso"
 msgstr "Kalipso"
+
+msgid ""
+"This Kalipso companion cannot download languages. Install or update it, then "
+"log out and back in."
+msgstr ""
+"Questo companion di Kalipso non sa scaricare le lingue. Installalo o "
+"aggiornalo, poi esci dalla sessione e rientra."
+
+msgid "Checking and unpacking %1…"
+msgstr "Controllo e scompatto %1…"
+
+msgid "Downloading %1: %2 of %3 MB"
+msgstr "Scarico %1: %2 di %3 MB"
+
+msgid "Ready to listen in %1. Choose Follow my voice and start listening."
+msgstr ""
+"Pronto ad ascoltarti in %1. Scegli Segui la mia voce e inizia ad ascoltare."
+
+msgid "Download cancelled. Nothing was changed."
+msgstr "Scaricamento annullato. Non è cambiato niente."
+
+msgid "Couldn't download %1. Check the internet connection and try again."
+msgstr ""
+"Non sono riuscito a scaricare %1. Controlla la connessione a internet e "
+"riprova."
+
+msgid ""
+"The %1 download didn't match its fingerprint, so it was deleted. Try again "
+"later."
+msgstr ""
+"Il file di %1 non corrispondeva alla sua impronta ed è stato cancellato. "
+"Riprova più tardi."
+
+msgid "The %1 model couldn't be unpacked. Try again later."
+msgstr "Non sono riuscito a scompattare il modello di %1. Riprova più tardi."
+
+msgid ""
+"Couldn't save %1: there isn't enough free space, or the data folder can't be "
+"written."
+msgstr ""
+"Non sono riuscito a salvare %1: lo spazio libero non basta, oppure la "
+"cartella dei dati non è scrivibile."
+
+msgid "%1 is downloaded. Choose it again when you stop listening."
+msgstr "%1 è scaricato. Sceglilo di nuovo quando smetti di ascoltare."
+
+msgid "Kalipso downloads speech models on Linux for x86_64 computers."
+msgstr "Kalipso scarica i modelli vocali su Linux, per i computer x86_64."
 
 msgid "Start listening"
 msgstr "Inizia ad ascoltare"
@@ -158,8 +212,30 @@ msgstr "Velocità costante"
 msgid "Follow my voice"
 msgstr "Segui la mia voce"
 
-msgid "Speech engine"
-msgstr "Motore vocale"
+msgid "Language you speak"
+msgstr "Lingua in cui parli"
+
+msgid "%1 · download %2 MB"
+msgstr "%1 · da scaricare, %2 MB"
+
+msgid "Download progress"
+msgstr "Avanzamento dello scaricamento"
+
+msgid "Cancel download"
+msgstr "Annulla lo scaricamento"
+
+msgid "Try again"
+msgstr "Riprova"
+
+msgid ""
+"Choosing a language downloads its speech model once, from the model's "
+"publisher, and checks it against a fingerprint. Recognition then runs on "
+"this computer: nothing you say is sent."
+msgstr ""
+"Quando scegli una lingua, Kalipso ne scarica il modello vocale una volta "
+"sola, dal sito di chi lo pubblica, e lo confronta con la sua impronta. Poi "
+"il riconoscimento avviene su questo computer: niente di quello che dici "
+"viene inviato."
 
 msgid "Reader colors"
 msgstr "Colori del lettore"
@@ -315,15 +391,59 @@ msgstr ""
 "installare un companion e un modello linguistico."
 
 #, javascript-format
-msgid "%s · %s · Ready"
-msgstr "%s · %s · Pronto"
+msgid "Ready to listen in %s, with %s."
+msgstr "Pronto ad ascoltarti in %s, con %s."
 
-msgid "configured language"
-msgstr "lingua configurata"
+#, javascript-format
+msgid "Checking and unpacking %s…"
+msgstr "Controllo e scompatto %s…"
+
+#, javascript-format
+msgid "Downloading %s: %d of %d MB"
+msgstr "Scarico %s: %d di %d MB"
+
+#, javascript-format
+msgid "Ready to listen in %s. Choose Follow my voice and start listening."
+msgstr ""
+"Pronto ad ascoltarti in %s. Scegli Segui la mia voce e inizia ad ascoltare."
+
+#, javascript-format
+msgid "Couldn't download %s. Check the internet connection and try again."
+msgstr ""
+"Non sono riuscito a scaricare %s. Controlla la connessione a internet e "
+"riprova."
+
+#, javascript-format
+msgid ""
+"The %s download didn't match its fingerprint, so it was deleted. Try again "
+"later."
+msgstr ""
+"Il file di %s non corrispondeva alla sua impronta ed è stato cancellato. "
+"Riprova più tardi."
+
+#, javascript-format
+msgid "The %s model couldn't be unpacked. Try again later."
+msgstr "Non sono riuscito a scompattare il modello di %s. Riprova più tardi."
+
+#, javascript-format
+msgid ""
+"Couldn't save %s: there isn't enough free space, or the data folder can't be "
+"written."
+msgstr ""
+"Non sono riuscito a salvare %s: lo spazio libero non basta, oppure la "
+"cartella dei dati non è scrivibile."
+
+#, javascript-format
+msgid "%s is downloaded. Choose it again when you stop listening."
+msgstr "%s è scaricato. Sceglilo di nuovo quando smetti di ascoltare."
 
 #, javascript-format
 msgid "%d words/min"
 msgstr "%d parole/min"
+
+#, javascript-format
+msgid "%s · download %d MB"
+msgstr "%s · da scaricare, %d MB"
 
 #, javascript-format
 msgid "Local speech unavailable. %s See docs/local-engine.md."

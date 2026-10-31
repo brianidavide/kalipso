@@ -40,7 +40,8 @@ metadata, the Plasma widget, the GNOME extension and the KWin script); CI fails 
 - Linux: a `.deb` (Debian 13, Ubuntu 24.04 or newer) and a `.tar.gz`, both with the voice companion and
   `kalipso-voice-setup`.
 - `kalipso-companion-vX.Y-linux-x86_64.tar.gz`: the companion alone, for people who use only the Plasma
-  widget or the GNOME extension; `./install --language it` sets up voice following under `~/.local`.
+  widget or the GNOME extension; `./install` puts it under `~/.local`, and the language is then chosen in
+  the widget's or extension's Settings.
 - Windows x64: a portable `.zip` with the app and its Qt libraries.
 - macOS Apple Silicon: the app bundle in a `.tar.gz`, signed ad hoc only.
 - The Plasma widget (`.plasmoid`), the GNOME Shell extension (`.zip`) and the KWin script.

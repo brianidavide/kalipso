@@ -33,6 +33,17 @@ if(APPLE OR WIN32)
   target_compile_definitions(kalipso_speech PUBLIC KALIPSO_QT_AUDIO=1)
 endif()
 
+# --- Speech model downloads: the built-in catalog, fingerprint-checked -----------
+add_library(kalipso_vendor STATIC third_party/puff/puff.c third_party/qrcodegen/qrcodegen.cpp)
+add_library(kalipso_downloads STATIC src/speech_download.cpp)
+target_link_libraries(kalipso_downloads PUBLIC kalipso_speech Qt6::Network PRIVATE kalipso_vendor)
+target_compile_options(kalipso_downloads PRIVATE ${KALIPSO_WARNINGS})
+qt_add_resources(kalipso_downloads "speech_catalog" PREFIX "/speech" BASE ${CMAKE_CURRENT_SOURCE_DIR}/tools/data
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/tools/data/speech-catalog.json)
+file(GLOB_RECURSE KALIPSO_NATIVE_NOTICES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/native-notices/*/*)
+qt_add_resources(kalipso_downloads "speech_notices" PREFIX "/speech/notices"
+  BASE ${CMAKE_CURRENT_SOURCE_DIR}/third_party/native-notices FILES ${KALIPSO_NATIVE_NOTICES})
+
 # --- Linux companion for the Plasma widget and GNOME extension ------------------
 if(UNIX AND NOT APPLE)
   find_package(Qt6 REQUIRED COMPONENTS DBus Gui)
@@ -44,7 +55,7 @@ if(UNIX AND NOT APPLE)
   target_compile_definitions(kalipso_colors PUBLIC KALIPSO_PORTAL_COLORS=1)
 
   add_executable(kalipso-engine src/engine/main.cpp)
-  target_link_libraries(kalipso-engine PRIVATE kalipso_speech kalipso_colors Qt6::DBus)
+  target_link_libraries(kalipso-engine PRIVATE kalipso_downloads kalipso_colors Qt6::DBus)
   target_compile_options(kalipso-engine PRIVATE ${KALIPSO_WARNINGS})
   install(TARGETS kalipso-engine RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Engine)
   configure_file(packaging/io.github.brianidavide.Kalipso.Engine.service.in
@@ -52,22 +63,16 @@ if(UNIX AND NOT APPLE)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/io.github.brianidavide.Kalipso.Engine.service
     DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/services COMPONENT Engine)
   install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/kalipso-engine COMPONENT Engine)
-  # kalipso-voice-setup: downloads one speech runtime and language model for the installed companion.
-  set(KALIPSO_SETUP_DIR ${CMAKE_INSTALL_DATADIR}/kalipso/setup)
-  install(FILES tools/install-local-engine.py tools/speech_assets.py DESTINATION ${KALIPSO_SETUP_DIR}/tools COMPONENT Engine)
-  install(FILES tools/data/speech-catalog.json DESTINATION ${KALIPSO_SETUP_DIR}/tools/data COMPONENT Engine)
-  install(DIRECTORY third_party/native-notices DESTINATION ${KALIPSO_SETUP_DIR}/third_party COMPONENT Engine)
-  configure_file(packaging/kalipso-voice-setup.in kalipso-voice-setup @ONLY)
-  install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/kalipso-voice-setup DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Engine)
+  # kalipso-voice-setup: downloads one language from a terminal, as Settings does.
+  install(PROGRAMS packaging/kalipso-voice-setup DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Engine)
 endif()
 
 # --- Standalone application -----------------------------------------------------
-add_library(kalipso_vendor STATIC third_party/puff/puff.c third_party/qrcodegen/qrcodegen.cpp)
 add_library(kalipso_app STATIC
   src/window.cpp src/reader.cpp src/backdrop.cpp src/library.cpp src/import.cpp src/remote.cpp
   src/script_highlighter.cpp src/session_stats.cpp src/impress.cpp src/icons.cpp src/motion.cpp
   src/platform/capture_exclusion.cpp)
-target_link_libraries(kalipso_app PUBLIC kalipso_speech Qt6::Widgets Qt6::Network Qt6::Svg PRIVATE kalipso_vendor)
+target_link_libraries(kalipso_app PUBLIC kalipso_downloads Qt6::Widgets Qt6::Network Qt6::Svg PRIVATE kalipso_vendor)
 file(GLOB KALIPSO_ICONS CONFIGURE_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/*.svg ${CMAKE_CURRENT_SOURCE_DIR}/src/icons/generated/*.svg)
 qt_add_resources(kalipso_app "icons" PREFIX "/icons" BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/icons FILES ${KALIPSO_ICONS})
@@ -148,6 +153,10 @@ if(BUILD_TESTING)
 
   add_library(fake_moonshine SHARED tests/fake_moonshine.cpp)
   set_target_properties(fake_moonshine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  add_executable(download_tests tests/download_tests.cpp)
+  target_link_libraries(download_tests PRIVATE kalipso_downloads Qt6::Test)
+  add_test(NAME downloads COMMAND download_tests)
+
   add_executable(speech_tests tests/speech_tests.cpp)
   target_link_libraries(speech_tests PRIVATE kalipso_speech Qt6::Test)
   target_compile_definitions(speech_tests PRIVATE FAKE_MOONSHINE_LIBRARY="$<TARGET_FILE:fake_moonshine>")
@@ -198,7 +207,6 @@ if(BUILD_TESTING)
   target_link_libraries(tracker_benchmark PRIVATE prompter_core)
 
   if(Python3_Interpreter_FOUND)
-    add_test(NAME speech_assets COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/speech_assets_test.py)
     add_test(NAME package_translations COMMAND ${Python3_EXECUTABLE}
                                                ${CMAKE_CURRENT_SOURCE_DIR}/tests/package_translations_test.py)
     add_test(NAME version_scheme COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/version_test.py)
