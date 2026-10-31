@@ -405,10 +405,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Medio</translation>
     </message>
     <message>
-        <source>Default microphone</source>
-        <translation>Microfono predefinito</translation>
-    </message>
-    <message>
         <source>Speech engine</source>
         <translation>Motore vocale</translation>
     </message>
@@ -890,6 +886,105 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <source>Choose the language you speak in Settings: Kalipso downloads it once.</source>
         <translation>Scegli nelle Impostazioni la lingua in cui parli: Kalipso la scarica una volta sola.</translation>
     </message>
+    <message>
+        <source>Test microphone</source>
+        <translation>Prova il microfono</translation>
+    </message>
+    <message>
+        <source>Microphone level</source>
+        <translation>Livello del microfono</translation>
+    </message>
+    <message>
+        <source>Speak: the bar moves when Kalipso hears you through %1.</source>
+        <translation>Parla: la barra si muove quando Kalipso ti sente tramite %1.</translation>
+    </message>
+    <message>
+        <source>Kalipso hears you through %1.</source>
+        <translation>Kalipso ti sente tramite %1.</translation>
+    </message>
+    <message>
+        <source>No sound from %1. Check that it is not muted in the system sound settings, or choose another microphone.</source>
+        <translation>Nessun suono da %1. Controlla che non sia muto nelle impostazioni audio del sistema, o scegli un altro microfono.</translation>
+    </message>
+    <message>
+        <source>System microphone</source>
+        <translation>Microfono di sistema</translation>
+    </message>
+    <message>
+        <source>System microphone · %1</source>
+        <translation>Microfono di sistema · %1</translation>
+    </message>
+    <message>
+        <source>No microphone found</source>
+        <translation>Nessun microfono trovato</translation>
+    </message>
+    <message>
+        <source>%1 · not connected</source>
+        <translation>%1 · non collegato</translation>
+    </message>
+    <message>
+        <source>Stop the test</source>
+        <translation>Ferma la prova</translation>
+    </message>
+    <message>
+        <source>Opening the microphone…</source>
+        <translation>Apertura del microfono…</translation>
+    </message>
+    <message>
+        <source>Test over: Kalipso heard you through %1.</source>
+        <translation>Prova finita: Kalipso ti ha sentito tramite %1.</translation>
+    </message>
+    <message>
+        <source>Test over: Kalipso did not hear a voice through %1. Raise its volume in the system sound settings, or choose another microphone.</source>
+        <translation>Prova finita: Kalipso non ha sentito nessuna voce tramite %1. Alza il suo volume nelle impostazioni audio del sistema, o scegli un altro microfono.</translation>
+    </message>
+    <message>
+        <source>The test shows whether Kalipso hears you. Nothing is recorded or sent.</source>
+        <translation>La prova mostra se Kalipso ti sente. Niente viene registrato né inviato.</translation>
+    </message>
+</context>
+<context>
+    <name>MicrophoneCapture</name>
+    <message>
+        <source>Install pipewire-audio (Arch) or pipewire-bin (Debian) to enable audio capture.</source>
+        <translation>Installa pipewire-audio (Arch) o pipewire-bin (Debian) per abilitare la cattura audio.</translation>
+    </message>
+    <message>
+        <source>the system microphone</source>
+        <translation>il microfono di sistema</translation>
+    </message>
+    <message>
+        <source>Kalipso finds no microphone. Connect one, or turn it on in the system sound settings.</source>
+        <translation>Kalipso non trova nessun microfono. Collegane uno, o attivalo nelle impostazioni audio del sistema.</translation>
+    </message>
+    <message>
+        <source>The microphone chosen in Settings is not connected. Connect it, or choose another one.</source>
+        <translation>Il microfono scelto nelle Impostazioni non è collegato. Collegalo, o scegline un altro.</translation>
+    </message>
+    <message>
+        <source>Unsupported microphone sample format.</source>
+        <translation>Formato audio del microfono non supportato.</translation>
+    </message>
+    <message>
+        <source>Microphone capture failed. Check device permissions.</source>
+        <translation>Cattura dal microfono non riuscita. Controlla i permessi del dispositivo.</translation>
+    </message>
+    <message>
+        <source>Cannot start the microphone.</source>
+        <translation>Impossibile avviare il microfono.</translation>
+    </message>
+    <message>
+        <source>Audio capture could not start. Check that PipeWire is installed and running.</source>
+        <translation>La cattura audio non è partita. Controlla che PipeWire sia installato e attivo.</translation>
+    </message>
+    <message>
+        <source>Audio capture from %1 stopped. Start listening again; if it stops again, check the microphone in the system sound settings.</source>
+        <translation>La cattura audio da %1 si è fermata. Riavvia l'ascolto; se si ferma di nuovo, controlla il microfono nelle impostazioni audio del sistema.</translation>
+    </message>
+    <message>
+        <source>Audio capture from %1 stopped: %2</source>
+        <translation>La cattura audio da %1 si è fermata: %2</translation>
+    </message>
 </context>
 <context>
     <name>PortalColors</name>
@@ -1253,10 +1348,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Motore vocale non supportato.</translation>
     </message>
     <message>
-        <source>Install pipewire-audio (Arch) or pipewire-bin (Debian) to enable audio capture.</source>
-        <translation>Installa pipewire-audio (Arch) o pipewire-bin (Debian) per abilitare la cattura audio.</translation>
-    </message>
-    <message>
         <source>Choose an extracted speech model folder in Settings.</source>
         <translation>Scegli nelle Impostazioni la cartella estratta di un modello vocale.</translation>
     </message>
@@ -1281,40 +1372,20 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>In ascolto · microfono · su questo dispositivo</translation>
     </message>
     <message>
-        <source>The selected microphone is unavailable.</source>
-        <translation>Il microfono scelto non è disponibile.</translation>
-    </message>
-    <message>
-        <source>No microphone is available.</source>
-        <translation>Nessun microfono disponibile.</translation>
-    </message>
-    <message>
-        <source>Unsupported microphone sample format.</source>
-        <translation>Formato audio del microfono non supportato.</translation>
-    </message>
-    <message>
-        <source>Microphone capture failed. Check device permissions.</source>
-        <translation>Cattura dal microfono non riuscita. Controlla i permessi del dispositivo.</translation>
-    </message>
-    <message>
-        <source>Cannot start the microphone.</source>
-        <translation>Impossibile avviare il microfono.</translation>
-    </message>
-    <message>
-        <source>Audio capture failed. Check PipeWire and the selected microphone.</source>
-        <translation>Cattura audio non riuscita. Controlla PipeWire e il microfono scelto.</translation>
-    </message>
-    <message>
-        <source>Audio capture ended. Check PipeWire and restart listening.</source>
-        <translation>Cattura audio terminata. Controlla PipeWire e riavvia l'ascolto.</translation>
-    </message>
-    <message>
         <source>Recognition cannot keep up on this computer. Listening stopped; try a smaller model.</source>
         <translation>Il riconoscimento non riesce a stare al passo su questo computer. Ascolto interrotto; prova un modello più piccolo.</translation>
     </message>
     <message>
         <source>Catching up: a moment of audio was skipped. Following continues.</source>
         <translation>Recupero: un istante di audio è stato saltato. Kalipso continua a seguirti.</translation>
+    </message>
+    <message>
+        <source>No sound from %1. If you are speaking, check that it is not muted in the system sound settings.</source>
+        <translation>Nessun suono da %1. Se stai parlando, controlla che non sia muto nelle impostazioni audio del sistema.</translation>
+    </message>
+    <message>
+        <source>Listening · %1 · on this device</source>
+        <translation>In ascolto · %1 · su questo dispositivo</translation>
     </message>
 </context>
 <context>

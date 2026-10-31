@@ -13,7 +13,8 @@ On each system you test (Linux, Windows, macOS):
 3. Allow the permission (system settings), start again and read a few lines. The current word should follow you; the `[cue]` should be skipped.
 4. Pause and resume five times in a row. Each pause should stop the microphone; the system's microphone indicator should turn off.
 5. While listening: hide the reader (Escape), minimize it, and quit Kalipso. Each one should turn the microphone off. Showing the reader again must not resume listening.
-6. Unplug a USB microphone or headset while listening. Kalipso should report the problem and stop, not freeze.
+6. In **Settings → Speech → Microphone**, every microphone of the system should be listed, the first entry naming the system's one. **Test microphone**: the bar should move when you speak and the note should say that Kalipso hears you; mute the microphone in the system and the note should say that no sound arrives.
+7. Unplug a USB microphone or headset while listening. With that microphone chosen in Settings, the reader should say that no sound arrives from it, by name, and must not freeze or switch to another microphone. With **System microphone**, listening should continue with the system's new microphone.
 
 ## Leaving the reader out of screen sharing (#32)
 

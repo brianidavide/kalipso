@@ -86,6 +86,8 @@ public:
     void setMode(ReadingMode mode);
     void setRunning(bool running, const QString &status);
     void setStatus(const QString &status);
+    // Shows the controls and the status, which hide while reading, until the reader is idle again.
+    void revealControls();
     void setSpeed(int wordsPerMinute);
     void setSections(const QVector<Section> &sections);
     void setCaptureExcluded(bool excluded);
@@ -132,7 +134,6 @@ private:
     void applyPalette(const Design::Palette &palette);
     void saveGeometry();
     void updatePrimary();
-    void revealControls();
     void setControlsVisible(bool visible);
     void trigger(ReaderAction action);
 
