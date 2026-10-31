@@ -17,14 +17,11 @@ export class LocalEngine {
         const dependencies=JSON.parse(await this.call('GetDependencies'));
         return {...choices,dependencies};
     }
-    async select(backend) {
-        if(this.closed||this.pending||this.owned)return null;
-        this.pending=true;
-        try {
-            if(!await this.call('SelectBackend',true,new GLib.Variant('(s)',[backend])))throw Error('The speech engine was not changed.');
-            return await this.settings();
-        } finally {this.pending=false;}
-    }
+    // The catalog languages and the download in progress (see GetLanguages in the companion).
+    async languages() {return JSON.parse(await this.call('GetLanguages'));}
+    // Listens in this language from now on, downloading its model first if needed.
+    async install(code) {return await this.call('InstallLanguage',true,new GLib.Variant('(s)',[code]));}
+    async cancelInstall() {await this.call('CancelInstall',false);}
     async start() {
         if(this.closed||this.pending||this.owned)return;
         this.pending=true;this.cancelled=false;

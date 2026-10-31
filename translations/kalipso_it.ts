@@ -413,10 +413,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
         <translation>Motore vocale</translation>
     </message>
     <message>
-        <source>Installed language model</source>
-        <translation>Modello linguistico installato</translation>
-    </message>
-    <message>
         <source>Native library</source>
         <translation>Libreria nativa</translation>
     </message>
@@ -455,10 +451,6 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Microphone</source>
         <translation>Microfono</translation>
-    </message>
-    <message>
-        <source>Recognition stays on this device. Moonshine and Vosk need a native runtime and a language model: install them with tools/install-local-engine.py and they appear above. System speech uses the default microphone. Kalipso never switches to a cloud service.</source>
-        <translation>Il riconoscimento resta su questo dispositivo. Moonshine e Vosk richiedono un runtime nativo e un modello linguistico: installali con tools/install-local-engine.py e compariranno qui sopra. La voce di sistema usa il microfono predefinito. Kalipso non passa mai a un servizio cloud.</translation>
     </message>
     <message>
         <source>Choose a language and check its availability.</source>
@@ -813,6 +805,86 @@ Possiamo procedere un passo alla volta. [Pausa] Ascoltiamo con attenzione, verif
     <message>
         <source>Close</source>
         <translation>Chiudi</translation>
+    </message>
+    <message>
+        <source>Download progress</source>
+        <translation>Avanzamento dello scaricamento</translation>
+    </message>
+    <message>
+        <source>Choosing a language downloads its speech model once, from the model's publisher, and checks it against a fingerprint. Recognition then runs on this computer: nothing you say is sent.</source>
+        <translation>Quando scegli una lingua, Kalipso ne scarica il modello vocale una volta sola, dal sito di chi lo pubblica, e lo confronta con la sua impronta. Poi il riconoscimento avviene su questo computer: niente di quello che dici viene inviato.</translation>
+    </message>
+    <message>
+        <source>Moonshine and Vosk need a runtime and a model installed by hand: choose Other model installed by hand.</source>
+        <translation>Moonshine e Vosk richiedono un runtime e un modello installati a mano: scegli Altro modello installato a mano.</translation>
+    </message>
+    <message>
+        <source>Language you speak</source>
+        <translation>Lingua in cui parli</translation>
+    </message>
+    <message>
+        <source>Recognition stays on this computer, and Kalipso never switches to a cloud service. System speech uses the default microphone.</source>
+        <translation>Il riconoscimento resta su questo computer e Kalipso non passa mai a un servizio cloud. La voce di sistema usa il microfono predefinito.</translation>
+    </message>
+    <message>
+        <source>Recognition stays on this computer, and Kalipso never switches to a cloud service.</source>
+        <translation>Il riconoscimento resta su questo computer e Kalipso non passa mai a un servizio cloud.</translation>
+    </message>
+    <message>
+        <source>Downloading %1: %2 of %3 MB</source>
+        <translation>Scarico %1: %2 di %3 MB</translation>
+    </message>
+    <message>
+        <source>Checking and unpacking %1…</source>
+        <translation>Controllo e scompatto %1…</translation>
+    </message>
+    <message>
+        <source>Couldn't download %1. Check the internet connection and try again.</source>
+        <translation>Non sono riuscito a scaricare %1. Controlla la connessione a internet e riprova.</translation>
+    </message>
+    <message>
+        <source>The %1 download didn't match its fingerprint, so it was deleted. Try again later.</source>
+        <translation>Il file di %1 non corrispondeva alla sua impronta ed è stato cancellato. Riprova più tardi.</translation>
+    </message>
+    <message>
+        <source>The %1 model couldn't be unpacked. Try again later.</source>
+        <translation>Non sono riuscito a scompattare il modello di %1. Riprova più tardi.</translation>
+    </message>
+    <message>
+        <source>Couldn't save %1: there isn't enough free space, or the data folder can't be written.</source>
+        <translation>Non sono riuscito a salvare %1: lo spazio libero non basta, oppure la cartella dei dati non è scrivibile.</translation>
+    </message>
+    <message>
+        <source>Kalipso downloads speech models on Linux for x86_64 computers. Choose Other model installed by hand.</source>
+        <translation>Kalipso scarica i modelli vocali su Linux, per i computer x86_64. Scegli Altro modello installato a mano.</translation>
+    </message>
+    <message>
+        <source>Download cancelled. Nothing was changed.</source>
+        <translation>Scaricamento annullato. Non è cambiato niente.</translation>
+    </message>
+    <message>
+        <source>Try again</source>
+        <translation>Riprova</translation>
+    </message>
+    <message>
+        <source>%1 · download %2 MB</source>
+        <translation>%1 · da scaricare, %2 MB</translation>
+    </message>
+    <message>
+        <source>%1 · ready</source>
+        <translation>%1 · pronto</translation>
+    </message>
+    <message>
+        <source>Downloading %1…</source>
+        <translation>Scarico %1…</translation>
+    </message>
+    <message>
+        <source>Cancel download</source>
+        <translation>Annulla lo scaricamento</translation>
+    </message>
+    <message>
+        <source>Ready to listen in %1. Choose Follow my voice and start the reader.</source>
+        <translation>Pronto ad ascoltarti in %1. Scegli Segui la mia voce e avvia il lettore.</translation>
     </message>
 </context>
 <context>

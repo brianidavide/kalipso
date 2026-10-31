@@ -5,8 +5,10 @@
 #include "session_stats.h"
 #include "speech.h"
 #include "tracker.h"
+#include <QElapsedTimer>
 #include <QMainWindow>
 #include <QTimer>
+#include <functional>
 
 class QAbstractButton;
 class QCheckBox;
@@ -14,8 +16,11 @@ class QDialog;
 class QComboBox;
 class QLineEdit;
 class QPlainTextEdit;
+class QProgressBar;
 class QSpinBox;
 class RemoteControl;
+class SpeechDownload;
+struct InstalledSpeech;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -77,7 +82,10 @@ private:
     QWidget *makeKeySettings();
     void applyTheme();
     void refreshScreens();
-    void refreshInstalledSpeech();
+    void refreshVoiceLanguages();
+    // Listens with this model from now on; announce says so under the language list.
+    void useInstalledSpeech(const InstalledSpeech &speech, bool announce = true);
+    void downloadLanguage(const QString &code);
     void loadSpeechProfile();
     void saveSpeechProfile();
     void saveSettings();
@@ -120,8 +128,15 @@ private:
     StatusLabel *audioStatus_;
     QLabel *position_;
 
-    QComboBox *screen_, *installed_, *backend_, *language_, *architecture_;
+    QComboBox *screen_, *voiceLanguage_, *backend_, *language_, *architecture_;
     QWidget *customSpeech_;
+    SpeechDownload *download_;
+    QProgressBar *downloadProgress_;
+    StatusLabel *downloadStatus_;
+    QPushButton *downloadAction_;
+    QString downloadCode_;
+    QElapsedTimer downloadShown_;
+    std::function<void()> updateSpeechFields_;
     QLineEdit *speechLibrary_, *modelPath_, *microphone_;
     QLabel *systemStatus_;
     QPushButton *checkSystem_, *installSystem_;

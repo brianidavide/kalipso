@@ -1,0 +1,5 @@
+#!/bin/sh
+# Downloads the speech model for one language, as Kalipso's Settings do. Example: kalipso-voice-setup --language it
+# --list-models shows the languages; --backend moonshine|vosk picks the engine. The companion is installed
+# next to this script.
+exec "$(dirname -- "$(readlink -f -- "$0")")/kalipso-engine" --download "$@"

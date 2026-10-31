@@ -84,9 +84,10 @@ Then enable **Kalipso companion** in System Settings → Window Management → K
 
 ## Speech
 
-**Settings → Speech** chooses the engine:
+**Settings → Speech**:
 
-- **Moonshine** or **Vosk**: install a runtime and a language model with the [local speech installer](local-engine.md); installed models then appear under **Installed language model**. Models installed by hand can be chosen with **Other model installed by hand…**.
+- On Linux, **Language you speak** lists the languages Kalipso can recognise, each marked *ready* or with the size of its download. Choosing one that is not ready downloads its speech model once, with **Cancel download** while it runs; Kalipso picks the engine (Moonshine where it has the language, Vosk otherwise). Arrow keys and typing open the list rather than choosing at once, so nothing downloads by accident. See [voice following on Linux](local-engine.md).
+- **Other model installed by hand…** takes a Moonshine or Vosk model folder and library you installed yourself.
 - **System · on-device** (macOS and Windows): the operating system's recognizer. See [macOS and Windows builds](system-speech.md).
 
 Listening only starts when you press **Start listening**, and stops when you pause, hide the reader or close Kalipso.

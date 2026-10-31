@@ -5,6 +5,7 @@
     "platform": "Linux x86_64, glibc >= 2.34",
     "url": "https://files.pythonhosted.org/packages/a9/9d/228f738b48e0e7cc1de97c3f842b5470c6a3c5f7a0bffbf13c3d00eefb87/moonshine_voice-0.1.5-py3-none-manylinux_2_34_x86_64.whl",
     "sha256": "1ed9e0ccf94be4845d69e7fa862dcf4c8b5801a758796966494c694f48184496",
+    "bytes": 19897307,
     "library": "moonshine_voice/libmoonshine.so",
     "nativeFiles": [
       "moonshine_voice/libmoonshine.so",
@@ -259,6 +260,7 @@
     "platform": "Linux x86_64, glibc >= 2.12",
     "url": "https://files.pythonhosted.org/packages/fc/ca/83398cfcd557360a3d7b2d732aee1c5f6999f68618d1645f38d53e14c9ff/vosk-0.3.45-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
     "sha256": "25e025093c4399d7278f543568ed8cc5460ac3a4bf48c23673ace1e25d26619f",
+    "bytes": 7173758,
     "library": "vosk/libvosk.so",
     "nativeFiles": [
       "vosk/libvosk.so"
@@ -268,36 +270,42 @@
         "name": "vosk-model-small-en-us-0.15",
         "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
         "sha256": "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498",
+        "bytes": 41205931,
         "license": "Apache-2.0"
       },
       "de": {
         "name": "vosk-model-small-de-0.15",
         "url": "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip",
         "sha256": "b7e53c90b1f0a38456f4cd62b366ecd58803cd97cd42b06438e2c131713d5e43",
+        "bytes": 46499967,
         "license": "Apache-2.0"
       },
       "es": {
         "name": "vosk-model-small-es-0.42",
         "url": "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip",
         "sha256": "09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f",
+        "bytes": 39817833,
         "license": "Apache-2.0"
       },
       "ja": {
         "name": "vosk-model-small-ja-0.22",
         "url": "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip",
         "sha256": "efa092d280153a77615e9e0c7d7283e93e600de3d19d3bec686c57ef19d52eac",
+        "bytes": 49704573,
         "license": "Apache-2.0"
       },
       "zh": {
         "name": "vosk-model-small-cn-0.22",
         "url": "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip",
         "sha256": "3af8b0e7e0f835ae9d414ce5df580237a3cfb08d586c9fbbb0f7ff29ad5b14ba",
+        "bytes": 43898754,
         "license": "Apache-2.0"
       },
       "it": {
         "name": "vosk-model-small-it-0.22",
         "url": "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip",
         "sha256": "9ec65e75861d1c6c2e457cccd932705340dcdf233f5b239f00733b4de0bf3267",
+        "bytes": 49665141,
         "license": "Apache-2.0"
       }
     }

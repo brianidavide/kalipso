@@ -132,7 +132,14 @@ export default class Kalipso extends Extension {
         this._countdownLeft = 0;
         this._countdownTimer = 0;
         this._pane = '';
-        this._status = _('Choose a speech engine to check its setup.');
+        this._status = _('Choose the language you speak.');
+        this._languages = [];
+        this._languageCodes = '';
+        this._install = {};
+        this._language = '';
+        this._downloads = true;
+        this._languagesUnavailable = false;
+        this._languagePoll = 0;
         this._speechState = 'idle';
         this._lastSequence = -1;
         this._backend = 'moonshine';
@@ -170,6 +177,7 @@ export default class Kalipso extends Extension {
     disable() {
         this.stopSteady();
         this.stopColorSampling();
+        this.stopLanguagePoll();
         this.state?.flush();
         this.state = null;
         this.local?.destroy();
@@ -275,8 +283,9 @@ export default class Kalipso extends Extension {
             this.button(_('Hide'), () => this.hide(), 'quiet', 'window-close-symbolic')])
             header.add_child(child);
 
-        this.progress = new St.Widget({style_class: 'tp-progress', x_expand: true, layout_manager: new Clutter.BinLayout()});
-        this.progressFill = new St.Widget({style_class: 'tp-progress-fill', x_expand: false, x_align: Clutter.ActorAlign.START});
+        // The filled part is the first child of a row, so it grows from the start of the line.
+        this.progress = new St.BoxLayout({style_class: 'tp-progress', x_expand: true});
+        this.progressFill = new St.Widget({style_class: 'tp-progress-fill'});
         this.progress.add_child(this.progressFill);
         this.reader = new Clutter.Text({font_name: `Sans ${N.readerSize}`, line_wrap: true, ellipsize: 0,
             y_align: Clutter.ActorAlign.START, x_align: Clutter.ActorAlign.START});
@@ -362,17 +371,26 @@ export default class Kalipso extends Extension {
             modeRow.add_child(button);
         this.settingsPane.add_child(modeRow);
 
-        this.settingsPane.add_child(this._group(_('Speech engine')));
-        const engineRow = this._row();
-        this.engineButtons = [];
-        for (const id of ['moonshine', 'vosk']) { // Product names, not translated.
-            const button = this.button(id === 'moonshine' ? 'Moonshine' : 'Vosk', () => this.chooseEngine(id));
-            this.engineButtons.push([id, button]);
-            engineRow.add_child(button);
-        }
-        this.settingsPane.add_child(engineRow);
+        this.settingsPane.add_child(this._group(_('Language you speak')));
+        // One button per language of the companion's catalog, three to a row; rows stack when narrow.
+        this.languageBox = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, x_expand: true,
+            style: `spacing:${T.space[2]};`});
+        this.languageRows = [];
+        this.languageButtons = [];
+        this.settingsPane.add_child(this.languageBox);
+        // The filled part is the first child of a row, so it grows from the start of the line.
+        this.languageProgress = new St.BoxLayout({style_class: 'tp-progress', x_expand: true, visible: false});
+        this.languageProgressFill = new St.Widget({style_class: 'tp-progress-fill'});
+        this.languageProgress.add_child(this.languageProgressFill);
+        this.settingsPane.add_child(this.languageProgress);
         this.details = this._note('');
         this.settingsPane.add_child(this.details);
+        const languageActions = this._row();
+        this.languageAction = this.button(_('Cancel download'), () => this.languageActionClicked());
+        languageActions.add_child(this.languageAction);
+        this.settingsPane.add_child(languageActions);
+        this.languageNote = this._note(_("Choosing a language downloads its speech model once, from the model's publisher, and checks it against a fingerprint. Recognition then runs on this computer: nothing you say is sent."));
+        this.settingsPane.add_child(this.languageNote);
 
         this.settingsPane.add_child(this._group(_('Reading size')));
         const sizeRow = this._row();
@@ -450,7 +468,7 @@ export default class Kalipso extends Extension {
             '<method name="SetAppearance"><arg type="s" direction="in"/></method>' +
             '<method name="Start"/><method name="Stop"/></interface></node>';
         const controls = () => [this.primary, this.previous, this.reset, this.editButton, this.settingsButton,
-            ...this.engineButtons.map(item => item[1]), ...this.modeButtons.map(item => item[2])];
+            ...this.languageButtons.map(item => item[2]), ...this.modeButtons.map(item => item[2])];
         this.testApi = Gio.DBusExportedObject.wrapJSObject(xml, {
             GetState: () => JSON.stringify({
                 appearance: this._appearance, resolvedAppearance: this._resolvedAppearance,
@@ -597,7 +615,7 @@ export default class Kalipso extends Extension {
         this.mainScroll.set_style(`max-height:${Math.max(120, monitor.height - Main.panel.height - 48 - N.padding * 2)}px;`);
         this.primary.width = Math.min(width - N.padding * 2, Math.ceil((N.primaryWidth - 28) * scale + 28));
         this.reader.width = innerWidth;
-        for (const actor of [this.details, this.privacy, this.secondaryContent, this.editor])
+        for (const actor of [this.details, this.privacy, this.secondaryContent, this.editor, this.languageNote])
             actor.width = innerWidth - 20;
         this.actor.set_position(monitor.x + Math.round((monitor.width - width) / 2), monitor.y + Main.panel.height + 16);
 
@@ -839,33 +857,130 @@ export default class Kalipso extends Extension {
                 this.render();
             }
         }
+        await this.loadLanguages();
+    }
+
+    _languageName(code) {
+        return this._languages.find(item => item.code === code)?.name ?? code;
     }
 
     showSettings(settings) {
         this._backend = settings.selected;
         const dependencies = settings.dependencies;
         this._status = dependencies.ready
-            ? _('%s · %s · Ready').format(this._backend === 'moonshine' ? 'Moonshine' : 'Vosk', dependencies.language || _('configured language'))
+            ? _('Ready to listen in %s, with %s.').format(this._languageName(dependencies.language) || _('your language'),
+                this._backend === 'moonshine' ? 'Moonshine' : 'Vosk')
+            : !dependencies.model ? _('Choose the language you speak.')
             : dependencies.missing.join(' ');
         this.render();
     }
 
-    async chooseEngine(id) {
-        if (this._active || this.local.pending || this.local.owned)
-            return;
+    async loadLanguages() {
         try {
-            const request = this.local.select(id);
+            const info = await this.local.languages();
+            if (!this.actor)
+                return;
+            const finished = this._install.active && !info.install.active;
+            this._languagesUnavailable = false;
+            this._languages = info.languages;
+            this._install = info.install;
+            this._downloads = info.downloads;
+            this._language = info.language || '';
+            const codes = info.languages.map(item => item.code).join();
+            if (codes !== this._languageCodes) {
+                this._languageCodes = codes;
+                for (const [, , button] of this.languageButtons)
+                    this._buttons.splice(this._buttons.indexOf(button), 1);
+                for (const row of this.languageRows) {
+                    this._rows.splice(this._rows.indexOf(row), 1);
+                    row.destroy();
+                }
+                this.languageRows = [];
+                this.languageButtons = info.languages.map((item, index) => {
+                    if (index % 3 === 0) {
+                        this.languageRows.push(this._row());
+                        this.languageBox.add_child(this.languageRows.at(-1));
+                    }
+                    const button = this.button(item.name, () => this.chooseLanguage(item.code));
+                    this.languageRows.at(-1).add_child(button);
+                    return [item.code, item.name, button];
+                });
+                this.place();
+            }
+            if (info.install.active && !this._languagePoll) {
+                this._languagePoll = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                    this.loadLanguages();
+                    return GLib.SOURCE_CONTINUE;
+                });
+            } else if (!info.install.active) {
+                this.stopLanguagePoll();
+            }
+            if (finished) {
+                const settings = await this.local.settings();
+                if (this.actor)
+                    this.showSettings(settings);
+            }
+        } catch {
+            this.stopLanguagePoll();
+            if (this.actor)
+                this._languagesUnavailable = true;
+        }
+        if (this.actor)
             this.render();
-            const settings = await request;
-            if (this.actor && settings)
-                this.showSettings(settings);
+    }
+
+    stopLanguagePoll() {
+        if (this._languagePoll)
+            GLib.source_remove(this._languagePoll);
+        this._languagePoll = 0;
+    }
+
+    async chooseLanguage(code) {
+        if (this._active || this.local.pending || this.local.owned || this._install.active)
+            return;
+        const keyboard = this.languageButtons.some(([, , button]) => button.has_key_focus());
+        try {
+            await this.local.install(code);
         } catch (error) {
             if (this.actor)
                 this._status = String(error.message);
-        } finally {
-            if (this.actor)
-                this.render();
         }
+        await this.loadLanguages();
+        // The language buttons are disabled while downloading: Cancel takes the focus.
+        if (keyboard && this._install.active && this.actor)
+            this.languageAction.grab_key_focus();
+    }
+
+    languageActionClicked() {
+        if (this._install.active)
+            this.local.cancelInstall().catch(() => {}).finally(() => this.loadLanguages());
+        else if (this._install.language)
+            this.chooseLanguage(this._install.language);
+    }
+
+    // What the language download is doing, in words; empty when there is nothing to say.
+    _languageText() {
+        const job = this._install, name = this._languageName(job.language || '');
+        const megabytes = bytes => Math.round(bytes / 1048576);
+        if (this._languagesUnavailable)
+            return _('This Kalipso companion cannot download languages. Install or update it, then log out and back in.');
+        if (job.active) {
+            return job.stage === 'unpacking' ? _('Checking and unpacking %s…').format(name)
+                : _('Downloading %s: %d of %d MB').format(name, megabytes(job.received), megabytes(job.total));
+        }
+        if (job.stage === 'done')
+            return _('Ready to listen in %s. Choose Follow my voice and start listening.').format(name);
+        if (job.stage === 'cancelled')
+            return _('Download cancelled. Nothing was changed.');
+        if (job.stage !== 'failed')
+            return '';
+        return {
+            network: _("Couldn't download %s. Check the internet connection and try again."),
+            fingerprint: _("The %s download didn't match its fingerprint, so it was deleted. Try again later."),
+            archive: _("The %s model couldn't be unpacked. Try again later."),
+            disk: _("Couldn't save %s: there isn't enough free space, or the data folder can't be written."),
+            busy: _('%s is downloaded. Choose it again when you stop listening.'),
+        }[job.error]?.format(name) ?? _('Kalipso downloads speech models on Linux for x86_64 computers.');
     }
 
     _stateText(listening, pending) {
@@ -924,7 +1039,8 @@ export default class Kalipso extends Extension {
         this.editButton._glyph.icon_name = this._pane === 'edit' ? 'object-select-symbolic' : 'document-edit-symbolic';
         this.settingsButton.label = this._pane === 'settings' ? _('Done') : _('Settings');
         this.settingsButton._glyph.icon_name = this._pane === 'settings' ? 'object-select-symbolic' : 'applications-system-symbolic';
-        this.details.set_text(this._status);
+        const languageText = this._languageText();
+        this.details.set_text(languageText || this._status);
         // The chosen option: accent border, tint and bold (:checked), and "checked" for assistive technology.
         const mark = (items, current) => {
             for (const [id, label, button] of items) {
@@ -940,10 +1056,26 @@ export default class Kalipso extends Extension {
         mark(this.countdownButtons, this._countdown);
         this.countdownLabel.visible = this._countdownTimer !== 0;
         this.countdownLabel.text = String(this._countdownLeft);
-        for (const [id, button] of this.engineButtons) {
-            button.checked = id === this._backend;
-            setEnabled(button, !listening && !pending);
+        const installing = Boolean(this._install.active);
+        const megabytes = bytes => Math.round(bytes / 1048576);
+        for (const [code, name, button] of this.languageButtons) {
+            const item = this._languages.find(language => language.code === code);
+            const chosen = Boolean(item?.ready) && code === this._language;
+            button.label = item?.ready ? name : _('%s · download %d MB').format(name, megabytes(item?.bytes ?? 0));
+            button.checked = chosen;
+            button.accessible_name = button.label + (chosen ? ', selected' : '');
+            setEnabled(button, !listening && !pending && !installing);
         }
+        this.languageProgress.visible = installing;
+        this.languageProgressFill.width = Math.round((this.mainContent.width - 20) *
+            (this._install.total ? Math.min(1, this._install.received / this._install.total) : 0));
+        const retry = this._install.stage === 'failed' &&
+            ['network', 'fingerprint', 'archive', 'disk', 'busy'].includes(this._install.error);
+        this.languageAction.get_parent().visible = installing || retry;
+        this.languageAction.label = installing ? _('Cancel download') : _('Try again');
+        this.languageNote.set_text(this._downloads
+            ? _("Choosing a language downloads its speech model once, from the model's publisher, and checks it against a fingerprint. Recognition then runs on this computer: nothing you say is sent.")
+            : _('Kalipso downloads speech models on Linux for x86_64 computers.'));
         this.state?.update({position: this.tracker.position >= 0 ? this.tracker.words[this.tracker.position].start : -1});
         this.place();
         if (this.diagnostics)

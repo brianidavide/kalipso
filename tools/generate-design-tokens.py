@@ -92,6 +92,9 @@ for theme, p in source['palette'].items():
 {scope} .tp-quiet:hover, {scope} .tp-quiet:active {{ background-color: {p['hover']}; }}
 {scope} .tp-quiet:focus {{ border-color: {p['focus']}; }}
 {scope} .tp-button:checked {{ background-color: {p['hover']}; border-color: {p['accent']}; font-weight: bold; }}
+{scope} .tp-button:insensitive {{ color: {p['muted']}; border-color: {p['divider']}; }}
+{scope} .tp-quiet:insensitive {{ border-color: transparent; }}
+{scope} .tp-primary:insensitive {{ background-color: {p['surface']}; }}
 {scope} .tp-group-label {{ font-size: {n['labelSize']}pt; font-weight: bold; color: {p['muted']}; padding-top: 4px; }}
 {scope} .tp-title {{ color: {p['muted']}; }}
 {scope} .tp-progress {{ background-color: {p['divider']}; height: 3px; }}

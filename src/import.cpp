@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #include "import.h"
+#include "zip.h"
 #include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
@@ -7,91 +8,13 @@
 #include <QSet>
 #include <QStringDecoder>
 #include <QXmlStreamReader>
-#include <QtEndian>
 #include <algorithm>
-
-extern "C" {
-#include "../third_party/puff/puff.h"
-}
 
 namespace {
 constexpr qint64 kMaxFile = 200 * 1024 * 1024;
-constexpr quint32 kMaxEntry = 64 * 1024 * 1024;
+constexpr qint64 kMaxEntry = 64 * 1024 * 1024;
 constexpr qint64 kMaxInflated = 256 * 1024 * 1024; // Per archive, against decompression bombs.
 constexpr qsizetype kMaxText = 2 * 1024 * 1024;    // Same limit as text files.
-
-// Reads stored and deflated members of a ZIP archive (no ZIP64, no encryption).
-class ZipArchive {
-public:
-    explicit ZipArchive(const QByteArray &data) : data_(data) { parse(); }
-    bool valid() const { return valid_; }
-    bool contains(const QString &name) const { return entries_.contains(name); }
-
-    QByteArray file(const QString &name) const {
-        const auto found = entries_.constFind(name);
-        if (found == entries_.cend())
-            return {};
-        const auto &entry = *found;
-        const qint64 header = entry.offset;
-        if (header + 30 > data_.size() || u32(header) != 0x04034b50)
-            return {};
-        const qint64 start = header + 30 + u16(header + 26) + u16(header + 28);
-        if (start + entry.compressed > data_.size())
-            return {};
-        const auto *source = reinterpret_cast<const unsigned char *>(data_.constData() + start);
-        if (entry.method == 0)
-            return entry.compressed == entry.size ? QByteArray(reinterpret_cast<const char *>(source), entry.size)
-                                                  : QByteArray();
-        if (entry.method != 8 || entry.size > kMaxEntry || inflated_ + entry.size > kMaxInflated)
-            return {};
-        inflated_ += entry.size;
-        QByteArray output(qsizetype(entry.size), Qt::Uninitialized);
-        unsigned long outputSize = entry.size, sourceSize = entry.compressed;
-        const int status = puff(reinterpret_cast<unsigned char *>(output.data()), &outputSize, source, &sourceSize);
-        if (status != 0 || outputSize != entry.size)
-            return {};
-        return output;
-    }
-
-private:
-    struct Entry {
-        quint16 method;
-        quint32 compressed, size;
-        qint64 offset;
-    };
-    quint16 u16(qint64 at) const { return qFromLittleEndian<quint16>(data_.constData() + at); }
-    quint32 u32(qint64 at) const { return qFromLittleEndian<quint32>(data_.constData() + at); }
-
-    void parse() {
-        // The end-of-central-directory record is within the last 64 KiB + 22 bytes.
-        qint64 end = -1;
-        for (qint64 at = data_.size() - 22; at >= 0 && at >= data_.size() - 65557; --at)
-            if (u32(at) == 0x06054b50) {
-                end = at;
-                break;
-            }
-        if (end < 0)
-            return;
-        const int count = u16(end + 10);
-        qint64 at = u32(end + 16);
-        for (int i = 0; i < count; ++i) {
-            if (at + 46 > data_.size() || u32(at) != 0x02014b50)
-                return;
-            const int nameLength = u16(at + 28);
-            if (at + 46 + nameLength > data_.size())
-                return;
-            const auto name = QString::fromUtf8(data_.constData() + at + 46, nameLength);
-            entries_.insert(name, {u16(at + 10), u32(at + 20), u32(at + 24), qint64(u32(at + 42))});
-            at += 46 + nameLength + u16(at + 30) + u16(at + 32);
-        }
-        valid_ = true;
-    }
-
-    const QByteArray &data_;
-    QHash<QString, Entry> entries_;
-    mutable qint64 inflated_ = 0;
-    bool valid_ = false;
-};
 
 QString attribute(const QXmlStreamReader &xml, QStringView name, bool namespaced = false) {
     for (const auto &item : xml.attributes())
@@ -347,7 +270,7 @@ Result read(const QString &path) {
 }
 
 Result fromPptx(const QByteArray &archive) {
-    const ZipArchive zip(archive);
+    const ZipArchive zip(archive, {kMaxEntry, kMaxInflated});
     const QString presentation = "ppt/presentation.xml";
     if (!zip.valid() || !zip.contains(presentation))
         return {{}, QCoreApplication::translate("ScriptImport", "This is not a readable PowerPoint (.pptx) file."), 0};
@@ -383,7 +306,7 @@ Result fromPptx(const QByteArray &archive) {
 }
 
 Result fromOdp(const QByteArray &archive) {
-    const ZipArchive zip(archive);
+    const ZipArchive zip(archive, {kMaxEntry, kMaxInflated});
     if (!zip.valid() || !zip.contains("content.xml"))
         return {{},
                 QCoreApplication::translate("ScriptImport", "This is not a readable LibreOffice Impress (.odp) file."),
@@ -445,7 +368,7 @@ Result fromOdp(const QByteArray &archive) {
 }
 
 Result fromDocx(const QByteArray &archive) {
-    const ZipArchive zip(archive);
+    const ZipArchive zip(archive, {kMaxEntry, kMaxInflated});
     const QString main = "word/document.xml";
     if (!zip.valid() || !zip.contains(main))
         return {{}, QCoreApplication::translate("ScriptImport", "This is not a readable Word (.docx) document."), 0};
@@ -530,7 +453,7 @@ Result fromDocx(const QByteArray &archive) {
 }
 
 Result fromOdt(const QByteArray &archive) {
-    const ZipArchive zip(archive);
+    const ZipArchive zip(archive, {kMaxEntry, kMaxInflated});
     if (!zip.valid() || !zip.contains("content.xml"))
         return {{},
                 QCoreApplication::translate("ScriptImport", "This is not a readable OpenDocument text (.odt) file."),

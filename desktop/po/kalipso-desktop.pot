@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the kalipso-desktop package.
+# This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: kalipso-desktop\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 17:17+0000\n"
+"POT-Creation-Date: 2026-10-31 13:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,12 +18,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-msgid "Choose a speech engine to check its setup."
+msgid "Choose the language you speak."
 msgstr ""
 
 msgid ""
 "Local speech is unavailable. Open Local speech setup to install the "
 "companion and a language model."
+msgstr ""
+
+msgid "your language"
+msgstr ""
+
+msgid "Ready to listen in %1, with %2."
 msgstr ""
 
 msgid "Checking local speech components"
@@ -50,6 +56,45 @@ msgid "Add your script to begin."
 msgstr ""
 
 msgid "Kalipso"
+msgstr ""
+
+msgid ""
+"This Kalipso companion cannot download languages. Install or update it, then "
+"log out and back in."
+msgstr ""
+
+msgid "Checking and unpacking %1…"
+msgstr ""
+
+msgid "Downloading %1: %2 of %3 MB"
+msgstr ""
+
+msgid "Ready to listen in %1. Choose Follow my voice and start listening."
+msgstr ""
+
+msgid "Download cancelled. Nothing was changed."
+msgstr ""
+
+msgid "Couldn't download %1. Check the internet connection and try again."
+msgstr ""
+
+msgid ""
+"The %1 download didn't match its fingerprint, so it was deleted. Try again "
+"later."
+msgstr ""
+
+msgid "The %1 model couldn't be unpacked. Try again later."
+msgstr ""
+
+msgid ""
+"Couldn't save %1: there isn't enough free space, or the data folder can't be "
+"written."
+msgstr ""
+
+msgid "%1 is downloaded. Choose it again when you stop listening."
+msgstr ""
+
+msgid "Kalipso downloads speech models on Linux for x86_64 computers."
 msgstr ""
 
 msgid "Start listening"
@@ -155,7 +200,25 @@ msgstr ""
 msgid "Follow my voice"
 msgstr ""
 
-msgid "Speech engine"
+msgid "Language you speak"
+msgstr ""
+
+msgid "%1 · download %2 MB"
+msgstr ""
+
+msgid "Download progress"
+msgstr ""
+
+msgid "Cancel download"
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid ""
+"Choosing a language downloads its speech model once, from the model's "
+"publisher, and checks it against a fingerprint. Recognition then runs on "
+"this computer: nothing you say is sent."
 msgstr ""
 
 msgid "Reader colors"
@@ -291,14 +354,51 @@ msgid ""
 msgstr ""
 
 #, javascript-format
-msgid "%s · %s · Ready"
+msgid "Ready to listen in %s, with %s."
 msgstr ""
 
-msgid "configured language"
+#, javascript-format
+msgid "Checking and unpacking %s…"
+msgstr ""
+
+#, javascript-format
+msgid "Downloading %s: %d of %d MB"
+msgstr ""
+
+#, javascript-format
+msgid "Ready to listen in %s. Choose Follow my voice and start listening."
+msgstr ""
+
+#, javascript-format
+msgid "Couldn't download %s. Check the internet connection and try again."
+msgstr ""
+
+#, javascript-format
+msgid ""
+"The %s download didn't match its fingerprint, so it was deleted. Try again "
+"later."
+msgstr ""
+
+#, javascript-format
+msgid "The %s model couldn't be unpacked. Try again later."
+msgstr ""
+
+#, javascript-format
+msgid ""
+"Couldn't save %s: there isn't enough free space, or the data folder can't be "
+"written."
+msgstr ""
+
+#, javascript-format
+msgid "%s is downloaded. Choose it again when you stop listening."
 msgstr ""
 
 #, javascript-format
 msgid "%d words/min"
+msgstr ""
+
+#, javascript-format
+msgid "%s · download %d MB"
 msgstr ""
 
 #, javascript-format

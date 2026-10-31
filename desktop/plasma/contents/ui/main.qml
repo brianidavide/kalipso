@@ -87,8 +87,10 @@ PlasmoidItem {
     function jumpTo(character) { tracker.seekCharacter(character); refresh() }
     function showPane(next) {
         pane = pane === next ? "" : next
-        if (pane === "settings")
+        if (pane === "settings") {
             audio.settings()
+            audio.refreshLanguages()
+        }
     }
     function setMode(next) {
         stop()
@@ -96,6 +98,36 @@ PlasmoidItem {
         if (next === "voice")
             audio.settings()
     }
+    function megabytes(bytes) { return Math.round(bytes / 1048576) }
+    // What the language download is doing, in words; empty when there is nothing to say.
+    readonly property string languageStatus: {
+        const job = audio.install
+        const name = audio.nameOf(job.language || "")
+        if (audio.languagesUnavailable)
+            return i18n("This Kalipso companion cannot download languages. Install or update it, then log out and back in.")
+        if (audio.languageError !== "")
+            return audio.languageError
+        if (job.active)
+            return job.stage === "unpacking" ? i18n("Checking and unpacking %1…", name)
+                : i18n("Downloading %1: %2 of %3 MB", name, megabytes(job.received), megabytes(job.total))
+        if (job.stage === "done")
+            return i18n("Ready to listen in %1. Choose Follow my voice and start listening.", name)
+        if (job.stage === "cancelled")
+            return i18n("Download cancelled. Nothing was changed.")
+        if (job.stage !== "failed")
+            return ""
+        switch (job.error) {
+        case "network": return i18n("Couldn't download %1. Check the internet connection and try again.", name)
+        case "fingerprint": return i18n("The %1 download didn't match its fingerprint, so it was deleted. Try again later.", name)
+        case "archive": return i18n("The %1 model couldn't be unpacked. Try again later.", name)
+        case "disk": return i18n("Couldn't save %1: there isn't enough free space, or the data folder can't be written.", name)
+        case "busy": return i18n("%1 is downloaded. Choose it again when you stop listening.", name)
+        default: return i18n("Kalipso downloads speech models on Linux for x86_64 computers.")
+        }
+    }
+    readonly property bool languageRetry: audio.install.stage === "failed"
+        && ["network", "fingerprint", "archive", "disk", "busy"].indexOf(audio.install.error) >= 0
+    property bool focusLanguageAction: false
     function chooseAppearance(name) {
         followWindow = false
         config.appearance = name
@@ -610,20 +642,63 @@ PlasmoidItem {
                         ChoiceButton { objectName: "steadyMode"; label: i18n("Steady speed"); selected: root.mode === "steady"; onClicked: root.setMode("steady") }
                         ChoiceButton { objectName: "voiceMode"; label: i18n("Follow my voice"); selected: root.mode === "voice"; onClicked: root.setMode("voice") }
                     }
-                    GroupLabel { text: i18n("Speech engine") }
+                    GroupLabel { text: i18n("Language you speak") }
                     Flow {
+                        objectName: "languageChoices"
                         Layout.fillWidth: true
                         spacing: 8
-                        ChoiceButton {
-                            objectName: "moonshineChoice"; label: "Moonshine"; selected: audio.backend === "moonshine"
-                            enabled: !audio.active && !audio.busy; onClicked: audio.selectBackend("moonshine")
-                        }
-                        ChoiceButton {
-                            objectName: "voskChoice"; label: "Vosk"; selected: audio.backend === "vosk"
-                            enabled: !audio.active && !audio.busy; onClicked: audio.selectBackend("vosk")
+                        Repeater {
+                            model: audio.languages
+                            ChoiceButton {
+                                required property var modelData
+                                objectName: "language-" + modelData.code
+                                label: modelData.ready ? modelData.name
+                                    : i18n("%1 · download %2 MB", modelData.name, root.megabytes(modelData.bytes))
+                                selected: modelData.ready && audio.language === modelData.code
+                                enabled: !audio.active && !audio.busy && !audio.installing
+                                onClicked: {
+                                    root.focusLanguageAction = visualFocus
+                                    audio.chooseLanguage(modelData.code)
+                                }
+                            }
                         }
                     }
-                    Note { objectName: "speechDetails"; text: audio.status }
+                    Rectangle {
+                        objectName: "languageProgress"
+                        visible: audio.installing
+                        Layout.fillWidth: true
+                        implicitHeight: 3
+                        color: root.c.overlayLine
+                        Accessible.role: Accessible.ProgressBar
+                        Accessible.name: i18n("Download progress")
+                        Rectangle {
+                            width: parent.width * (audio.install.total ? Math.min(1, audio.install.received / audio.install.total) : 0)
+                            height: parent.height
+                            color: root.c.reading
+                        }
+                    }
+                    Note {
+                        objectName: "speechDetails"
+                        text: root.languageStatus !== "" ? root.languageStatus : audio.status
+                        Accessible.role: Accessible.StaticText
+                        Accessible.name: text
+                    }
+                    ReaderButton {
+                        objectName: "languageAction"
+                        visible: audio.installing || root.languageRetry
+                        text: audio.installing ? i18n("Cancel download") : i18n("Try again")
+                        onClicked: audio.installing ? audio.cancelInstall() : audio.chooseLanguage(audio.install.language)
+                        // Choosing from the keyboard disables the language buttons: Cancel takes the focus.
+                        onVisibleChanged: if (visible && root.focusLanguageAction) {
+                            root.focusLanguageAction = false
+                            forceActiveFocus(Qt.TabFocusReason)
+                        }
+                    }
+                    Note {
+                        text: audio.downloads
+                            ? i18n("Choosing a language downloads its speech model once, from the model's publisher, and checks it against a fingerprint. Recognition then runs on this computer: nothing you say is sent.")
+                            : i18n("Kalipso downloads speech models on Linux for x86_64 computers.")
+                    }
                     GroupLabel { text: i18n("Reader colors") }
                     Flow {
                         Layout.fillWidth: true
