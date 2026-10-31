@@ -385,18 +385,21 @@ private slots:
         window.showPrompter();
         auto *reader = window.prompter();
         QVERIFY(QTest::qWaitForWindowExposed(reader));
-        const int w = reader->width(), h = reader->height();
-        const QList<std::pair<QPoint, Qt::CursorShape>> spots{{{w - 2, h / 2}, Qt::SizeHorCursor},
-                                                              {{1, h / 2}, Qt::SizeHorCursor},
-                                                              {{w / 2, h - 2}, Qt::SizeVerCursor},
-                                                              {{w - 2, h - 2}, Qt::SizeFDiagCursor},
-                                                              {{1, h - 2}, Qt::SizeBDiagCursor}};
-        for (const auto &[point, shape] : spots) {
-            QTest::mouseMove(reader, point);
-            QCOMPARE(reader->cursor().shape(), shape);
-        }
-        QTest::mouseMove(reader, {12, h / 2}); // Beside the text, away from the edge: no resizing.
-        QCOMPARE(reader->cursor().shape(), Qt::ArrowCursor);
+        // Mouse events straight to the reader, at points of its current size: real pointers differ
+        // per platform (Windows moves the system cursor, X11 window managers may resize the window).
+        const auto hover = [reader](double x, double y) {
+            const QPoint point(qRound(x < 0 ? reader->width() + x : x), qRound(y < 0 ? reader->height() + y : y));
+            QMouseEvent move(QEvent::MouseMove, point, reader->mapToGlobal(point), Qt::NoButton, Qt::NoButton,
+                             Qt::NoModifier);
+            QApplication::sendEvent(reader, &move);
+            return reader->cursor().shape();
+        };
+        QCOMPARE(hover(-2, reader->height() / 2), Qt::SizeHorCursor); // Right edge.
+        QCOMPARE(hover(1, reader->height() / 2), Qt::SizeHorCursor);  // Left edge.
+        QCOMPARE(hover(reader->width() / 2, -2), Qt::SizeVerCursor);  // Bottom edge.
+        QCOMPARE(hover(-2, -2), Qt::SizeFDiagCursor);                 // Bottom right corner.
+        QCOMPARE(hover(1, -2), Qt::SizeBDiagCursor);                  // Bottom left corner.
+        QCOMPARE(hover(12, reader->height() / 2), Qt::ArrowCursor);   // Beside the text: no resizing.
     }
 
     void steadyScrollingAdvancesAndStopsAtTheEnd() {
