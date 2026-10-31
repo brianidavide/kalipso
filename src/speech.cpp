@@ -5,16 +5,13 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QStandardPaths>
 #ifdef KALIPSO_QT_AUDIO
-#include <QAudioDevice>
 #include <QCoreApplication>
-#include <QMediaDevices>
 #include <QPermissions>
 #endif
 
 namespace {
-constexpr int kSampleRate = 16000;
+constexpr int kSampleRate = MicrophoneCapture::kSampleRate;
 constexpr int kChunkBytes = 6400;       // 200 ms of 16-bit mono PCM.
 constexpr int kMaxBacklogBytes = 64000; // 2 s; beyond this the model cannot keep up.
 } // namespace
@@ -141,6 +138,21 @@ SpeechService::SpeechService(QObject *parent) : QObject(parent), worker_(new Spe
             fail(message);
     });
     connect(&system_, &SystemSpeechClient::message, this, &SpeechService::status);
+    connect(&capture_, &MicrophoneCapture::started, this, &SpeechService::captureReady);
+    connect(&capture_, &MicrophoneCapture::audio, this, &SpeechService::queueAudio);
+    connect(&capture_, &MicrophoneCapture::failed, this, [this](const QString &message) {
+        if (active_)
+            fail(message);
+    });
+    connect(&capture_, &MicrophoneCapture::silent, this, [this](bool silent) {
+        if (!active_ || systemMode_)
+            return;
+        emit status(silent ? tr("No sound from %1. If you are speaking, check that it is not muted in the system "
+                                "sound settings.")
+                                 .arg(capture_.name())
+                           : listeningText());
+        emit this->silent(silent);
+    });
 
     qputenv("MOONSHINE_ORT_SINGLE_THREAD", "1"); // Must be set before the worker loads ONNX Runtime.
     worker_->moveToThread(&thread_);
@@ -191,8 +203,9 @@ void SpeechService::start(const SpeechRequest &request) {
         return;
     }
 #ifndef KALIPSO_QT_AUDIO
-    if (QStandardPaths::findExecutable("pw-record").isEmpty()) {
-        emit status(tr("Install pipewire-audio (Arch) or pipewire-bin (Debian) to enable audio capture."));
+    // Before the model loads: no microphone, or not the one chosen, is said at once.
+    if (const auto problem = MicrophoneCapture::problem(request.microphone); !problem.isEmpty()) {
+        emit status(problem);
         return;
     }
 #endif
@@ -257,7 +270,12 @@ void SpeechService::captureReady() {
     if (!active_)
         return;
     emit listening();
-    emit status(tr("Listening · microphone · on this device"));
+    emit status(listeningText());
+}
+
+QString SpeechService::listeningText() const {
+    return systemMode_ ? tr("Listening · microphone · on this device")
+                       : tr("Listening · %1 · on this device").arg(capture_.name());
 }
 
 void SpeechService::fail(const QString &message) {
@@ -268,22 +286,7 @@ void SpeechService::fail(const QString &message) {
 void SpeechService::stop() {
     system_.stop();
     systemMode_ = false;
-#ifdef KALIPSO_QT_AUDIO
-    if (audio_) {
-        audio_->disconnect(this);
-        audio_->stop();
-        audio_->deleteLater();
-        audio_ = nullptr;
-    }
-#else
-    if (recorder_) {
-        recorder_->disconnect(this);
-        recorder_->kill();
-        recorder_->waitForFinished(1000);
-        recorder_->deleteLater();
-        recorder_ = nullptr;
-    }
-#endif
+    capture_.stop();
     const bool wasActive = active_;
     active_ = false;
     epoch_->store(++generation_);
@@ -320,71 +323,4 @@ void SpeechService::queueAudio(const QByteArray &pcm) {
     }
 }
 
-void SpeechService::startCapture() {
-#ifdef KALIPSO_QT_AUDIO
-    auto device = QMediaDevices::defaultAudioInput();
-    if (!microphone_.isEmpty()) {
-        bool found = false;
-        for (const auto &candidate : QMediaDevices::audioInputs()) {
-            if (candidate.description() == microphone_ || QString::fromUtf8(candidate.id()) == microphone_) {
-                device = candidate;
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-            return fail(tr("The selected microphone is unavailable."));
-    }
-    if (device.isNull())
-        return fail(tr("No microphone is available."));
-    auto format = device.preferredFormat();
-    QAudioFormat desired;
-    desired.setSampleRate(kSampleRate);
-    desired.setChannelCount(1);
-    desired.setSampleFormat(QAudioFormat::Int16);
-    if (device.isFormatSupported(desired))
-        format = desired;
-    PcmConverter::Format encoding;
-    switch (format.sampleFormat()) {
-    case QAudioFormat::UInt8: encoding = PcmConverter::Unsigned8; break;
-    case QAudioFormat::Int16: encoding = PcmConverter::Signed16; break;
-    case QAudioFormat::Int32: encoding = PcmConverter::Signed32; break;
-    case QAudioFormat::Float: encoding = PcmConverter::Float32; break;
-    default: return fail(tr("Unsupported microphone sample format."));
-    }
-    converter_.reset(format.sampleRate(), format.channelCount(), encoding);
-    audio_ = new QAudioSource(device, format, this);
-    audio_->setBufferSize(format.bytesForDuration(100000));
-    connect(audio_, &QAudioSource::stateChanged, this, [this](QAudio::State state) {
-        if (active_ && audio_ && state == QAudio::StoppedState && audio_->error() != QAudio::NoError)
-            fail(tr("Microphone capture failed. Check device permissions."));
-    });
-    auto *input = audio_->start();
-    if (!active_ || !audio_)
-        return;
-    if (!input)
-        return fail(tr("Cannot start the microphone."));
-    connect(input, &QIODevice::readyRead, this, [this, input] { queueAudio(converter_.convert(input->readAll())); });
-    captureReady();
-#else
-    recorder_ = new QProcess(this);
-    QStringList arguments{"--raw",      "--format", "s16",       "--rate", QString::number(kSampleRate),
-                          "--channels", "1",        "--latency", "100ms"};
-    if (!microphone_.isEmpty())
-        arguments << "--target" << microphone_;
-    arguments << "-";
-    connect(recorder_, &QProcess::readyReadStandardOutput, this,
-            [this] { queueAudio(recorder_->readAllStandardOutput()); });
-    connect(recorder_, &QProcess::readyReadStandardError, this, [this] { recorder_->readAllStandardError(); });
-    connect(recorder_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
-        if (active_)
-            fail(tr("Audio capture failed. Check PipeWire and the selected microphone."));
-    });
-    connect(recorder_, &QProcess::finished, this, [this] {
-        if (active_)
-            fail(tr("Audio capture ended. Check PipeWire and restart listening."));
-    });
-    connect(recorder_, &QProcess::started, this, &SpeechService::captureReady);
-    recorder_->start("pw-record", arguments);
-#endif
-}
+void SpeechService::startCapture() { capture_.start(microphone_); }

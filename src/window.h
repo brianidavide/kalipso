@@ -88,6 +88,12 @@ private:
     // Listens with this model from now on; announce says so under the language list.
     void useInstalledSpeech(const InstalledSpeech &speech, bool announce = true);
     void downloadLanguage(const QString &code);
+    // The microphones connected now, keeping the one chosen even when it is unplugged.
+    void refreshMicrophones();
+    void saveMicrophone();
+    void startMicrophoneTest();
+    // A finished test says whether Kalipso heard a voice; otherwise the note comes back.
+    void stopMicrophoneTest(bool finished);
     void loadSpeechProfile();
     void saveSpeechProfile();
     void saveSettings();
@@ -120,7 +126,8 @@ private:
     int countdownLeft_ = 0;
     int wordsPerMinute_ = 140;
     QString speechStatus_;
-    QString speechError_; // Why listening did not start or stopped; shown in the reader until the next try.
+    QString speechError_;           // Why listening did not start or stopped; shown in the reader until the next try.
+    bool microphoneSilent_ = false; // No sound from the microphone: said before anything else.
     bool waitForNewUtterance_ = false;
 
     QComboBox *scripts_;
@@ -140,7 +147,16 @@ private:
     QString downloadCode_;
     QElapsedTimer downloadShown_;
     std::function<void()> updateSpeechFields_;
-    QLineEdit *speechLibrary_, *modelPath_, *microphone_;
+    QLineEdit *speechLibrary_, *modelPath_;
+    QComboBox *microphone_;
+    // Settings → Microphone → Test: a level meter, and whether a voice came through.
+    MicrophoneCapture microphoneTest_;
+    QPushButton *testMicrophone_;
+    QProgressBar *microphoneLevel_;
+    StatusLabel *microphoneStatus_;
+    QTimer microphoneTestEnd_;
+    double meter_ = 0;
+    bool heard_ = false;
     QLabel *systemStatus_;
     QPushButton *checkSystem_, *installSystem_;
     QString profile_;

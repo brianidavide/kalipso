@@ -77,6 +77,18 @@ protected:
     }
 };
 
+// The microphones can change while Settings is open (a headset plugged in): the list is read again
+// each time it opens.
+class MicrophonePicker : public SettingsComboBox {
+public:
+    std::function<void()> opening;
+    void showPopup() override {
+        if (opening)
+            opening();
+        SettingsComboBox::showPopup();
+    }
+};
+
 QString megabytes(qint64 bytes) { return QString::number((bytes + 524288) >> 20); }
 
 // Shows a useful width of the script title but can still shrink on narrow windows.
@@ -350,6 +362,10 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     dialogLayout->addLayout(closeRow);
     icons_.append({close, "close"});
     settings_->resize(620, 700);
+    connect(settings_, &QDialog::finished, this, [this] {
+        if (microphoneTestEnd_.isActive())
+            stopMicrophoneTest(false);
+    });
     connect(settingsButton, &QPushButton::clicked, this, [this] { showSettings(); });
     applyTheme();
 
@@ -430,9 +446,17 @@ MainWindow::MainWindow(const QString &libraryDirectory)
     connect(impress_, &ImpressFollower::statusChanged, audioStatus_, &QLabel::setText);
     connect(impress_, &ImpressFollower::finished, this,
             [this] { impressAction_->setText(tr("Present with Impress…")); });
+    // The reader hides its status while you read: a silent microphone shows it again.
+    connect(&speech_, &SpeechService::silent, this, [this](bool silent) {
+        microphoneSilent_ = silent;
+        refreshRunning();
+        if (silent)
+            prompter_->revealControls();
+    });
     connect(&speech_, &SpeechService::listening, this,
             [this] { session_.start(tracker_.position(), QDateTime::currentMSecsSinceEpoch()); });
     connect(&speech_, &SpeechService::stopped, this, [this] {
+        microphoneSilent_ = false;
         finishSession();
         backend_->setEnabled(!download_->active());
         voiceLanguage_->setEnabled(!download_->active());
@@ -1030,6 +1054,7 @@ QString MainWindow::statusText() const {
     case ReadingMode::Voice:
         status = !active && !speechError_.isEmpty() ? speechError_
                  : !active                          ? tr("Microphone off")
+                 : microphoneSilent_                ? speechStatus_
                  : tracker_.lost()                  ? tr("Off script · Kalipso catches up when you return to the text")
                  : speechStatus_.isEmpty()          ? tr("Listening")
                                                     : speechStatus_;
@@ -1041,6 +1066,8 @@ QString MainWindow::statusText() const {
 void MainWindow::refreshRunning() { refreshReading(); }
 
 void MainWindow::showSettings(QWidget *field) {
+    if (!settings_->isVisible())
+        refreshMicrophones();
     settings_->show();
     settings_->raise();
     settings_->activateWindow();
@@ -1058,12 +1085,15 @@ void MainWindow::startListening() {
     waitForNewUtterance_ = false;
     speechStatus_.clear();
     speechError_.clear();
+    microphoneSilent_ = false;
+    if (microphoneTestEnd_.isActive())
+        stopMicrophoneTest(false); // Listening takes the microphone over.
     speech_.setScript(script_->toPlainText(), tracker_.position());
     SpeechRequest request;
     request.backend = backend_->currentData().toString();
     request.library = speechLibrary_->text();
     request.model = modelPath_->text();
-    request.microphone = request.backend == QLatin1String("system") ? QString() : microphone_->text();
+    request.microphone = request.backend == QLatin1String("system") ? QString() : microphone_->currentData().toString();
     request.language = speechLanguage();
     request.architecture = architecture_->currentIndex() + 2;
     // No language yet: say so in the reader too, and open Settings at the choice.
@@ -1499,8 +1529,79 @@ QWidget *MainWindow::makeSpeechSettings() {
     modelPath_->setObjectName("speechModel");
     architecture_ = new SettingsComboBox;
     architecture_->addItems({tr("Tiny"), tr("Base"), tr("Small"), tr("Medium")});
-    microphone_ = new QLineEdit(settings.value("speech/microphone").toString());
-    microphone_->setPlaceholderText(tr("Default microphone"));
+    auto *microphone = new MicrophonePicker;
+    microphone->setObjectName("microphone");
+    microphone->opening = [this] { refreshMicrophones(); };
+    microphone_ = microphone;
+    refreshMicrophones();
+    connect(microphone_, &QComboBox::activated, this, [this] {
+        saveMicrophone();
+        if (microphoneTest_.active() || microphoneTestEnd_.isActive())
+            startMicrophoneTest(); // Trying one microphone after another.
+    });
+
+    // The test: what Kalipso hears, on a meter, and in words.
+    auto *microphoneBox = new QWidget;
+    microphoneBox->setObjectName("microphoneTestBox");
+    auto *microphoneLayout = new QVBoxLayout(microphoneBox);
+    microphoneLayout->setContentsMargins(0, 0, 0, 0);
+    microphoneLayout->setSpacing(Design::Metric::space2);
+    testMicrophone_ = new AccessibleButton(tr("Test microphone"));
+    testMicrophone_->setObjectName("testMicrophone");
+    microphoneLevel_ = new QProgressBar;
+    microphoneLevel_->setObjectName("microphoneLevel");
+    microphoneLevel_->setRange(0, 1000);
+    microphoneLevel_->setTextVisible(false);
+    microphoneLevel_->setAccessibleName(tr("Microphone level"));
+    microphoneLevel_->hide();
+    microphoneStatus_ = new StatusLabel(QString());
+    microphoneStatus_->setObjectName("microphoneStatus");
+    auto *testRow = new QHBoxLayout;
+    testRow->setContentsMargins(0, 0, 0, 0);
+    testRow->addWidget(testMicrophone_);
+    testRow->addStretch();
+    microphoneLayout->addLayout(testRow);
+    microphoneLayout->addWidget(microphoneLevel_);
+    microphoneLayout->addWidget(microphoneStatus_);
+    stopMicrophoneTest(false);
+    microphoneTestEnd_.setSingleShot(true);
+    microphoneTestEnd_.setInterval(30000);
+    connect(&microphoneTestEnd_, &QTimer::timeout, this, [this] { stopMicrophoneTest(true); });
+    connect(testMicrophone_, &QPushButton::clicked, this, [this] {
+        if (microphoneTestEnd_.isActive())
+            stopMicrophoneTest(true);
+        else
+            startMicrophoneTest();
+    });
+    connect(&microphoneTest_, &MicrophoneCapture::started, this, [this](const QString &name) {
+        microphoneStatus_->setText(tr("Speak: the bar moves when Kalipso hears you through %1.").arg(name));
+    });
+    connect(&microphoneTest_, &MicrophoneCapture::audio, this, [this](const QByteArray &pcm) {
+        // The bar jumps up with the voice and falls back gently.
+        const double level = MicrophoneCapture::level(pcm);
+        meter_ = std::max(level, meter_ * 0.85);
+        microphoneLevel_->setValue(qRound(meter_ * 1000));
+        if (level >= 0.45 && !heard_) { // Louder than -33 dB: a voice near the microphone, not the room.
+            heard_ = true;
+            microphoneStatus_->setText(tr("Kalipso hears you through %1.").arg(microphoneTest_.name()));
+        }
+    });
+    connect(&microphoneTest_, &MicrophoneCapture::silent, this, [this](bool silent) {
+        const auto name = microphoneTest_.name();
+        if (silent) { // Nothing arrives to move the bar down: it says so at once.
+            meter_ = 0;
+            microphoneLevel_->setValue(0);
+        }
+        microphoneStatus_->setText(silent ? tr("No sound from %1. Check that it is not muted in the system sound "
+                                               "settings, or choose another microphone.")
+                                                .arg(name)
+                                   : heard_ ? tr("Kalipso hears you through %1.").arg(name)
+                                            : tr("Speak: the bar moves when Kalipso hears you through %1.").arg(name));
+    });
+    connect(&microphoneTest_, &MicrophoneCapture::failed, this, [this](const QString &message) {
+        stopMicrophoneTest(false);
+        microphoneStatus_->setText(message);
+    });
 
     // The download of the chosen language: progress, what is happening, and Cancel or Try again.
     download_ = new SpeechDownload(this);
@@ -1569,6 +1670,7 @@ QWidget *MainWindow::makeSpeechSettings() {
     form->addRow(systemActions);
     form->addRow(systemStatus_);
     form->addRow(tr("Microphone"), microphone_);
+    form->addRow(microphoneBox);
     auto *commands = new WrappingCheckBox(tr("Voice commands: say “go next”, “go back” or “go start” (in Italian "
                                              "“vai avanti”, “torna indietro”, “da capo”) on their own"));
     commands->box->setObjectName("voiceCommands");
@@ -1595,7 +1697,7 @@ QWidget *MainWindow::makeSpeechSettings() {
                                "System speech uses the default microphone.")
                           : tr("Recognition stays on this computer, and Kalipso never switches to a cloud service.")));
 
-    updateSpeechFields_ = [this, form, systemActions, downloadBox, downloadNote] {
+    updateSpeechFields_ = [this, form, systemActions, downloadBox, downloadNote, microphoneBox] {
         const auto backend = backend_->currentData().toString();
         const bool system = backend == QLatin1String("system");
         const bool custom = voiceLanguage_->currentData().toMap().value("kind").toString() == QLatin1String("custom");
@@ -1608,6 +1710,7 @@ QWidget *MainWindow::makeSpeechSettings() {
         form->setRowVisible(customSpeech_, !system && custom);
         form->setRowVisible(language_, system || custom);
         form->setRowVisible(microphone_, !system);
+        form->setRowVisible(microphoneBox, !system);
         form->setRowVisible(architecture_, backend == QLatin1String("moonshine") && custom);
         form->setRowVisible(systemActions, system);
         form->setRowVisible(systemStatus_, system);
@@ -1978,7 +2081,81 @@ void MainWindow::saveSettings() {
     QSettings settings;
     saveSpeechProfile();
     settings.setValue("speech/backend", backend_->currentData().toString());
-    settings.setValue("speech/microphone", microphone_->text());
+    saveMicrophone();
+}
+
+void MainWindow::saveMicrophone() {
+    QSettings settings;
+    settings.setValue("speech/microphone", microphone_->currentData());
+    settings.setValue("speech/microphoneName", microphone_->currentData(Qt::UserRole + 1));
+}
+
+void MainWindow::refreshMicrophones() {
+    QSettings settings;
+    const auto chosen = microphone_->count() ? microphone_->currentData().toString()
+                                             : settings.value("speech/microphone").toString().trimmed();
+    const auto devices = Microphones::list();
+    struct Item {
+        QString text, id, name;
+        bool operator==(const Item &) const = default;
+    };
+    QList<Item> items;
+    const auto system = devices.find(QString());
+    items.append({!devices.known ? tr("System microphone")
+                  : system       ? tr("System microphone · %1").arg(system->name)
+                                 : tr("No microphone found"),
+                  QString(), QString()});
+    for (const auto &input : devices.inputs)
+        items.append({input.name, input.id, input.name});
+    // Also a name typed by hand in earlier versions.
+    const auto found = chosen.isEmpty() ? std::nullopt : devices.find(chosen);
+    QString current = found ? found->id : chosen;
+    if (!chosen.isEmpty() && !found) {
+        // Unplugged: kept, so that it is used again when it comes back.
+        const auto name = settings.value("speech/microphoneName").toString();
+        items.append(
+            {devices.known ? tr("%1 · not connected").arg(name.isEmpty() ? chosen : name) : chosen, chosen, name});
+    }
+    QList<Item> shown;
+    for (int i = 0; i < microphone_->count(); ++i)
+        shown.append({microphone_->itemText(i), microphone_->itemData(i).toString(),
+                      microphone_->itemData(i, Qt::UserRole + 1).toString()});
+    const QSignalBlocker block(microphone_);
+    if (shown != items) {
+        microphone_->clear();
+        for (const auto &item : items) {
+            microphone_->addItem(item.text, item.id);
+            microphone_->setItemData(microphone_->count() - 1, item.name, Qt::UserRole + 1);
+        }
+    }
+    microphone_->setCurrentIndex(std::max(0, microphone_->findData(current)));
+}
+
+void MainWindow::startMicrophoneTest() {
+    heard_ = false;
+    meter_ = 0;
+    microphoneLevel_->setValue(0);
+    microphoneLevel_->show();
+    testMicrophone_->setText(tr("Stop the test"));
+    microphoneStatus_->setText(tr("Opening the microphone…"));
+    microphoneTestEnd_.start();
+    microphoneTest_.start(microphone_->currentData().toString());
+}
+
+void MainWindow::stopMicrophoneTest(bool finished) {
+    const bool opened = microphoneTest_.active();
+    const auto name = microphoneTest_.name();
+    microphoneTest_.stop();
+    microphoneTestEnd_.stop();
+    microphoneLevel_->hide();
+    testMicrophone_->setText(tr("Test microphone"));
+    if (finished && opened)
+        microphoneStatus_->setText(heard_ ? tr("Test over: Kalipso heard you through %1.").arg(name)
+                                          : tr("Test over: Kalipso did not hear a voice through %1. Raise its "
+                                               "volume in the system sound settings, or choose another microphone.")
+                                                .arg(name));
+    else if (!finished)
+        microphoneStatus_->setText(tr("The test shows whether Kalipso hears you. Nothing is recorded or sent."));
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

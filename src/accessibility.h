@@ -119,12 +119,16 @@ QComboBox, QLineEdit, QSpinBox {
     background: @surface; color: @text; border: 1px solid @border; border-radius: @radiuspx;
     padding: 6px 10px; min-height: 22px; selection-background-color: @selection; selection-color: @selectionText;
 }
-QComboBox { padding-right: 32px; }
+/* The list opens under the field. Fusion's list over the field measured its rows before this style
+   sheet and cut the last one off. */
+QComboBox { padding-right: 32px; combobox-popup: 0; }
 QComboBox:hover, QSpinBox:hover { background: @hover; }
 QComboBox::drop-down { border: none; width: 28px; subcontrol-origin: padding; subcontrol-position: center right; }
 QComboBox::down-arrow { image: url(:/icons/generated/chevron-down-@theme.svg); width: 14px; height: 14px; }
-QComboBox QAbstractItemView { background: @surface; color: @text; border: 1px solid @border; padding: 4px;
+QComboBox QAbstractItemView { background: @surface; color: @text; border: 1px solid @border; padding: 0;
     selection-background-color: @selection; selection-color: @selectionText; outline: none; }
+QComboBox QAbstractItemView::item { background: @surface; color: @text; padding: 6px 10px; border: none; }
+QComboBox QAbstractItemView::item:selected { background: @selection; color: @selectionText; }
 QSpinBox { padding-right: 30px; }
 QSpinBox::up-button, QSpinBox::down-button { subcontrol-origin: border; width: 26px; border: none;
     border-left: 1px solid @divider; background: transparent; }
@@ -157,6 +161,8 @@ QCheckBox:focus { outline: none; } QCheckBox::indicator:focus { border: 2px soli
 
 QProgressBar { background: @divider; border: none; max-height: 3px; min-height: 3px; }
 QProgressBar::chunk { background: @accent; }
+QProgressBar#microphoneLevel { max-height: 8px; min-height: 8px; border-radius: 4px; }
+QProgressBar#microphoneLevel::chunk { border-radius: 4px; }
 QStatusBar { background: @background; border-top: 1px solid @divider; }
 QStatusBar::item { border: none; }
 QMenu { background: @surface; color: @text; border: 1px solid @border; padding: 4px; }

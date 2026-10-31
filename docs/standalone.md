@@ -32,6 +32,8 @@ Choose the mode in the reader:
 
 After a voice session, the status line summarizes it: duration, words read, pace, long pauses and recognized filler words (many recognizers drop fillers, so this is a lower bound). **More → Save session report…** saves the same as a Markdown file, with the time and pace of each section and the words just before each long pause. Nothing is saved unless you choose to. Filler counting can be turned off in **Settings → Speech**.
 
+**Settings → Speech → Microphone** lists the microphones connected now. **System microphone** names the one the system uses and follows the system's choice when it changes. A microphone you choose stays the one: if it is unplugged, Kalipso says so instead of switching to another. **Test microphone** opens it for up to 30 seconds; a bar moves with your voice and the note says whether Kalipso hears you. Nothing is recorded or sent. While listening, the reader names the microphone and, when no sound arrives from it for a few seconds (muted or unplugged), says so and shows its controls again.
+
 **Settings → Speech → Voice commands** (off by default) lets you move without touching anything while Kalipso follows your voice: say "go next" or "go back" for the next or previous section and "go start" to return to the beginning (in Italian "vai avanti", "torna indietro", "da capo"). A command counts only when you say it on its own, and never when the script itself continues with those words, so reading them aloud still follows the script.
 
 ### Keys, foot pedals and clickers

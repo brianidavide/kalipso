@@ -19,7 +19,7 @@ target_link_libraries(prompter_core PUBLIC Qt6::Core)
 target_compile_options(prompter_core PRIVATE ${KALIPSO_WARNINGS})
 
 # --- Speech recognition ---------------------------------------------------------
-add_library(kalipso_speech STATIC src/speech.cpp src/moonshine.cpp src/system_speech/client.cpp)
+add_library(kalipso_speech STATIC src/speech.cpp src/microphone.cpp src/moonshine.cpp src/system_speech/client.cpp)
 target_link_libraries(kalipso_speech PUBLIC prompter_core Qt6::Core)
 target_compile_options(kalipso_speech PRIVATE ${KALIPSO_WARNINGS})
 if(APPLE OR WIN32)
@@ -176,6 +176,8 @@ if(BUILD_TESTING)
 
   add_executable(ui_tests tests/ui_tests.cpp)
   target_link_libraries(ui_tests PRIVATE kalipso_app Qt6::Test)
+  target_compile_definitions(ui_tests PRIVATE FAKE_MOONSHINE_LIBRARY="$<TARGET_FILE:fake_moonshine>")
+  add_dependencies(ui_tests fake_moonshine)
   add_test(NAME ui COMMAND ui_tests -o ui-results.txt,txt -o -,txt)
   # The same check of icon motion with the system asking for reduced motion.
   add_test(NAME ui_reduced_motion COMMAND ui_tests iconMotionFollowsTheSystemChoice)

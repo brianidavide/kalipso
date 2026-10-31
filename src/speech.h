@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
+#include "microphone.h"
 #include "moonshine.h"
 #include "system_speech/client.h"
 #include <QLibrary>
 #include <QObject>
-#include <QProcess>
 #include <QThread>
-#ifdef KALIPSO_QT_AUDIO
-#include "pcm_converter.h"
-#include <QAudioSource>
-#endif
 #include <atomic>
 #include <memory>
 
@@ -18,7 +14,7 @@ struct SpeechRequest {
     QString backend = QStringLiteral("moonshine"); // "moonshine", "vosk" or "system"
     QString library;
     QString model;
-    QString microphone; // Empty selects the default input.
+    QString microphone; // A Microphone id; empty selects the system's microphone.
     QString language;
     int architecture = 2; // Moonshine streaming architecture, 2..5.
 };
@@ -109,12 +105,15 @@ signals:
     void transcript(const QString &text, bool final);
     void listening();
     void status(const QString &text);
+    // No sound from the microphone for a few seconds (muted or unplugged), or sound again.
+    void silent(bool silent);
     void stopped();
 
 private:
     void startCapture();
     void queueAudio(const QByteArray &pcm);
     void captureReady();
+    QString listeningText() const;
     void fail(const QString &message);
 
     SystemSpeechClient system_;
@@ -122,12 +121,7 @@ private:
     QStringList commands_;
     int scriptPosition_ = -1;
     bool systemMode_ = false;
-#ifdef KALIPSO_QT_AUDIO
-    QAudioSource *audio_ = nullptr;
-    PcmConverter converter_;
-#else
-    QProcess *recorder_ = nullptr;
-#endif
+    MicrophoneCapture capture_;
     QThread thread_;
     std::shared_ptr<std::atomic<quint64>> epoch_ = std::make_shared<std::atomic<quint64>>(0);
     // Declared before worker_, which is constructed with it.

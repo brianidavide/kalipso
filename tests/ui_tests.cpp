@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+#include "fake_pipewire.h"
 #include "impress.h"
 #include "remote.h"
 #include "script_highlighter.h"
@@ -17,6 +18,7 @@
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QProcess>
+#include <QProgressBar>
 #include <QScopeGuard>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -289,7 +291,8 @@ private slots:
     void settingsFieldsHaveAccessibleNames() {
         MainWindow window(scripts_.path());
         for (const auto *name : {"speechBackend", "speechLanguage", "speechLibrary", "speechModel", "applicationTheme",
-                                 "readerTheme", "readerMirror", "readingLine", "voiceLanguage", "scriptPicker"}) {
+                                 "readerTheme", "readerMirror", "readingLine", "voiceLanguage", "scriptPicker",
+                                 "microphone", "testMicrophone", "microphoneLevel"}) {
             auto *field = window.findChild<QWidget *>(name);
             QVERIFY2(field, name);
             auto *interface = QAccessible::queryAccessibleInterface(field);
@@ -378,6 +381,91 @@ private slots:
                 action->trigger();
         QCOMPARE(status->text(), QString("Microphone off"));
     }
+
+#ifndef KALIPSO_QT_AUDIO
+    void settingsListTheMicrophonesAndTestThem() {
+        FakePipeWire pipewire;
+        pipewire.setNodes({{"alsa_input.usb", "Blue Yeti"}, {"bluez_input.headset", "Headset"}}, "alsa_input.usb");
+        pipewire.setSound(FakePipeWire::tone(0.5, 200));
+        QSettings().setValue("speech/microphone", "alsa_input.webcam");
+        QSettings().setValue("speech/microphoneName", "Webcam C920");
+        MainWindow window(scripts_.path());
+        window.show();
+        auto *settings = openSettings(window);
+        auto *microphone = window.findChild<QComboBox *>("microphone");
+        QCOMPARE(microphone->count(), 4);
+        QCOMPARE(microphone->itemText(0), QString("System microphone · Blue Yeti"));
+        QCOMPARE(microphone->itemText(1), QString("Blue Yeti"));
+        QCOMPARE(microphone->itemText(2), QString("Headset"));
+        // Chosen before and unplugged now: kept, and said.
+        QCOMPARE(microphone->currentText(), QString("Webcam C920 · not connected"));
+        // Plugged in while Settings is open: there when the list opens.
+        pipewire.setNodes({{"alsa_input.usb", "Blue Yeti"}, {"alsa_input.webcam", "Webcam C920"}}, "alsa_input.usb");
+        microphone->showPopup();
+        microphone->hidePopup();
+        QCOMPARE(microphone->currentText(), QString("Webcam C920"));
+        QCOMPARE(microphone->count(), 3);
+        microphone->setCurrentIndex(0);
+        emit microphone->activated(0);
+        QCOMPARE(QSettings().value("speech/microphone").toString(), QString());
+
+        auto *test = window.findChild<QPushButton *>("testMicrophone");
+        auto *status = window.findChild<QLabel *>("microphoneStatus");
+        auto *level = window.findChild<QProgressBar *>("microphoneLevel");
+        QVERIFY(status->text().startsWith("The test shows whether Kalipso hears you."));
+        QVERIFY(!level->isVisible());
+        test->click();
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Kalipso hears you through Blue Yeti."), 3000);
+        QVERIFY(level->isVisible());
+        QVERIFY(level->value() > 500);
+        test->click();
+        QCOMPARE(status->text(), QString("Test over: Kalipso heard you through Blue Yeti."));
+        QVERIFY(!level->isVisible());
+
+        // Negative control: the noise of a quiet room is not a voice.
+        pipewire.setSound(FakePipeWire::tone(0.0005, 200));
+        test->click();
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("Speak: the bar moves"), 3000);
+        QTest::qWait(500);
+        test->click();
+        QVERIFY2(status->text().startsWith("Test over: Kalipso did not hear a voice through Blue Yeti."),
+                 qPrintable(status->text()));
+
+        // Closing Settings ends the test and releases the microphone.
+        test->click();
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("Speak: the bar moves"), 3000);
+        settings->close();
+        QVERIFY(status->text().startsWith("The test shows whether Kalipso hears you."));
+        QCOMPARE(test->text(), QString("Test microphone"));
+    }
+
+    void listeningNamesTheMicrophoneAndSaysWhenItIsSilent() {
+        FakePipeWire pipewire;
+        pipewire.setNodes({{"alsa_input.usb", "Blue Yeti"}}, "alsa_input.usb");
+        pipewire.setSound(FakePipeWire::tone(0.5, 200));
+        QTemporaryDir model;
+        QSettings().setValue("speech/backend", "moonshine");
+        QSettings().setValue("profiles/moonshine/library", FAKE_MOONSHINE_LIBRARY);
+        QSettings().setValue("profiles/moonshine/model", model.path());
+        QSettings().setValue("profiles/moonshine/language", "en");
+        MainWindow window(scripts_.path());
+        editor(window)->setPlainText(QString("completed ").repeated(400)); // What the fake recognizer hears.
+        window.showPrompter();
+        auto *reader = window.prompter();
+        emit reader->modeRequested(ReadingMode::Voice);
+        auto *status = reader->findChild<QLabel *>("readerListeningStatus");
+        reader->findChild<QPushButton *>("readerListeningButton")->click();
+        QTRY_COMPARE_WITH_TIMEOUT(status->text(), QString("Listening · Blue Yeti · on this device"), 5000);
+        // Muted while reading: the controls hide as usual, then come back to say why nothing follows.
+        pipewire.setSound(FakePipeWire::tone(0, 200));
+        QTRY_VERIFY_WITH_TIMEOUT(!reader->controlsVisible(), 4000);
+        QTRY_VERIFY_WITH_TIMEOUT(status->text().startsWith("No sound from Blue Yeti."), 6000);
+        QVERIFY(reader->controlsVisible());
+        pipewire.setSound(FakePipeWire::tone(0.5, 200));
+        QTRY_VERIFY_WITH_TIMEOUT(!status->text().startsWith("No sound"), 3000);
+        reader->findChild<QPushButton *>("readerListeningButton")->click();
+    }
+#endif
 
     void theReaderResizesFromItsEdges() {
         MainWindow window(scripts_.path());
